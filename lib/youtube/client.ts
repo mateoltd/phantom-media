@@ -36,15 +36,30 @@ export async function getInnertube(): Promise<Innertube> {
 
     // Generate a full BotGuard-attested PO token to bypass YouTube's
     // "Sign in to confirm you're not a bot" check on flagged ASN ranges.
-    const { visitorData, poToken } = await getPoToken();
+    let visitorData: string | undefined;
+    let poToken: string | undefined;
+
+    try {
+      const result = await getPoToken();
+      visitorData = result.visitorData;
+      poToken = result.poToken;
+      console.log(
+        `[innertube] PO token generated (length=${poToken.length})`
+      );
+    } catch (err) {
+      console.error(
+        "[innertube] PO token generation failed, continuing without:",
+        err instanceof Error ? err.message : err
+      );
+    }
 
     innertubeInstance = await Innertube.create({
       retrieve_player: true,
       generate_session_locally: true,
       enable_session_cache: true,
       cache: new UniversalCache(true),
-      visitor_data: visitorData,
-      po_token: poToken,
+      ...(visitorData ? { visitor_data: visitorData } : {}),
+      ...(poToken ? { po_token: poToken } : {}),
     });
   }
   return innertubeInstance;
