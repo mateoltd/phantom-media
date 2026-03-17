@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { spawn } from "child_process";
+import { getYtDlpPath } from "@/lib/server/ytdlp";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes for long videos
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const proc = spawn("yt-dlp", [
+    const proc = spawn(getYtDlpPath(), [
       "-f",
       formatSpec,
       "-o",

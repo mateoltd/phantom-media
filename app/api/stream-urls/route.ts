@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "child_process";
+import { getYtDlpPath } from "@/lib/server/ytdlp";
 
 export const runtime = "nodejs";
 
@@ -38,7 +39,7 @@ function resolveUrls(
   formatSpec: string
 ): Promise<string[]> {
   return new Promise((resolve, reject) => {
-    const proc = spawn("yt-dlp", [
+    const proc = spawn(getYtDlpPath(), [
       "-g",
       "-f",
       formatSpec,

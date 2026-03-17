@@ -1,5 +1,6 @@
 import { spawn } from "child_process";
 import type { Container, DownloadOption, QueryResult } from "@/lib/types";
+import { getYtDlpPath } from "@/lib/server/ytdlp";
 
 interface YtDlpThumbnail {
   url?: string;
@@ -295,7 +296,7 @@ async function getYtDlpVideoData(videoId: string): Promise<YtDlpVideoData> {
 
 function runYtDlp(args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
-    const proc = spawn("yt-dlp", ["--no-warnings", ...args]);
+    const proc = spawn(getYtDlpPath(), ["--no-warnings", ...args]);
     let stdout = "";
     let stderr = "";
 
