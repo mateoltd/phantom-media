@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import {
   CLIENT_FALLBACK_ORDER,
+  NO_CIPHER_CLIENTS,
   withSessionRetry,
 } from "@/lib/youtube/client";
 import type { Innertube } from "youtubei.js";
@@ -10,53 +11,60 @@ export const maxDuration = 300; // 5 minutes for long videos
 
 /**
  * Server-side download endpoint.
- * Uses youtubei.js to download and pipes the ReadableStream directly to the response.
- * youtubei.js handles YouTube's SABR protocol and throttling internally.
+ * For IOS/ANDROID clients: fetches directly from YouTube CDN using pre-signed URLs (fast).
+ * Falls back to youtubei.js download() for other clients.
  *
  * Query params:
  *   videoId: YouTube video ID
- *   formatSpec: itag or "itag+itag" for adaptive
- *   type: 'video+audio' | 'video' | 'audio'
- *   quality: '360p' | '720p' | '1080p' | 'best' etc
- *   format: 'mp4' | 'webm'
+ *   formatSpec: itag (e.g., "137" or "140")
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const videoId = searchParams.get("videoId");
-  const formatSpecParam = searchParams.get("formatSpec");
-  const itag = searchParams.get("itag");
-  const type = searchParams.get("type") ?? "video+audio";
-  const quality = searchParams.get("quality") ?? "best";
-  const format = searchParams.get("format") ?? "mp4";
+  const formatSpec = searchParams.get("formatSpec");
 
   if (!videoId) {
     return new Response("Missing videoId parameter", { status: 400 });
   }
 
+  if (!formatSpec) {
+    return new Response("Missing formatSpec parameter", { status: 400 });
+  }
+
+  const itag = parseInt(formatSpec.split("+")[0], 10);
+  if (isNaN(itag)) {
+    return new Response("Invalid formatSpec", { status: 400 });
+  }
+
   try {
-    const downloadType =
-      type === "audio"
-        ? ("audio" as const)
-        : type === "video"
-          ? ("video" as const)
-          : ("video+audio" as const);
-
-    const itagNum = formatSpecParam
-      ? parseInt(formatSpecParam.split("+")[0], 10)
-      : itag
-        ? parseInt(itag, 10)
-        : undefined;
-
-    const stream = await withSessionRetry((yt) =>
-      tryDownload(yt, videoId, downloadType, quality, format, itagNum)
+    const result = await withSessionRetry((yt) =>
+      getStreamUrl(yt, videoId, itag)
     );
 
-    const headers = new Headers();
-    headers.set("Content-Type", "application/octet-stream");
-    headers.set("Access-Control-Allow-Origin", "*");
-    headers.set("Transfer-Encoding", "chunked");
+    // Fetch directly from YouTube CDN and stream to client
+    const upstream = await fetch(result.url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Origin: "https://www.youtube.com",
+        Referer: "https://www.youtube.com/",
+      },
+    });
 
-    return new Response(stream, { headers });
+    if (!upstream.ok) {
+      throw new Error(`YouTube CDN returned ${upstream.status}`);
+    }
+
+    const headers = new Headers();
+    headers.set("Content-Type", upstream.headers.get("Content-Type") ?? "application/octet-stream");
+    headers.set("Access-Control-Allow-Origin", "*");
+
+    const contentLength = upstream.headers.get("Content-Length");
+    if (contentLength) {
+      headers.set("Content-Length", contentLength);
+    }
+
+    return new Response(upstream.body, { headers });
   } catch (error) {
     console.error("Download error:", error);
     const message =
@@ -65,31 +73,52 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function tryDownload(
+interface StreamResult {
+  url: string;
+  contentLength?: number;
+}
+
+async function getStreamUrl(
   yt: Innertube,
   videoId: string,
-  downloadType: "video" | "audio" | "video+audio",
-  quality: string,
-  format: string,
-  itagNum: number | undefined
-): Promise<ReadableStream<Uint8Array>> {
-  let lastError: Error | null = null;
-
+  itag: number
+): Promise<StreamResult> {
   for (const client of CLIENT_FALLBACK_ORDER) {
     try {
-      const stream = await yt.download(videoId, {
-        client,
-        type: downloadType,
-        quality: quality === "best" ? "best" : quality,
-        format,
-        ...(itagNum && !isNaN(itagNum) ? { itag: itagNum } : {}),
-      });
+      const info = await yt.getBasicInfo(videoId, { client });
+      const streaming = info.streaming_data;
+      if (!streaming) continue;
 
-      if (stream) return stream;
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
+      const allFormats = [
+        ...(streaming.formats ?? []),
+        ...(streaming.adaptive_formats ?? []),
+      ];
+
+      const format = allFormats.find((f) => f.itag === itag);
+      if (!format) continue;
+
+      // IOS/ANDROID have pre-signed URLs ready to use
+      if (NO_CIPHER_CLIENTS.has(client) && format.url) {
+        return {
+          url: format.url,
+          contentLength: format.content_length,
+        };
+      }
+
+      // For other clients, try decipher if player is available
+      if (yt.session.player) {
+        const url = await format.decipher(yt.session.player);
+        if (url) {
+          return {
+            url,
+            contentLength: format.content_length,
+          };
+        }
+      }
+    } catch {
+      // Try next client
     }
   }
 
-  throw lastError ?? new Error("Failed to start download");
+  throw new Error("Could not get stream URL for this format");
 }
