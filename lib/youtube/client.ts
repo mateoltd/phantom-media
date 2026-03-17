@@ -1,7 +1,7 @@
 import { Innertube, Platform, UniversalCache } from "youtubei.js";
 import type { Types } from "youtubei.js";
-import { BG } from "bgutils-js";
 import evaluate from "./evaluate";
+import { getPoToken } from "./potoken";
 
 export type InnerTubeClient = Types.InnerTubeClient;
 
@@ -34,34 +34,17 @@ export async function getInnertube(): Promise<Innertube> {
   if (!innertubeInstance) {
     patchPlatform();
 
-    // Step 1: Create a lightweight session to obtain visitor data
-    const tempYt = await Innertube.create({
-      retrieve_player: false,
-      generate_session_locally: true,
-    });
-
-    const visitorData = tempYt.session.context.client?.visitorData;
-
-    // Step 2: Generate a cold-start PO token using BgUtils.
-    // This token attests the client is genuine and bypasses YouTube's
+    // Generate a full BotGuard-attested PO token to bypass YouTube's
     // "Sign in to confirm you're not a bot" check on flagged ASN ranges.
-    let poToken: string | undefined;
-    if (visitorData) {
-      try {
-        poToken = BG.PoToken.generateColdStartToken(visitorData);
-      } catch {
-        // Continue without PO token if generation fails
-      }
-    }
+    const { visitorData, poToken } = await getPoToken();
 
-    // Step 3: Create the full Innertube instance with PO token
     innertubeInstance = await Innertube.create({
       retrieve_player: true,
       generate_session_locally: true,
       enable_session_cache: true,
       cache: new UniversalCache(true),
-      ...(visitorData ? { visitor_data: visitorData } : {}),
-      ...(poToken ? { po_token: poToken } : {}),
+      visitor_data: visitorData,
+      po_token: poToken,
     });
   }
   return innertubeInstance;

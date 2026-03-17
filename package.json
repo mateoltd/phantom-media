@@ -13,6 +13,7 @@
     "@ffmpeg/util": "^0.12.2",
     "@tabler/icons-react": "^3.40.0",
     "bgutils-js": "^3.2.0",
+    "jsdom": "^29.0.0",
     "next": "^16.1.7",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.1",
+    "@types/jsdom": "^28.0.0",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
