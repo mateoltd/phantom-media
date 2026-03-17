@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["youtubei.js", "bgutils-js"],
+  serverExternalPackages: ["youtubei.js"],
   // COOP/COEP headers needed for multi-threaded ffmpeg.wasm (SharedArrayBuffer).
   // Uncomment when upgrading from single-threaded to multi-threaded mode.
   // headers: async () => [

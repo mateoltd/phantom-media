@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   CLIENT_FALLBACK_ORDER,
+  NO_CIPHER_CLIENTS,
   withSessionRetry,
 } from "@/lib/youtube/client";
 import type { Innertube } from "youtubei.js";
@@ -8,7 +9,7 @@ import type { Innertube } from "youtubei.js";
 export const runtime = "nodejs";
 
 /**
- * Lightweight URL resolver — uses youtubei.js to get deciphered stream URLs.
+ * Lightweight URL resolver — uses youtubei.js to get stream URLs.
  *
  * POST body: { videoId, formatSpec }
  *   formatSpec: itag string like "137" or "137+140"
@@ -63,7 +64,15 @@ async function resolveUrls(
         const format = allFormats.find((f) => f.itag === itag);
         if (!format) continue;
 
-        const url = await format.decipher(yt.session.player);
+        // IOS/ANDROID: pre-signed URLs, use format.url directly.
+        // WEB/TV_EMBEDDED: cipher-scrambled, need decipher() + player.
+        let url: string | undefined;
+        if (NO_CIPHER_CLIENTS.has(client)) {
+          url = format.url ?? undefined;
+        } else if (yt.session.player) {
+          url = await format.decipher(yt.session.player);
+        }
+
         if (url) urls.push(url);
       }
 

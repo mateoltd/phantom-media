@@ -1,29 +1,33 @@
-import { Innertube, Platform, UniversalCache } from "youtubei.js";
+import { Innertube, Platform } from "youtubei.js";
 import type { Types } from "youtubei.js";
 import evaluate from "./evaluate";
-import { getPoToken, invalidatePoToken } from "./potoken";
 
 export type InnerTubeClient = Types.InnerTubeClient;
 
 /**
- * Client types to try in order when fetching video info or downloading.
- * WEB is the default; ANDROID/IOS/TV_EMBEDDED use different InnerTube
- * endpoints that are often less aggressively bot-checked.
+ * IOS client first: returns pre-signed direct URLs, no PO token required,
+ * minimal bot detection. Mirrors cobalt.tools' production strategy.
+ * WEB is last resort (needs player + PO token for URL deciphering).
  */
 export const CLIENT_FALLBACK_ORDER: InnerTubeClient[] = [
-  "WEB",
+  "IOS",
   "ANDROID",
   "TV_EMBEDDED",
-  "IOS",
+  "WEB",
 ];
+
+/**
+ * These clients return pre-signed URLs — use format.url directly.
+ * WEB/TV_EMBEDDED return cipher-scrambled URLs that need decipher().
+ */
+export const NO_CIPHER_CLIENTS = new Set<InnerTubeClient>([
+  "IOS",
+  "ANDROID",
+]);
 
 let innertubeInstance: Innertube | null = null;
 let platformPatched = false;
 
-/**
- * Patch the Platform shim with our custom JS evaluator.
- * Required for deciphering YouTube stream URLs.
- */
 function patchPlatform() {
   if (platformPatched) return;
   Platform.load({ ...Platform.shim, eval: evaluate });
@@ -32,28 +36,12 @@ function patchPlatform() {
 
 async function createInnertube(): Promise<Innertube> {
   patchPlatform();
-
-  let visitorData: string | undefined;
-  let poToken: string | undefined;
-
-  try {
-    const result = await getPoToken();
-    visitorData = result.visitorData;
-    poToken = result.poToken;
-  } catch (err) {
-    console.error(
-      "[innertube] PO token generation failed:",
-      err instanceof Error ? err.message : err
-    );
-  }
-
+  // retrieve_player: false — skip player script fetch (avoids bot-checked
+  // YouTube request at session creation time). IOS/ANDROID use pre-signed
+  // URLs so no player deciphering is needed.
   return Innertube.create({
-    retrieve_player: true,
+    retrieve_player: false,
     generate_session_locally: true,
-    enable_session_cache: true,
-    cache: new UniversalCache(true),
-    ...(visitorData ? { visitor_data: visitorData } : {}),
-    ...(poToken ? { po_token: poToken } : {}),
   });
 }
 
@@ -64,34 +52,21 @@ export async function getInnertube(): Promise<Innertube> {
   return innertubeInstance;
 }
 
-/**
- * Nuke the cached session + PO token and create fresh ones.
- * Call this when YouTube starts rejecting the current session.
- */
 export async function resetInnertube(): Promise<Innertube> {
-  invalidatePoToken();
   innertubeInstance = null;
   innertubeInstance = await createInnertube();
   return innertubeInstance;
 }
 
-/**
- * Run an async operation against the Innertube instance.
- * If every client type fails, reset the session (new PO token + visitor data)
- * and retry once.
- */
 export async function withSessionRetry<T>(
   operation: (yt: Innertube) => Promise<T>
 ): Promise<T> {
-  // First attempt with existing session
   try {
     const yt = await getInnertube();
     return await operation(yt);
   } catch {
-    // Noop — fall through to retry
+    // fall through
   }
-
-  // Second attempt with a completely fresh session + PO token
   console.log("[innertube] Retrying with fresh session");
   const yt = await resetInnertube();
   return operation(yt);
