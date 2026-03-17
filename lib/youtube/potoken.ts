@@ -1,4 +1,3 @@
-import { JSDOM } from "jsdom";
 import { BG } from "bgutils-js";
 import { Innertube } from "youtubei.js";
 
@@ -41,7 +40,9 @@ export async function getPoToken(): Promise<{
     };
   }
 
-  // Step 1: Shim browser globals via JSDOM for BotGuard
+  // Step 1: Shim browser globals via JSDOM for BotGuard.
+  // Dynamic import avoids ESM/CJS conflicts during Next.js build.
+  const { JSDOM } = await import("jsdom");
   const dom = new JSDOM(
     "<!DOCTYPE html><html><head></head><body></body></html>",
     {
