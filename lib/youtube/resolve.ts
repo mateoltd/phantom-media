@@ -1,8 +1,7 @@
 import { Innertube } from "youtubei.js";
 import type { QueryResult, VideoInfo } from "@/lib/types";
 import { SEARCH_RESULT_LIMIT } from "@/lib/constants";
-import { getInnertube } from "@/lib/youtube/client";
-import { resolveVideoWithYtDlp } from "@/lib/youtube/ytdlp";
+import { getInnertube, CLIENT_FALLBACK_ORDER } from "@/lib/youtube/client";
 
 // Extract video ID from URL or string
 function tryParseVideoId(query: string): string | null {
@@ -158,42 +157,70 @@ async function tryResolveVideo(
   const videoId = tryParseVideoId(query);
   if (!videoId) return null;
 
-  try {
-    return await resolveVideoWithYtDlp(videoId);
-  } catch {
+  // Try youtubei.js with multiple client types to bypass bot detection
+  const yt = await getInnertube();
+  for (const client of CLIENT_FALLBACK_ORDER) {
     try {
-      const url = new URL("https://www.youtube.com/oembed");
-      url.searchParams.set("url", `https://www.youtube.com/watch?v=${videoId}`);
-      url.searchParams.set("format", "json");
+      const info = await yt.getBasicInfo(videoId, { client });
+      const basic = info.basic_info;
 
-      const response = await fetch(url, { cache: "no-store" });
-      if (!response.ok) return null;
-
-      const data = (await response.json()) as {
-        title?: string;
-        author_name?: string;
-        thumbnail_url?: string;
-      };
-
-      if (!data.title) return null;
+      if (!basic?.title) continue;
 
       return {
         kind: "video",
-        title: data.title,
+        title: basic.title,
         videos: [
           {
-            id: videoId,
-            title: data.title,
-            author: data.author_name ?? "Unknown",
-            authorId: "",
-            duration: 0,
-            thumbnailUrl: data.thumbnail_url ?? thumbnailUrl(videoId),
+            id: basic.id ?? videoId,
+            title: basic.title,
+            author: basic.author ?? basic.channel?.name ?? "Unknown",
+            authorId: basic.channel_id ?? basic.channel?.id ?? "",
+            duration: basic.duration ?? 0,
+            thumbnailUrl:
+              basic.thumbnail?.[basic.thumbnail.length - 1]?.url ??
+              thumbnailUrl(videoId),
+            viewCount: basic.view_count ?? undefined,
           },
         ],
       };
     } catch {
-      return null;
+      // Try next client type
     }
+  }
+
+  // Final fallback: oEmbed (lightweight, usually not bot-checked)
+  try {
+    const url = new URL("https://www.youtube.com/oembed");
+    url.searchParams.set("url", `https://www.youtube.com/watch?v=${videoId}`);
+    url.searchParams.set("format", "json");
+
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as {
+      title?: string;
+      author_name?: string;
+      thumbnail_url?: string;
+    };
+
+    if (!data.title) return null;
+
+    return {
+      kind: "video",
+      title: data.title,
+      videos: [
+        {
+          id: videoId,
+          title: data.title,
+          author: data.author_name ?? "Unknown",
+          authorId: "",
+          duration: 0,
+          thumbnailUrl: data.thumbnail_url ?? thumbnailUrl(videoId),
+        },
+      ],
+    };
+  } catch {
+    return null;
   }
 }
 

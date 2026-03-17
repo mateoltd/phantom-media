@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { spawn } from "child_process";
-import { getYtDlpPath } from "@/lib/server/ytdlp";
+import { getInnertube, CLIENT_FALLBACK_ORDER } from "@/lib/youtube/client";
 
 export const runtime = "nodejs";
 
 /**
- * Lightweight URL resolver — spawns a single yt-dlp to get direct CDN URLs.
- * Much faster than /api/download which also proxies the full stream.
+ * Lightweight URL resolver — uses youtubei.js to get deciphered stream URLs.
  *
  * POST body: { videoId, formatSpec }
- *   formatSpec: yt-dlp format string like "137" or "137+140"
+ *   formatSpec: itag string like "137" or "137+140"
  *
  * Returns: { urls: string[] }
  */
@@ -34,41 +32,41 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function resolveUrls(
+async function resolveUrls(
   videoId: string,
   formatSpec: string
 ): Promise<string[]> {
-  return new Promise((resolve, reject) => {
-    const proc = spawn(getYtDlpPath(), [
-      "-g",
-      "-f",
-      formatSpec,
-      "--no-warnings",
-      `https://www.youtube.com/watch?v=${videoId}`,
-    ]);
+  const yt = await getInnertube();
+  const itags = formatSpec.split("+").map((s) => parseInt(s.trim(), 10));
 
-    let stdout = "";
-    let stderr = "";
+  for (const client of CLIENT_FALLBACK_ORDER) {
+    try {
+      const info = await yt.getBasicInfo(videoId, { client });
+      const streaming = info.streaming_data;
 
-    proc.stdout.on("data", (data) => (stdout += data.toString()));
-    proc.stderr.on("data", (data) => (stderr += data.toString()));
+      if (!streaming) continue;
 
-    proc.on("close", (code) => {
-      if (code !== 0) {
-        reject(new Error(stderr.trim() || `yt-dlp exited with code ${code}`));
-        return;
+      const allFormats = [
+        ...(streaming.formats ?? []),
+        ...(streaming.adaptive_formats ?? []),
+      ];
+
+      const urls: string[] = [];
+
+      for (const itag of itags) {
+        const format = allFormats.find((f) => f.itag === itag);
+        if (!format) continue;
+
+        // decipher() returns the decrypted URL
+        const url = await format.decipher(yt.session.player);
+        if (url) urls.push(url);
       }
-      const urls = stdout
-        .trim()
-        .split("\n")
-        .filter((u) => u.length > 0);
-      if (urls.length === 0) {
-        reject(new Error("No URLs returned by yt-dlp"));
-        return;
-      }
-      resolve(urls);
-    });
 
-    proc.on("error", (err) => reject(err));
-  });
+      if (urls.length > 0) return urls;
+    } catch {
+      // Try next client
+    }
+  }
+
+  throw new Error("No URLs could be resolved for the given format");
 }

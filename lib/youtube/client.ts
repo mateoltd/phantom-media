@@ -1,5 +1,20 @@
-import { Innertube, Platform } from "youtubei.js";
+import { Innertube, Platform, UniversalCache } from "youtubei.js";
+import type { Types } from "youtubei.js";
 import evaluate from "./evaluate";
+
+export type InnerTubeClient = Types.InnerTubeClient;
+
+/**
+ * Client types to try in order when fetching video info or downloading.
+ * WEB is the default; ANDROID/IOS/TV_EMBEDDED use different InnerTube
+ * endpoints that are often less aggressively bot-checked.
+ */
+export const CLIENT_FALLBACK_ORDER: InnerTubeClient[] = [
+  "WEB",
+  "ANDROID",
+  "TV_EMBEDDED",
+  "IOS",
+];
 
 let innertubeInstance: Innertube | null = null;
 let platformPatched = false;
@@ -19,6 +34,9 @@ export async function getInnertube(): Promise<Innertube> {
     patchPlatform();
     innertubeInstance = await Innertube.create({
       retrieve_player: true,
+      generate_session_locally: true,
+      enable_session_cache: true,
+      cache: new UniversalCache(true),
     });
   }
   return innertubeInstance;
