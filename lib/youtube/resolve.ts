@@ -1,7 +1,11 @@
 import { Innertube } from "youtubei.js";
 import type { QueryResult, VideoInfo } from "@/lib/types";
 import { SEARCH_RESULT_LIMIT } from "@/lib/constants";
-import { getInnertube, CLIENT_FALLBACK_ORDER } from "@/lib/youtube/client";
+import {
+  getInnertube,
+  CLIENT_FALLBACK_ORDER,
+  withSessionRetry,
+} from "@/lib/youtube/client";
 
 // Extract video ID from URL or string
 function tryParseVideoId(query: string): string | null {
@@ -157,35 +161,41 @@ async function tryResolveVideo(
   const videoId = tryParseVideoId(query);
   if (!videoId) return null;
 
-  // Try youtubei.js with multiple client types to bypass bot detection
-  const yt = await getInnertube();
-  for (const client of CLIENT_FALLBACK_ORDER) {
-    try {
-      const info = await yt.getBasicInfo(videoId, { client });
-      const basic = info.basic_info;
+  // Try youtubei.js with session retry (new PO token if stale)
+  try {
+    return await withSessionRetry(async (yt) => {
+      for (const client of CLIENT_FALLBACK_ORDER) {
+        try {
+          const info = await yt.getBasicInfo(videoId, { client });
+          const basic = info.basic_info;
 
-      if (!basic?.title) continue;
+          if (!basic?.title) continue;
 
-      return {
-        kind: "video",
-        title: basic.title,
-        videos: [
-          {
-            id: basic.id ?? videoId,
+          return {
+            kind: "video" as const,
             title: basic.title,
-            author: basic.author ?? basic.channel?.name ?? "Unknown",
-            authorId: basic.channel_id ?? basic.channel?.id ?? "",
-            duration: basic.duration ?? 0,
-            thumbnailUrl:
-              basic.thumbnail?.[basic.thumbnail.length - 1]?.url ??
-              thumbnailUrl(videoId),
-            viewCount: basic.view_count ?? undefined,
-          },
-        ],
-      };
-    } catch {
-      // Try next client type
-    }
+            videos: [
+              {
+                id: basic.id ?? videoId,
+                title: basic.title,
+                author: basic.author ?? basic.channel?.name ?? "Unknown",
+                authorId: basic.channel_id ?? basic.channel?.id ?? "",
+                duration: basic.duration ?? 0,
+                thumbnailUrl:
+                  basic.thumbnail?.[basic.thumbnail.length - 1]?.url ??
+                  thumbnailUrl(videoId),
+                viewCount: basic.view_count ?? undefined,
+              },
+            ],
+          };
+        } catch {
+          // Try next client type
+        }
+      }
+      throw new Error("All clients failed");
+    });
+  } catch {
+    // All innertube attempts failed — fall through to oEmbed
   }
 
   // Final fallback: oEmbed (lightweight, usually not bot-checked)

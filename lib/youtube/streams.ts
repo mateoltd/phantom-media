@@ -1,18 +1,27 @@
 import type { Container, DownloadOption } from "@/lib/types";
-import { getInnertube, CLIENT_FALLBACK_ORDER } from "@/lib/youtube/client";
-import type { Misc } from "youtubei.js";
+import {
+  CLIENT_FALLBACK_ORDER,
+  withSessionRetry,
+} from "@/lib/youtube/client";
+import type { Innertube, Misc } from "youtubei.js";
 
 type Format = Misc.Format;
 
 /**
  * Resolves all available download options using youtubei.js directly.
- * Tries multiple InnerTube client types to work around bot detection on
- * servers whose ASN range has been flagged by YouTube.
+ * Tries multiple InnerTube client types, and if every client fails it
+ * resets the session (new PO token) and retries once.
  */
 export async function resolveDownloadOptions(
   videoId: string
 ): Promise<DownloadOption[]> {
-  const yt = await getInnertube();
+  return withSessionRetry((yt) => tryAllClients(yt, videoId));
+}
+
+async function tryAllClients(
+  yt: Innertube,
+  videoId: string
+): Promise<DownloadOption[]> {
   let lastError: Error | null = null;
 
   for (const client of CLIENT_FALLBACK_ORDER) {
@@ -32,7 +41,6 @@ export async function resolveDownloadOptions(
       return buildDownloadOptions(allFormats);
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
-      // Try next client type
     }
   }
 

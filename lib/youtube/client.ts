@@ -1,7 +1,7 @@
 import { Innertube, Platform, UniversalCache } from "youtubei.js";
 import type { Types } from "youtubei.js";
 import evaluate from "./evaluate";
-import { getPoToken } from "./potoken";
+import { getPoToken, invalidatePoToken } from "./potoken";
 
 export type InnerTubeClient = Types.InnerTubeClient;
 
@@ -30,42 +30,69 @@ function patchPlatform() {
   platformPatched = true;
 }
 
+async function createInnertube(): Promise<Innertube> {
+  patchPlatform();
+
+  let visitorData: string | undefined;
+  let poToken: string | undefined;
+
+  try {
+    const result = await getPoToken();
+    visitorData = result.visitorData;
+    poToken = result.poToken;
+  } catch (err) {
+    console.error(
+      "[innertube] PO token generation failed:",
+      err instanceof Error ? err.message : err
+    );
+  }
+
+  return Innertube.create({
+    retrieve_player: true,
+    generate_session_locally: true,
+    enable_session_cache: true,
+    cache: new UniversalCache(true),
+    ...(visitorData ? { visitor_data: visitorData } : {}),
+    ...(poToken ? { po_token: poToken } : {}),
+  });
+}
+
 export async function getInnertube(): Promise<Innertube> {
   if (!innertubeInstance) {
-    patchPlatform();
-
-    // Generate a full BotGuard-attested PO token to bypass YouTube's
-    // "Sign in to confirm you're not a bot" check on flagged ASN ranges.
-    let visitorData: string | undefined;
-    let poToken: string | undefined;
-
-    try {
-      const result = await getPoToken();
-      visitorData = result.visitorData;
-      poToken = result.poToken;
-      console.log(
-        `[innertube] PO token generated (length=${poToken.length})`
-      );
-    } catch (err) {
-      console.error(
-        "[innertube] PO token generation failed, continuing without:",
-        err instanceof Error ? err.message : err
-      );
-    }
-
-    innertubeInstance = await Innertube.create({
-      retrieve_player: true,
-      generate_session_locally: true,
-      enable_session_cache: true,
-      cache: new UniversalCache(true),
-      ...(visitorData ? { visitor_data: visitorData } : {}),
-      ...(poToken ? { po_token: poToken } : {}),
-    });
+    innertubeInstance = await createInnertube();
   }
   return innertubeInstance;
 }
 
+/**
+ * Nuke the cached session + PO token and create fresh ones.
+ * Call this when YouTube starts rejecting the current session.
+ */
 export async function resetInnertube(): Promise<Innertube> {
+  invalidatePoToken();
   innertubeInstance = null;
-  return getInnertube();
+  innertubeInstance = await createInnertube();
+  return innertubeInstance;
+}
+
+/**
+ * Run an async operation against the Innertube instance.
+ * If every client type fails, reset the session (new PO token + visitor data)
+ * and retry once.
+ */
+export async function withSessionRetry<T>(
+  operation: (yt: Innertube) => Promise<T>
+): Promise<T> {
+  // First attempt with existing session
+  try {
+    const yt = await getInnertube();
+    return await operation(yt);
+  } catch {
+    // Noop — fall through to retry
+  }
+
+  // Second attempt with a completely fresh session + PO token
+  console.log("[innertube] Retrying with fresh session");
+  const yt = await resetInnertube();
+  return operation(yt);
 }

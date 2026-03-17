@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getInnertube, CLIENT_FALLBACK_ORDER } from "@/lib/youtube/client";
+import {
+  CLIENT_FALLBACK_ORDER,
+  withSessionRetry,
+} from "@/lib/youtube/client";
+import type { Innertube } from "youtubei.js";
 
 export const runtime = "nodejs";
 
@@ -22,7 +26,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const urls = await resolveUrls(videoId, formatSpec);
+    const urls = await withSessionRetry((yt) =>
+      resolveUrls(yt, videoId, formatSpec)
+    );
     return NextResponse.json({ urls });
   } catch (error) {
     console.error("stream-urls error:", error);
@@ -33,10 +39,10 @@ export async function POST(request: NextRequest) {
 }
 
 async function resolveUrls(
+  yt: Innertube,
   videoId: string,
   formatSpec: string
 ): Promise<string[]> {
-  const yt = await getInnertube();
   const itags = formatSpec.split("+").map((s) => parseInt(s.trim(), 10));
 
   for (const client of CLIENT_FALLBACK_ORDER) {
@@ -57,7 +63,6 @@ async function resolveUrls(
         const format = allFormats.find((f) => f.itag === itag);
         if (!format) continue;
 
-        // decipher() returns the decrypted URL
         const url = await format.decipher(yt.session.player);
         if (url) urls.push(url);
       }

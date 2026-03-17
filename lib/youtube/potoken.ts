@@ -13,6 +13,14 @@ interface PoTokenData {
 let cachedToken: PoTokenData | null = null;
 
 /**
+ * Force-expire the cached PO token so the next call to getPoToken()
+ * generates a fresh one. Call this when YouTube rejects the current token.
+ */
+export function invalidatePoToken(): void {
+  cachedToken = null;
+}
+
+/**
  * Generate a full BotGuard-attested PO (Proof of Origin) token.
  *
  * Uses JSDOM to simulate a browser environment, then runs Google's BotGuard
