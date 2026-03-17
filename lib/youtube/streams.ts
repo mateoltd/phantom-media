@@ -7,15 +7,46 @@ import type { Innertube, Misc } from "youtubei.js";
 
 type Format = Misc.Format;
 
+// Server-side cache: videoId → { options, expiresAt }
+// Dramatically reduces YouTube API calls for repeated requests
+const streamCache = new Map<
+  string,
+  { options: DownloadOption[]; expiresAt: number }
+>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 /**
  * Resolves all available download options using youtubei.js directly.
- * Tries multiple InnerTube client types, and if every client fails it
- * resets the session (new PO token) and retries once.
+ * Results are cached server-side to reduce YouTube API pressure.
  */
 export async function resolveDownloadOptions(
   videoId: string
 ): Promise<DownloadOption[]> {
-  return withSessionRetry((yt) => tryAllClients(yt, videoId));
+  // Check cache first
+  const cached = streamCache.get(videoId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.options;
+  }
+
+  const options = await withSessionRetry((yt) => tryAllClients(yt, videoId));
+
+  // Cache successful results
+  streamCache.set(videoId, {
+    options,
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  });
+
+  // Prune old entries periodically (keep cache size bounded)
+  if (streamCache.size > 100) {
+    const now = Date.now();
+    for (const [key, value] of streamCache) {
+      if (value.expiresAt < now) {
+        streamCache.delete(key);
+      }
+    }
+  }
+
+  return options;
 }
 
 async function tryAllClients(

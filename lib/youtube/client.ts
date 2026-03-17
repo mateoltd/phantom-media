@@ -7,18 +7,14 @@ export type InnerTubeClient = Types.InnerTubeClient;
 /**
  * IOS client first: returns pre-signed direct URLs, no PO token required,
  * minimal bot detection. Mirrors cobalt.tools' production strategy.
- * WEB is last resort (needs player + PO token for URL deciphering).
  */
 export const CLIENT_FALLBACK_ORDER: InnerTubeClient[] = [
   "IOS",
   "ANDROID",
-  "TV_EMBEDDED",
-  "WEB",
 ];
 
 /**
  * These clients return pre-signed URLs — use format.url directly.
- * WEB/TV_EMBEDDED return cipher-scrambled URLs that need decipher().
  */
 export const NO_CIPHER_CLIENTS = new Set<InnerTubeClient>([
   "IOS",
@@ -26,7 +22,15 @@ export const NO_CIPHER_CLIENTS = new Set<InnerTubeClient>([
 ]);
 
 let innertubeInstance: Innertube | null = null;
+let innertubePromise: Promise<Innertube> | null = null;
 let platformPatched = false;
+
+// Mutex to prevent concurrent session resets (thundering herd)
+let resetLock: Promise<Innertube> | null = null;
+
+// Cooldown: don't reset more than once per 5 seconds
+let lastResetTime = 0;
+const RESET_COOLDOWN_MS = 5000;
 
 function patchPlatform() {
   if (platformPatched) return;
@@ -36,9 +40,6 @@ function patchPlatform() {
 
 async function createInnertube(): Promise<Innertube> {
   patchPlatform();
-  // retrieve_player: false — skip player script fetch (avoids bot-checked
-  // YouTube request at session creation time). IOS/ANDROID use pre-signed
-  // URLs so no player deciphering is needed.
   return Innertube.create({
     retrieve_player: false,
     generate_session_locally: true,
@@ -46,16 +47,51 @@ async function createInnertube(): Promise<Innertube> {
 }
 
 export async function getInnertube(): Promise<Innertube> {
-  if (!innertubeInstance) {
-    innertubeInstance = await createInnertube();
+  // If instance exists, return it
+  if (innertubeInstance) {
+    return innertubeInstance;
   }
-  return innertubeInstance;
+  // If creation is in progress, wait for it (prevents duplicate creation)
+  if (innertubePromise) {
+    return innertubePromise;
+  }
+  // Create new instance
+  innertubePromise = createInnertube();
+  try {
+    innertubeInstance = await innertubePromise;
+    return innertubeInstance;
+  } finally {
+    innertubePromise = null;
+  }
 }
 
 export async function resetInnertube(): Promise<Innertube> {
-  innertubeInstance = null;
-  innertubeInstance = await createInnertube();
-  return innertubeInstance;
+  // If a reset is already in progress, wait for it instead of starting another
+  if (resetLock) {
+    return resetLock;
+  }
+
+  // Respect cooldown to avoid hammering YouTube
+  const now = Date.now();
+  if (now - lastResetTime < RESET_COOLDOWN_MS && innertubeInstance) {
+    return innertubeInstance;
+  }
+
+  // Acquire the lock
+  resetLock = (async () => {
+    innertubeInstance = null;
+    innertubePromise = null;
+    lastResetTime = Date.now();
+    const yt = await createInnertube();
+    innertubeInstance = yt;
+    return yt;
+  })();
+
+  try {
+    return await resetLock;
+  } finally {
+    resetLock = null;
+  }
 }
 
 export async function withSessionRetry<T>(
@@ -65,7 +101,7 @@ export async function withSessionRetry<T>(
     const yt = await getInnertube();
     return await operation(yt);
   } catch {
-    // fall through
+    // fall through to retry
   }
   console.log("[innertube] Retrying with fresh session");
   const yt = await resetInnertube();
