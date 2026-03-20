@@ -30,3 +30,22 @@ export const PROXY_ALLOWED_DOMAINS = [
 ];
 
 export const SEARCH_RESULT_LIMIT = 20;
+
+// WebSocket Bridge Configuration
+export const WS_BRIDGE_ENABLED = true;
+export const WS_SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
+export const WS_MAX_SESSIONS_PER_IP = 3;
+export const WS_MAX_BYTES_PER_SESSION = 2 * 1024 * 1024 * 1024; // 2GB
+export const WS_PING_INTERVAL_MS = 30 * 1000; // 30 seconds
+export const WS_COMMAND_MAX_AGE_MS = 60 * 1000; // 60 seconds
+export const WS_MAX_CONCURRENT_FETCHES = 4;
+export const WS_CHUNK_SIZE = 256 * 1024; // 256KB chunks
+export const WS_TEMP_FILE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+// Allowed domains for WebSocket bridge fetch commands
+export const WS_BRIDGE_ALLOWED_DOMAINS = [
+  "googlevideo.com",
+  "youtube.com",
+  "ytimg.com",
+  "ggpht.com",
+];

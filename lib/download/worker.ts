@@ -1,9 +1,11 @@
 import { muxStreams } from "@/lib/ffmpeg/muxer";
-import type { DownloadOption } from "@/lib/types";
+import type { DownloadOption, DownloadStatus } from "@/lib/types";
+import { BridgeDownload, triggerDownload as triggerBridgeDownload } from "@/lib/ws-bridge/bridge-download";
+import { WS_BRIDGE_ENABLED } from "@/lib/constants";
 
 export interface DownloadWorkerCallbacks {
   onProgress: (progress: number) => void;
-  onStatusChange: (status: "started" | "completed" | "failed") => void;
+  onStatusChange: (status: DownloadStatus) => void;
   onError: (message: string) => void;
   signal: AbortSignal;
 }
@@ -12,14 +14,24 @@ export interface DownloadWorkerCallbacks {
  * Orchestrates a single download using yt-dlp's built-in download + pipe.
  * yt-dlp handles YouTube's throttling internally (range requests, retries),
  * which is dramatically faster than fetching raw CDN URLs.
+ *
+ * If useBridge is true, uses the WebSocket bridge for downloads (bypasses
+ * server IP blocking by having the browser fetch directly from YouTube).
  */
 export async function executeDownload(
   option: DownloadOption,
   videoId: string,
   fileName: string,
-  callbacks: DownloadWorkerCallbacks
+  callbacks: DownloadWorkerCallbacks,
+  useBridge: boolean = false
 ): Promise<void> {
   const { onProgress, onStatusChange, onError, signal } = callbacks;
+
+  // Use WebSocket bridge if enabled and requested
+  if (useBridge && WS_BRIDGE_ENABLED) {
+    await executeDownloadViaBridge(option, videoId, fileName, callbacks);
+    return;
+  }
 
   try {
     onStatusChange("started");
@@ -40,6 +52,60 @@ export async function executeDownload(
     onError(message);
     onStatusChange("failed");
   }
+}
+
+/**
+ * Execute download via WebSocket bridge.
+ * Browser fetches from YouTube CDN and streams to server for muxing.
+ */
+async function executeDownloadViaBridge(
+  option: DownloadOption,
+  videoId: string,
+  fileName: string,
+  callbacks: DownloadWorkerCallbacks
+): Promise<void> {
+  const { onProgress, onStatusChange, onError, signal } = callbacks;
+
+  return new Promise((resolve) => {
+    let resolved = false;
+    const finish = () => {
+      if (!resolved) {
+        resolved = true;
+        resolve();
+      }
+    };
+
+    const bridge = new BridgeDownload({
+      onStatusChange: (status) => {
+        onStatusChange(status);
+        if (status === "completed" || status === "failed") {
+          finish();
+        }
+      },
+      onProgress,
+      onError: (message) => {
+        onError(message);
+        // Ensure we resolve even if status change doesn't fire
+        setTimeout(finish, 100);
+      },
+      onComplete: (blob, outputFileName) => {
+        triggerBridgeDownload(blob, outputFileName || fileName);
+      },
+    });
+
+    // Handle abort
+    signal.addEventListener("abort", () => {
+      bridge.abort();
+      finish();
+    });
+
+    // Start the download with error handling
+    bridge.start(videoId, option.id, fileName).catch((err) => {
+      onError(err instanceof Error ? err.message : "Bridge failed to start");
+      onStatusChange("failed");
+      finish();
+    });
+  });
 }
 
 /**

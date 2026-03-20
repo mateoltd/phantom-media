@@ -22,6 +22,9 @@
 .DS_Store
 *.pem
 
+# internal docs (not for VCS)
+/.internal/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

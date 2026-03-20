@@ -21,7 +21,12 @@ export function processQueue(): void {
     const { downloads, parallelLimit, updateDownload } = state;
 
     const activeCount = downloads.filter(
-      (d) => d.status === "started"
+      (d) =>
+        d.status === "started" ||
+        d.status === "bridging" ||
+        d.status === "uploading" ||
+        d.status === "server_muxing" ||
+        d.status === "receiving"
     ).length;
     const enqueued = downloads.filter((d) => d.status === "enqueued");
 
@@ -69,22 +74,28 @@ function startDownload(
     }
   });
 
-  executeDownload(item.option, item.video.id, item.fileName, {
-    onProgress: (progress) => {
-      updateDownload(item.id, { progress });
+  executeDownload(
+    item.option,
+    item.video.id,
+    item.fileName,
+    {
+      onProgress: (progress) => {
+        updateDownload(item.id, { progress });
+      },
+      onStatusChange: (status) => {
+        updateDownload(item.id, { status });
+        if (status === "completed" || status === "failed") {
+          activeDownloads.delete(item.id);
+          unsubscribe();
+        }
+      },
+      onError: (message) => {
+        updateDownload(item.id, { errorMessage: message });
+      },
+      signal: controller.signal,
     },
-    onStatusChange: (status) => {
-      updateDownload(item.id, { status });
-      if (status === "completed" || status === "failed") {
-        activeDownloads.delete(item.id);
-        unsubscribe();
-      }
-    },
-    onError: (message) => {
-      updateDownload(item.id, { errorMessage: message });
-    },
-    signal: controller.signal,
-  });
+    item.useBridge ?? false
+  );
 }
 
 /**

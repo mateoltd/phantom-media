@@ -6,9 +6,7 @@ import { VideoList } from "./video-list";
 import { QUALITY_PRESETS, CONTAINER_OPTIONS } from "@/lib/constants";
 import { useSettings } from "@/hooks/use-settings";
 import { IconX, IconAlertTriangle, IconExternalLink } from "@tabler/icons-react";
-
-// Temporary restriction flag - YouTube is blocking server-side downloads
-const DOWNLOADS_RESTRICTED = true;
+import { DOWNLOADS_RESTRICTED } from "@/lib/config";
 
 interface BatchDownloadDialogProps {
   title: string;

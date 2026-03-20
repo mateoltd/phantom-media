@@ -20,6 +20,10 @@ export type QueryResultKind =
 export type DownloadStatus =
   | "enqueued"
   | "started"
+  | "bridging"      // WebSocket bridge connecting
+  | "uploading"     // Browser fetching, uploading to server
+  | "server_muxing" // Server muxing video+audio
+  | "receiving"     // Receiving muxed output from server
   | "completed"
   | "failed"
   | "canceled";
@@ -105,6 +109,10 @@ export interface DownloadItem {
   progress: number; // 0-1
   errorMessage?: string;
   fileName: string;
+  // WebSocket bridge fields
+  wsSessionId?: string;
+  wsDownloadId?: string;
+  useBridge?: boolean;
 }
 
 export function isAudioOnlyContainer(container: Container): boolean {

@@ -12,6 +12,7 @@ import type {
 } from "@/lib/types";
 import { DEFAULT_PARALLEL_LIMIT } from "@/lib/constants";
 import { generateId, generateFileName } from "@/lib/utils";
+import { USE_WS_BRIDGE } from "@/lib/config";
 
 export interface DownloadStoreState {
   // Downloads
@@ -62,6 +63,7 @@ export const useDownloadStore = create<DownloadStoreState>()(
           status: "enqueued",
           progress: 0,
           fileName: generateFileName(video.title, option.container, index),
+          useBridge: USE_WS_BRIDGE,
         };
         set((state) => ({
           downloads: [...state.downloads, item],
@@ -123,7 +125,13 @@ export const useDownloadStore = create<DownloadStoreState>()(
       cancelDownload: (id) => {
         set((state) => ({
           downloads: state.downloads.map((d) =>
-            d.id === id && (d.status === "enqueued" || d.status === "started")
+            d.id === id &&
+            (d.status === "enqueued" ||
+              d.status === "started" ||
+              d.status === "bridging" ||
+              d.status === "uploading" ||
+              d.status === "server_muxing" ||
+              d.status === "receiving")
               ? { ...d, status: "canceled" as DownloadStatus }
               : d
           ),
@@ -133,7 +141,12 @@ export const useDownloadStore = create<DownloadStoreState>()(
       cancelAllDownloads: () => {
         set((state) => ({
           downloads: state.downloads.map((d) =>
-            d.status === "enqueued" || d.status === "started"
+            d.status === "enqueued" ||
+            d.status === "started" ||
+            d.status === "bridging" ||
+            d.status === "uploading" ||
+            d.status === "server_muxing" ||
+            d.status === "receiving"
               ? { ...d, status: "canceled" as DownloadStatus }
               : d
           ),

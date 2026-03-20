@@ -9,9 +9,7 @@ import {
   IconExternalLink,
   IconSettings,
 } from "@tabler/icons-react";
-
-// Temporary restriction flag - YouTube is blocking server-side downloads
-const DOWNLOADS_RESTRICTED = true;
+import { DOWNLOADS_RESTRICTED } from "@/lib/config";
 import { BatchDownloadDialog } from "@/components/batch-download-dialog";
 import { DownloadOptionsDialog } from "@/components/download-options-dialog";
 import { DownloadQueue } from "@/components/download-queue";

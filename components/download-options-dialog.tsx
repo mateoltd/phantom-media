@@ -5,9 +5,7 @@ import type { VideoInfo, DownloadOption } from "@/lib/types";
 import { formatFileSize, containerDisplayName } from "@/lib/types";
 import { useStreams } from "@/hooks/use-youtube";
 import { IconX, IconAlertTriangle, IconExternalLink } from "@tabler/icons-react";
-
-// Temporary restriction flag - YouTube is blocking server-side downloads
-const DOWNLOADS_RESTRICTED = true;
+import { DOWNLOADS_RESTRICTED } from "@/lib/config";
 
 interface DownloadOptionsDialogProps {
   video: VideoInfo;
