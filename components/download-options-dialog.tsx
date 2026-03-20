@@ -4,7 +4,10 @@ import { useState, useEffect } from "react";
 import type { VideoInfo, DownloadOption } from "@/lib/types";
 import { formatFileSize, containerDisplayName } from "@/lib/types";
 import { useStreams } from "@/hooks/use-youtube";
-import { IconX, IconAlertTriangle } from "@tabler/icons-react";
+import { IconX, IconAlertTriangle, IconExternalLink } from "@tabler/icons-react";
+
+// Temporary restriction flag - YouTube is blocking server-side downloads
+const DOWNLOADS_RESTRICTED = true;
 
 interface DownloadOptionsDialogProps {
   video: VideoInfo;
@@ -23,7 +26,7 @@ export function DownloadOptionsDialog({
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) {
+    if (open && !DOWNLOADS_RESTRICTED) {
       fetchStreams(video.id);
       setSelectedId(null);
     }
@@ -77,73 +80,106 @@ export function DownloadOptionsDialog({
 
         {/* Content */}
         <div className="max-h-[50vh] overflow-y-auto p-4">
-          {loading && (
-            <div className="flex flex-col items-center gap-3 py-8">
-              <div className="overflow-hidden rounded-full bg-white/[0.05]">
-                <div
-                  className="h-[3px] w-1/5 rounded-full bg-phantom/50"
-                  style={{ animation: "progress-slide 1.5s ease-in-out infinite" }}
-                />
+          {DOWNLOADS_RESTRICTED ? (
+            <div className="flex flex-col items-center gap-4 py-6 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10 text-amber-500">
+                <IconAlertTriangle size={24} stroke={1.8} />
               </div>
-              <p className="text-[12px] text-text-tertiary">
-                Loading download options...
-              </p>
-            </div>
-          )}
-
-          {error && (
-            <div className="flex flex-col items-center gap-2 py-6 text-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-error/10 text-error">
-                <IconAlertTriangle size={20} stroke={1.8} />
+              <div className="space-y-2">
+                <h4 className="text-[15px] font-semibold text-text">
+                  Downloads Temporarily Unavailable
+                </h4>
+                <p className="text-[13px] leading-relaxed text-text-secondary">
+                  YouTube has recently implemented new restrictions that are affecting
+                  download services. We are actively working on a solution.
+                </p>
               </div>
-              <p className="text-[13px] text-error">{error}</p>
+              <div className="mt-2 rounded-lg bg-white/[0.03] px-4 py-3">
+                <p className="text-[12px] text-text-tertiary">
+                  In the meantime, you can use{" "}
+                  <a
+                    href="https://github.com/yt-dlp/yt-dlp"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-phantom hover:underline"
+                  >
+                    yt-dlp
+                    <IconExternalLink size={12} />
+                  </a>
+                </p>
+              </div>
             </div>
-          )}
-
-          {!loading && !error && options.length > 0 && (
-            <div className="flex flex-col gap-4">
-              {/* Video options */}
-              {videoOptions.length > 0 && (
-                <div>
-                  <div className="mb-2 px-1">
-                    <span className="text-[11px] font-medium text-text-tertiary">
-                      Video
-                    </span>
+          ) : (
+            <>
+              {loading && (
+                <div className="flex flex-col items-center gap-3 py-8">
+                  <div className="overflow-hidden rounded-full bg-white/[0.05]">
+                    <div
+                      className="h-[3px] w-1/5 rounded-full bg-phantom/50"
+                      style={{ animation: "progress-slide 1.5s ease-in-out infinite" }}
+                    />
                   </div>
-                  <div className="space-y-px">
-                    {videoOptions.map((opt) => (
-                      <OptionRow
-                        key={opt.id}
-                        option={opt}
-                        selected={selectedId === opt.id}
-                        onSelect={() => setSelectedId(opt.id)}
-                      />
-                    ))}
-                  </div>
+                  <p className="text-[12px] text-text-tertiary">
+                    Loading download options...
+                  </p>
                 </div>
               )}
 
-              {/* Audio options */}
-              {audioOptions.length > 0 && (
-                <div>
-                  <div className="mb-2 px-1">
-                    <span className="text-[11px] font-medium text-text-tertiary">
-                      Audio Only
-                    </span>
+              {error && (
+                <div className="flex flex-col items-center gap-2 py-6 text-center">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-error/10 text-error">
+                    <IconAlertTriangle size={20} stroke={1.8} />
                   </div>
-                  <div className="space-y-px">
-                    {audioOptions.map((opt) => (
-                      <OptionRow
-                        key={opt.id}
-                        option={opt}
-                        selected={selectedId === opt.id}
-                        onSelect={() => setSelectedId(opt.id)}
-                      />
-                    ))}
-                  </div>
+                  <p className="text-[13px] text-error">{error}</p>
                 </div>
               )}
-            </div>
+
+              {!loading && !error && options.length > 0 && (
+                <div className="flex flex-col gap-4">
+                  {/* Video options */}
+                  {videoOptions.length > 0 && (
+                    <div>
+                      <div className="mb-2 px-1">
+                        <span className="text-[11px] font-medium text-text-tertiary">
+                          Video
+                        </span>
+                      </div>
+                      <div className="space-y-px">
+                        {videoOptions.map((opt) => (
+                          <OptionRow
+                            key={opt.id}
+                            option={opt}
+                            selected={selectedId === opt.id}
+                            onSelect={() => setSelectedId(opt.id)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Audio options */}
+                  {audioOptions.length > 0 && (
+                    <div>
+                      <div className="mb-2 px-1">
+                        <span className="text-[11px] font-medium text-text-tertiary">
+                          Audio Only
+                        </span>
+                      </div>
+                      <div className="space-y-px">
+                        {audioOptions.map((opt) => (
+                          <OptionRow
+                            key={opt.id}
+                            option={opt}
+                            selected={selectedId === opt.id}
+                            onSelect={() => setSelectedId(opt.id)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -153,18 +189,20 @@ export function DownloadOptionsDialog({
             onClick={onClose}
             className="rounded-lg px-4 py-2 text-[13px] text-text-tertiary transition-colors hover:bg-white/[0.03] hover:text-text-secondary"
           >
-            Cancel
+            {DOWNLOADS_RESTRICTED ? "Close" : "Cancel"}
           </button>
-          <button
-            onClick={() => {
-              if (!selectedOption) return;
-              onDownload(video, selectedOption);
-            }}
-            disabled={!selectedOption || loading}
-            className="rounded-lg bg-phantom px-4 py-2 text-[13px] font-semibold text-white transition-all hover:bg-phantom-dark active:scale-[0.97] disabled:opacity-30"
-          >
-            Download
-          </button>
+          {!DOWNLOADS_RESTRICTED && (
+            <button
+              onClick={() => {
+                if (!selectedOption) return;
+                onDownload(video, selectedOption);
+              }}
+              disabled={!selectedOption || loading}
+              className="rounded-lg bg-phantom px-4 py-2 text-[13px] font-semibold text-white transition-all hover:bg-phantom-dark active:scale-[0.97] disabled:opacity-30"
+            >
+              Download
+            </button>
+          )}
         </div>
       </div>
     </div>
