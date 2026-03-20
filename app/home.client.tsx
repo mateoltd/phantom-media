@@ -3,10 +3,15 @@
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import {
+  IconAlertTriangle,
   IconArrowLeft,
   IconDownload,
+  IconExternalLink,
   IconSettings,
 } from "@tabler/icons-react";
+
+// Temporary restriction flag - YouTube is blocking server-side downloads
+const DOWNLOADS_RESTRICTED = true;
 import { BatchDownloadDialog } from "@/components/batch-download-dialog";
 import { DownloadOptionsDialog } from "@/components/download-options-dialog";
 import { DownloadQueue } from "@/components/download-queue";
@@ -239,6 +244,35 @@ export default function HomePageClient() {
           <Navbar onSettingsClick={() => setSettingsOpen(true)} />
 
           <div className="mx-auto w-full max-w-5xl flex-1 px-4 sm:px-6 lg:px-8">
+            {DOWNLOADS_RESTRICTED && (
+              <div className="mx-auto mb-6 max-w-xl">
+                <div className="flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+                  <IconAlertTriangle
+                    size={18}
+                    stroke={1.8}
+                    className="mt-0.5 shrink-0 text-amber-500"
+                  />
+                  <div className="space-y-1">
+                    <p className="text-[13px] font-medium text-text">
+                      Downloads Temporarily Unavailable
+                    </p>
+                    <p className="text-[12px] leading-relaxed text-text-secondary">
+                      YouTube has implemented new restrictions affecting download services.
+                      We are working on a solution. In the meantime, you can use{" "}
+                      <a
+                        href="https://github.com/yt-dlp/yt-dlp"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-phantom hover:underline"
+                      >
+                        yt-dlp
+                        <IconExternalLink size={11} />
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             <SearchBar
               onSubmit={handleSubmit}
               loading={loading}
