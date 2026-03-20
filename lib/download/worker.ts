@@ -9,9 +9,9 @@ export interface DownloadWorkerCallbacks {
 }
 
 /**
- * Orchestrates a single download.
- * Flow: 1) Get CDN URL from server, 2) Download via client-side proxy
- * This avoids YouTube's server-IP blocking by having the client fetch.
+ * Orchestrates a single download using yt-dlp's built-in download + pipe.
+ * yt-dlp handles YouTube's throttling internally (range requests, retries),
+ * which is dramatically faster than fetching raw CDN URLs.
  */
 export async function executeDownload(
   option: DownloadOption,
@@ -43,42 +43,26 @@ export async function executeDownload(
 }
 
 /**
- * Get the YouTube CDN URL from our server, then fetch via client-side proxy.
- * Server resolves URL (IOS client), client downloads (avoids IP blocking).
+ * Fetch a stream from the yt-dlp download endpoint with progress tracking.
+ * yt-dlp pipes the download directly to stdout, handling throttle avoidance.
  */
 async function fetchStream(
   videoId: string,
-  formatSpec: string,
+  params: Record<string, string>,
   expectedSize: number,
   onProgress: (downloaded: number, total: number) => void,
   signal: AbortSignal
 ): Promise<Blob> {
-  // Step 1: Get CDN URL from server
-  const urlResponse = await fetch("/api/stream-urls", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ videoId, formatSpec }),
-    signal,
-  });
-
-  if (!urlResponse.ok) {
-    const data = await urlResponse.json().catch(() => ({}));
-    throw new Error(data.error ?? `Failed to get stream URL: ${urlResponse.status}`);
+  const url = new URL("/api/download", window.location.origin);
+  url.searchParams.set("videoId", videoId);
+  for (const [k, v] of Object.entries(params)) {
+    url.searchParams.set(k, v);
   }
 
-  const { urls } = await urlResponse.json();
-  if (!urls || urls.length === 0) {
-    throw new Error("No stream URL returned");
-  }
-
-  const cdnUrl = urls[0];
-
-  // Step 2: Download via client-side proxy (avoids server IP blocking)
-  const proxyUrl = `/api/proxy?url=${encodeURIComponent(cdnUrl)}`;
-  const response = await fetch(proxyUrl, { signal });
-
+  const response = await fetch(url.toString(), { signal });
   if (!response.ok) {
-    throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+    const text = await response.text();
+    throw new Error(`Download failed: ${text || response.statusText}`);
   }
 
   const contentLength = parseInt(
@@ -124,9 +108,13 @@ async function downloadDirect(
     throw new Error("Missing format selector");
   }
 
+  const params: Record<string, string> = {
+    formatSpec,
+  };
+
   const blob = await fetchStream(
     videoId,
-    formatSpec,
+    params,
     option.totalSize,
     (downloaded, total) => {
       onProgress(total > 0 ? downloaded / total : 0);
@@ -171,11 +159,13 @@ async function downloadAndMux(
     }
   };
 
-  // Download video + audio in parallel (progress: 0-60%)
+  // Download video + audio in parallel via yt-dlp pipe (progress: 0-60%)
   const [videoBlob, audioBlob] = await Promise.all([
     fetchStream(
       videoId,
-      videoFormatSpec,
+      {
+        formatSpec: videoFormatSpec,
+      },
       videoSize,
       (downloaded, total) => {
         videoDownloaded = downloaded;
@@ -189,7 +179,9 @@ async function downloadAndMux(
     ),
     fetchStream(
       videoId,
-      audioFormatSpec,
+      {
+        formatSpec: audioFormatSpec,
+      },
       audioSize,
       (downloaded, total) => {
         audioDownloaded = downloaded;
@@ -231,7 +223,9 @@ async function downloadAndConvertAudio(
 
   const blob = await fetchStream(
     videoId,
-    formatSpec,
+    {
+      formatSpec,
+    },
     option.totalSize,
     (downloaded, total) => {
       onProgress(total > 0 ? (downloaded / total) * 0.6 : 0);
