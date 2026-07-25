@@ -55,8 +55,41 @@ export interface SearchFieldProps {
   onSuggestionPrefetch?: (suggestion: SearchSuggestion) => void;
   /** Landscape thumbnails for video, 2:3 for posters. */
   thumbnail?: "video" | "poster" | "none";
+  /**
+   * `compact` takes twelve pixels off the pill and scales what sits inside it
+   * to match. For a field in a bar, where the height it costs is height the
+   * page below it does not get; `default` is the one that stands on its own in
+   * a hero and must not change.
+   */
+  size?: "default" | "compact";
   className?: string;
 }
+
+/** Every measurement that differs between the two, in one place. */
+const SIZES = {
+  default: {
+    form: "h-[52px] pl-4 pr-1.5 sm:h-14",
+    icon: 19,
+    input: "px-2.5 text-[15px] sm:px-3",
+    accessory: "h-9 w-9",
+    accessoryIcon: 16,
+    pasteIcon: 18,
+    submit: "h-10 w-10",
+    submitIcon: 19,
+    spinner: "h-4 w-4",
+  },
+  compact: {
+    form: "h-11 pl-3.5 pr-1",
+    icon: 17,
+    input: "px-2 text-[14px] sm:px-2.5",
+    accessory: "h-8 w-8",
+    accessoryIcon: 15,
+    pasteIcon: 16,
+    submit: "h-9 w-9",
+    submitIcon: 17,
+    spinner: "h-3.5 w-3.5",
+  },
+} as const;
 
 /**
  * The one search field in the Phantom system. It is rounded because every
@@ -80,8 +113,10 @@ export function SearchField({
   onSuggestionSelect,
   onSuggestionPrefetch,
   thumbnail = "video",
+  size = "default",
   className = "",
 }: SearchFieldProps) {
+  const metrics = SIZES[size];
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
@@ -204,9 +239,13 @@ export function SearchField({
             setOpen(false);
           }
         }}
-        className="search-pill flex h-[52px] items-center gap-1 pl-4 pr-1.5 sm:h-14"
+        className={`search-pill flex items-center gap-1 ${metrics.form}`}
       >
-        <IconSearch size={19} stroke={2} className="shrink-0 text-text-secondary" />
+        <IconSearch
+          size={metrics.icon}
+          stroke={2}
+          className="shrink-0 text-text-secondary"
+        />
         <input
           ref={inputRef}
           type="text"
@@ -224,17 +263,17 @@ export function SearchField({
           aria-activedescendant={activeDescendant}
           aria-autocomplete="list"
           autoComplete="off"
-          className="min-w-0 flex-1 bg-transparent px-2.5 text-[15px] font-medium text-text outline-none placeholder:font-normal placeholder:text-text-tertiary disabled:opacity-50 sm:px-3"
+          className={`min-w-0 flex-1 bg-transparent font-medium text-text outline-none placeholder:font-normal placeholder:text-text-tertiary disabled:opacity-50 ${metrics.input}`}
         />
 
         {value && !loading && (
           <button
             type="button"
             onClick={clear}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-bg hover:text-text"
+            className={`flex shrink-0 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-bg hover:text-text ${metrics.accessory}`}
             aria-label="Clear"
           >
-            <IconX size={16} stroke={2.2} />
+            <IconX size={metrics.accessoryIcon} stroke={2.2} />
           </button>
         )}
 
@@ -242,25 +281,27 @@ export function SearchField({
           <button
             type="button"
             onClick={handlePaste}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-bg hover:text-text"
+            className={`flex shrink-0 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-bg hover:text-text ${metrics.accessory}`}
             aria-label={labels.paste}
             title={labels.paste}
           >
-            <IconClipboard size={18} stroke={1.9} />
+            <IconClipboard size={metrics.pasteIcon} stroke={1.9} />
           </button>
         )}
 
         <button
           type="submit"
           disabled={loading}
-          className="search-pill-submit flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+          className={`search-pill-submit flex shrink-0 items-center justify-center rounded-full ${metrics.submit}`}
           aria-label={loading ? labels.working : labels.submit}
           title={labels.submit}
         >
           {loading ? (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/35 border-t-white" />
+            <span
+              className={`animate-spin rounded-full border-2 border-white/35 border-t-white ${metrics.spinner}`}
+            />
           ) : (
-            <IconArrowUpRight size={19} stroke={2.4} />
+            <IconArrowUpRight size={metrics.submitIcon} stroke={2.4} />
           )}
         </button>
       </form>

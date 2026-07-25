@@ -15,6 +15,7 @@ interface MediaSearchProps {
   /** Prefills the field on the results page so the query stays editable. */
   initialQuery?: string;
   autoFocus?: boolean;
+  size?: "default" | "compact";
 }
 
 const MIN_QUERY_LENGTH = 2;
@@ -35,6 +36,7 @@ function isLookupWorthy(query: string): boolean {
 export function MediaSearch({
   initialQuery = "",
   autoFocus = false,
+  size = "default",
 }: MediaSearchProps) {
   const router = useRouter();
   const [navigating, startNavigation] = useTransition();
@@ -140,6 +142,7 @@ export function MediaSearch({
       suggestionsLoading={lookingUp}
       onSuggestionsOpenChange={setOpen}
       thumbnail="poster"
+      size={size}
       autoFocus={autoFocus}
       labels={{
         placeholder: "Search a title, or paste an IMDb link",
