@@ -3,9 +3,14 @@
  * default theme bundle so pages without a player ship none of it.
  */
 
+/* The stage takes the shape of whatever is playing, not a shape of its own.
+   A fixed 16:9 box is what puts bands down the sides of a 2.39:1 film and
+   along the top of anything squarer, and a band is the frame admitting it
+   guessed wrong. `--stage-ratio` is set from the video's intrinsic size as
+   soon as the metadata arrives; until then 16:9 is the safest guess. */
 .stage {
   position: relative;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: var(--stage-ratio, 16 / 9);
   overflow: hidden;
   background: var(--color-stage);
   color: var(--color-stage-text);
@@ -20,36 +25,24 @@
   border-radius: 0;
 }
 
-/* The whole player has to be on screen without scrolling: the controls, the
-   scrub bar and the picture are one object, and an object you have to scroll
-   to finish looking at is not one you can use.
+/* The picture gets the full width of the page and nothing crops it.
+   Nothing narrows it either, and nothing caps its height: both are ways of
+   spending width to buy height, and the width they spend comes back as a band
+   down each side.
 
-   So the height available under the header is the constraint, and the width
-   follows from it rather than the other way round. Deriving the width is what
-   keeps this honest — capping the height alone would leave the element full
-   width and pillarbox the picture inside it, which is the same as making it
-   smaller while pretending not to.
-
-   `svh` rather than `vh` so a phone's collapsing address bar cannot leave the
-   controls under the fold on first paint. `--app-header-h` is published by
-   AppHeader, which is the only thing that knows how tall it ended up. */
+   A height cap looks like the exception and is not. With a width already set,
+   clamping the height does not shrink the box back to the ratio — it leaves it
+   wider than the picture, and the picture centres inside it. Same band, harder
+   to find. So the stage is exactly as tall as the film is, and the film's own
+   proportions are what decide whether that clears the fold. */
 .stage-frame {
-  display: flex;
-  justify-content: center;
   background: var(--color-stage);
 }
 
 .stage-frame .stage {
-  width: min(100%, calc((100svh - var(--app-header-h, 5rem)) * 16 / 9));
+  width: 100%;
   border-radius: 0;
   box-shadow: none;
-}
-
-/* Same specificity as the rule above, so it has to be said again here or the
-   stage keeps its page width while fullscreen. */
-.stage-frame .stage:fullscreen {
-  width: 100%;
-  height: 100%;
 }
 
 /* A hairline inside the rounded corner rather than a border outside it: a

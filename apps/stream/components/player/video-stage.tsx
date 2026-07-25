@@ -292,6 +292,38 @@ export function VideoStage({
     containerRef.current?.classList.toggle("stage-idle", idle);
   }, []);
 
+  /**
+   * The stage takes the film's own shape.
+   *
+   * A fixed 16:9 box has to put the difference somewhere, and that somewhere is
+   * a band down the sides of anything wider — which is most films. Reading the
+   * intrinsic size means the picture meets every edge of the stage, so there is
+   * no band to colour in, and a 2.39:1 film is short enough that the whole
+   * player clears the fold on its own.
+   */
+  useEffect(() => {
+    const video = videoRef.current;
+    const container = containerRef.current;
+    if (!video || !container) return;
+
+    const apply = () => {
+      if (!video.videoWidth || !video.videoHeight) return;
+      container.style.setProperty(
+        "--stage-ratio",
+        `${video.videoWidth} / ${video.videoHeight}`,
+      );
+    };
+    apply();
+    // `resize` is the one that fires when a rendition swap changes the frame
+    // size mid-playback; `loadedmetadata` covers the first read.
+    video.addEventListener("loadedmetadata", apply);
+    video.addEventListener("resize", apply);
+    return () => {
+      video.removeEventListener("loadedmetadata", apply);
+      video.removeEventListener("resize", apply);
+    };
+  }, [videoRef]);
+
   const scheduleIdle = useCallback(() => {
     if (idleTimerRef.current) window.clearTimeout(idleTimerRef.current);
     idleTimerRef.current = null;
@@ -658,19 +690,19 @@ export function VideoStage({
         }`}
       />
 
-      {/* What is playing, which in fullscreen is otherwise nowhere on screen. */}
-      {status === "ready" && (
+      {/* Only in fullscreen. In the page the site header is already sitting
+          over the top of the picture and the title is right underneath it, so
+          a second band saying the same thing is two things doing one job. */}
+      {status === "ready" && state.fullscreen && (
         <div className="stage-top">
-          {state.fullscreen && (
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              aria-label="Leave fullscreen"
-              className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-stage-text/85 transition-colors hover:bg-white/12 hover:text-stage-text"
-            >
-              <IconArrowLeft size={18} stroke={2} />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            aria-label="Leave fullscreen"
+            className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-stage-text/85 transition-colors hover:bg-white/12 hover:text-stage-text"
+          >
+            <IconArrowLeft size={18} stroke={2} />
+          </button>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] font-extrabold text-stage-text">
               {title}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Wordmark } from "@phantom/ui";
 import { MediaSearch } from "@/components/media-search";
@@ -33,34 +33,9 @@ export function AppHeader({ floating = false, initialQuery }: AppHeaderProps) {
     atTopOnServer
   );
   const solid = !floating || lifted;
-  const ref = useRef<HTMLElement>(null);
-
-  /**
-   * Publishes its own height, because it is the only thing that knows it: the
-   * bar wraps to two rows on narrow screens, so there is no number to hard
-   * code. The watch page reads this to size the player to whatever is left of
-   * the window.
-   */
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    const publish = () => {
-      document.documentElement.style.setProperty(
-        "--app-header-h",
-        // A floating header sits over the artwork rather than above it, so it
-        // takes up none of the room below.
-        floating ? "0px" : `${element.offsetHeight}px`
-      );
-    };
-    publish();
-    const observer = new ResizeObserver(publish);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [floating]);
 
   return (
     <header
-      ref={ref}
       className={`z-40 transition-colors duration-300 ${
         floating ? "fixed inset-x-0 top-0" : "sticky top-0"
       } ${
