@@ -1,6 +1,7 @@
 "use client";
 
 import { asSettled, type Settled } from "./concurrent";
+import { debug, debugRequestHeaders, readServerTiming, span } from "./debug";
 import { probeCandidates } from "./player";
 import {
   initialRaceState,
@@ -24,13 +25,24 @@ import type { MediaResult, ResolverResponse } from "./types";
  *
  * There was no limit at all before, which is where the minute-long waits came
  * from: a single upstream that never replied held its slot open forever and
- * the race simply stopped moving. A working scrape lands in one and a half to
- * four seconds, so seven covers the slow tail without covering the pathology.
+ * the race simply stopped moving.
+ *
+ * Five rather than seven, because this is not the only thing the slot pays
+ * for. Probing runs after it and inside the same slot, so the number that
+ * matters is the sum: five here plus one round of probing is a hair under
+ * seven seconds, and a slot is the scarcest thing in the race — every source
+ * still queued waits behind whoever is holding one. A working scrape lands in
+ * one and a half to four seconds, so five still covers the honest tail; what
+ * it stops covering is the pathology.
  */
-export const RESOLVE_TIMEOUT_MS = 7_000;
+export const RESOLVE_TIMEOUT_MS = 5_000;
 
-/** How long a manifest gets to answer during probing. */
+/** How long a manifest gets to answer during probing. One round, so this is
+ *  also the whole probe phase. */
 export const PROBE_TIMEOUT_MS = 1_800;
+
+/** What one source may cost the race, end to end. Asserted, not assumed. */
+export const ASK_BUDGET_MS = RESOLVE_TIMEOUT_MS + PROBE_TIMEOUT_MS + 200;
 
 /** How long the video element gets to produce a picture from one candidate. */
 export const STARTUP_TIMEOUT_MS = 5_000;
@@ -106,17 +118,30 @@ export async function askSource(
   context.signal.addEventListener("abort", abort, { once: true });
   const timeout = window.setTimeout(abort, RESOLVE_TIMEOUT_MS);
 
+  const done = span("source", "ask", { source: label });
+
   let payload: ResolverResponse & ResolverFailureBody;
   let response: Response;
   try {
     response = await fetch(`/api/sources/resolve?${params}`, {
       signal: controller.signal,
+      headers: debugRequestHeaders(),
+    });
+    debug("source", "http", {
+      source: label,
+      status: response.status,
+      ms: performance.now() - startedAt,
+      server: readServerTiming(response),
     });
     payload = (await response.json()) as ResolverResponse & ResolverFailureBody;
   } catch (error) {
     // The caller's own abort has to stay an abort: it means a different source
     // already won, not that this one is broken.
-    if (context.signal.aborted) throw error;
+    if (context.signal.aborted) {
+      done({ outcome: "abandoned", source: label });
+      throw error;
+    }
+    done({ outcome: "timeout", source: label });
     throw new SourceFailure(`${label} did not answer`, "unreachable");
   } finally {
     window.clearTimeout(timeout);
@@ -128,6 +153,12 @@ export async function askSource(
     // one, so the race stops rather than working through thirteen more.
     const limited =
       response.status === 429 || (Boolean(payload.retryable) && !payload.server);
+    done({
+      outcome: limited ? "limited" : "unreachable",
+      source: label,
+      status: response.status,
+      retryAfterMs: payload.retryAfterMs ?? null,
+    });
     throw new SourceFailure(
       payload.error || `${label} returned HTTP ${response.status}`,
       limited ? "limited" : "unreachable",
@@ -137,12 +168,30 @@ export async function askSource(
 
   const resolveMs = performance.now() - startedAt;
   if (!payload.candidates?.length) {
+    done({ outcome: "empty", source: label, resolveMs });
     throw new SourceFailure(`${label} offered no streams`, "empty");
   }
 
-  const probe = await probeCandidates(payload.candidates, {
-    timeoutMs: PROBE_TIMEOUT_MS,
-    signal: context.signal,
+  let probe;
+  try {
+    probe = await probeCandidates(payload.candidates, {
+      timeoutMs: PROBE_TIMEOUT_MS,
+      signal: context.signal,
+    });
+  } catch (error) {
+    // Only raised when the race itself was cancelled, but the span still has
+    // to be closed or the log grows a start with no end for every source that
+    // was in flight when a winner was found.
+    done({ outcome: "abandoned", source: label });
+    throw error;
+  }
+  debug("source", "probed", {
+    source: label,
+    offered: payload.candidates.length,
+    verified: probe.verified.length,
+    failed: probe.failed.length,
+    tier: probe.verifiedTier,
+    ms: performance.now() - startedAt - resolveMs,
   });
 
   // Nothing verified means every manifest was a dead address, so only fixed
@@ -154,8 +203,18 @@ export async function askSource(
   ).slice(0, MAX_ATTEMPTS_PER_SOURCE);
 
   if (attempts.length === 0) {
+    done({ outcome: "unplayable", source: label, resolveMs });
     throw new SourceFailure(`${label} had nothing playable`, "empty");
   }
+
+  done({
+    outcome: "offer",
+    source: label,
+    resolveMs,
+    verified: probe.verified.length > 0,
+    tier: probe.verifiedTier,
+    attempts: attempts.length,
+  });
 
   return {
     sourceId,
@@ -231,6 +290,26 @@ function armTick(deadline: number, now: () => number) {
  * a failed attach costs only the element.
  */
 export async function runRace(deps: RaceDeps): Promise<RaceOutcome> {
+  const done = span("router", "race", {
+    wave: deps.wave,
+    queued: deps.order.length,
+    budgetMs: ASK_BUDGET_MS,
+  });
+  try {
+    const outcome = await driveRace(deps);
+    done(
+      outcome.ok
+        ? { ok: true, source: outcome.offer.label }
+        : { ok: false, reason: outcome.reason, cooldownMs: outcome.cooldownMs },
+    );
+    return outcome;
+  } catch (error) {
+    done({ ok: false, reason: "threw", message: (error as Error)?.message });
+    throw error;
+  }
+}
+
+async function driveRace(deps: RaceDeps): Promise<RaceOutcome> {
   const now = deps.now ?? (() => Date.now());
   const iterator = asSettled(deps.order, deps.wave, async (sourceId) => {
     deps.onAsking?.(sourceId);
@@ -307,7 +386,14 @@ export async function runRace(deps: RaceDeps): Promise<RaceOutcome> {
             break;
           }
           const error = settled.error;
-          if (error instanceof DOMException && error.name === "AbortError") {
+          // Only the race's own signal means cancelled. An abort raised by a
+          // deadline inside one source is that source failing, and treating it
+          // as a cancel would end the race over one slow host.
+          if (
+            error instanceof DOMException &&
+            error.name === "AbortError" &&
+            deps.signal.aborted
+          ) {
             return { ok: false, reason: "cancelled", cooldownMs: 0 };
           }
           const failure =
@@ -329,8 +415,28 @@ export async function runRace(deps: RaceDeps): Promise<RaceOutcome> {
       }
 
       const previouslyHeld = race.state.held;
-      const outcome = raceStep(race.state, event, now(), deps.snapshot);
+      const at = now();
+      const outcome = raceStep(race.state, event, at, deps.snapshot);
       race.state = outcome.state;
+
+      // The reducer is where a race that will not move becomes visible: the
+      // event that arrived, what it decided, and what it is still holding.
+      debug("router", "step", {
+        event: event.type,
+        source:
+          event.type === "offer"
+            ? event.offer.label
+            : event.type === "failure"
+              ? event.sourceId
+              : null,
+        action: outcome.action.type,
+        held: race.state.held?.label ?? null,
+        attaching: race.state.attaching,
+        graceInMs: Number.isFinite(race.state.graceUntil)
+          ? Math.round(race.state.graceUntil - at)
+          : null,
+        exhausted: race.state.exhausted,
+      });
 
       // The window belongs to whatever is currently held: armed when
       // something starts waiting, cancelled the moment nothing is.

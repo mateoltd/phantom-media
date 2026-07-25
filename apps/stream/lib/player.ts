@@ -2,7 +2,17 @@
 
 import Hls, { type ErrorData, type Events } from "hls.js";
 import { asSettled } from "./concurrent";
+import { debug, span } from "./debug";
 import type { StreamCandidate } from "./types";
+
+/** Hosts, never full URLs: a log is read at a glance or not at all. */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return "invalid";
+  }
+}
 
 export interface QualityLevel {
   /** Index into the controller's own level list; -1 is automatic. */
@@ -57,9 +67,15 @@ const NO_LEVELS: PlayerController["levels"] = [];
  * a hundred simultaneous cross-origin requests against a browser that will
  * only open six per host. The top few by resolution contain the answer in
  * every case that matters.
+ *
+ * The two numbers are equal on purpose, which makes probing exactly one round
+ * and gives the whole of it a fixed ceiling of one timeout. At four they were
+ * two rounds, so a source that had already answered went on holding its slot
+ * in the race for another second and a half while the second round ran — time
+ * charged to every source still queued behind it.
  */
-const PROBE_CONCURRENCY = 4;
 const MAX_PROBE_CANDIDATES = 6;
+const PROBE_CONCURRENCY = MAX_PROBE_CANDIDATES;
 
 /** Enough to see whether a playlist starts the way a playlist must. */
 const MANIFEST_HEAD_BYTES = 256;
@@ -143,13 +159,26 @@ async function probeOne(
       signal: controller.signal,
     });
     const head = response.ok ? await readManifestHead(response) : "";
+    const ok = response.ok && head.trimStart().startsWith("#EXTM3U");
+    debug("probe", ok ? "ok" : "rejected", {
+      host: hostOf(candidate.url),
+      status: response.status,
+      ms: performance.now() - startedAt,
+      tier: qualityTier(candidate),
+    });
     return {
       candidate,
-      ok: response.ok && head.trimStart().startsWith("#EXTM3U"),
+      ok,
       latencyMs: performance.now() - startedAt,
       tier: qualityTier(candidate),
     };
-  } catch {
+  } catch (error) {
+    debug("probe", "failed", {
+      host: hostOf(candidate.url),
+      ms: performance.now() - startedAt,
+      timedOut: !signal?.aborted,
+      message: (error as Error)?.message,
+    });
     return {
       candidate,
       ok: false,
@@ -359,6 +388,11 @@ async function attachHls(
   let recoveredNetwork = false;
   let recoveredMedia = false;
   const onError = (_event: Events.ERROR, data: ErrorData) => {
+    debug("attach", data.fatal ? "hls.fatal" : "hls.error", {
+      type: data.type,
+      details: data.details,
+      host: hostOf(url),
+    });
     if (!data.fatal) return;
     if (data.type === Hls.ErrorTypes.NETWORK_ERROR && !recoveredNetwork) {
       recoveredNetwork = true;
@@ -406,14 +440,31 @@ export async function attachCandidate(
   },
 ): Promise<PlayerController> {
   const timeoutMs = options.timeoutMs ?? 5_000;
+  const done = span("attach", "element", {
+    host: hostOf(candidate.url),
+    type: candidate.type,
+    resolution: candidate.resolution,
+    timeoutMs,
+  });
+  const finish = async (pending: Promise<PlayerController>) => {
+    try {
+      const controller = await pending;
+      done({ ok: true, levels: controller.levels.length });
+      return controller;
+    } catch (error) {
+      done({ ok: false, message: (error as Error)?.message });
+      throw error;
+    }
+  };
 
   if (candidate.type === "hls") {
     // hls.js gives a quality menu and error recovery, so it is preferred even
     // where the browser could play the manifest itself.
     if (Hls.isSupported()) {
-      return attachHls(video, candidate.url, timeoutMs, options.onFatal);
+      return finish(attachHls(video, candidate.url, timeoutMs, options.onFatal));
     }
     if (!video.canPlayType("application/vnd.apple.mpegurl")) {
+      done({ ok: false, message: "no HLS support" });
       throw new Error("This browser cannot play HLS streams");
     }
   }
@@ -421,5 +472,5 @@ export async function attachCandidate(
   const pending = waitForNativeMedia(video, timeoutMs, options.onFatal);
   video.src = candidate.url;
   video.load();
-  return pending;
+  return finish(pending);
 }

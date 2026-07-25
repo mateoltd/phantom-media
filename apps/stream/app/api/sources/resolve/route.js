@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
 import { getProvider } from "../../../../src/providers/registry.mjs";
 import { RelayError } from "../../../../src/relay-client.mjs";
+import { formatEntry, sharedLog } from "../../../../src/debug.mjs";
+
+// `STREAM_DEBUG=1` puts the server's half of the record on stdout. The browser
+// can ask for timings per request without it; this is for the case where the
+// question is about the isolate rather than about one race.
+if (process.env.STREAM_DEBUG) {
+  sharedLog().setSink((entry) => {
+    console.log(`[stream] ${formatEntry(entry)}`);
+  });
+}
 
 // The relay decrypts upstream payloads with node:crypto.
 export const runtime = "nodejs";
@@ -11,6 +21,15 @@ export const runtime = "nodejs";
  * that never answers holds a subrequest open for as long as it likes.
  */
 const DEADLINE_MS = 8_500;
+
+/** Set by the browser when its log is running; answered with timings. */
+const DEBUG_HEADER = "x-phantom-debug";
+
+function timing(fields) {
+  return Object.entries(fields)
+    .map(([key, value]) => `${key}=${value}`)
+    .join(";");
+}
 
 /**
  * Combines the browser hanging up with our own ceiling. The first matters as
@@ -70,10 +89,30 @@ export async function GET(request) {
     });
   }
 
+  // The browser asks for timings when its own log is running. They are the
+  // only way to tell an upstream that is slow from a route that is queued
+  // behind something else, and the difference decides what to fix.
+  const wantsTiming = request.headers.get(DEBUG_HEADER) === "1";
+  const log = sharedLog();
+  if (wantsTiming) log.setEnabled(true);
+  const startedAt = Date.now();
+
   try {
     const result = await provider.resolve(readMedia(params), {
       signal: deadlineSignal(request),
+      // Distinct from the merged signal above: this one aborting means the
+      // caller left, which must not be recorded as the source failing.
+      abandoned: request.signal,
     });
+    const headers = { "cache-control": "no-store" };
+    if (wantsTiming) {
+      headers[DEBUG_HEADER] = timing({
+        route: Date.now() - startedAt,
+        upstream: result.latencyMs,
+        candidates: result.candidates.length,
+        subtitles: result.subtitles.length,
+      });
+    }
     return NextResponse.json(
       {
         server: provider.id,
@@ -82,7 +121,7 @@ export async function GET(request) {
         candidates: result.candidates,
         subtitles: result.subtitles,
       },
-      { headers: { "cache-control": "no-store" } },
+      { headers },
     );
   } catch (error) {
     // A malformed request is the caller's mistake, not upstream's, and
@@ -101,6 +140,14 @@ export async function GET(request) {
     const aborted = error?.name === "AbortError" || error?.name === "TimeoutError";
     const status = known && error.status >= 400 ? error.status : aborted ? 504 : 502;
     const retryAfterMs = known ? error.retryAfterMs : null;
+
+    log.event("route", "failed", {
+      source: provider.label,
+      status,
+      ms: Date.now() - startedAt,
+      abandoned: Boolean(known && error.abandoned),
+      message: error?.message,
+    });
 
     return failure(
       status,

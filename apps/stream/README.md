@@ -96,9 +96,15 @@ actually produced rather than by which answered first — a fast source holding 
   clean race. One request here is one request upstream, and a single 429 arms a
   cooldown that affects every source on the isolate, so a wider burst is
   actively dangerous rather than merely rude.
-- Seven seconds per source. There was no limit before, which is where the
-  minute-long waits came from: one upstream that never replied held its slot
-  open indefinitely.
+- Seven seconds per source, end to end: five for the scrape and one round of
+  manifest probing after it. The sum is the number that matters, because a slot
+  is the scarcest thing in the race — every source still queued is waiting
+  behind whoever holds one.
+- **A request the router walks away from is not a failure.** When one source
+  wins, its four siblings are aborted; those aborts used to reach the server as
+  errors and cool the source that was serving them, so every *successful* race
+  benched the four it had abandoned. The pool outlives the page, so the next
+  load raced without them — which is what the minute-long waits actually were.
 - An offer that is already excellent — a **verified** 1080p or adaptive master —
   goes on screen immediately. Anything less is held for up to 1.2s, capped at
   4s from the start of the race, to see whether something better is close
@@ -196,11 +202,38 @@ has to reach into attachment and failure handling.
   written to the DOM directly rather than held in React state. Sixty frames a
   second of scrubbing costs sixty style writes, not sixty renders.
 
+## Debugging a slow start
+
+Append `?debug=1` to any watch URL. The choice is remembered, which is the
+point — a race that is slow once and fine the next four times is only ever
+caught by an instrument that was already running.
+
+Every timing the router has goes to the console and into a ring buffer of the
+last two thousand events: when each slot opened, what each source was asked and
+what it answered, every manifest probe with its host and latency, each step of
+the race reducer with what it was holding and how long the window had left,
+attachment and hls.js errors, and each score written. With the log on, requests
+carry `x-phantom-debug: 1` and the resolve route answers with its own timings,
+so an upstream that is slow can be told apart from a route that was queued.
+
+```js
+__phantom.help()      // the rest of the commands
+__phantom.sources()   // a table of every source's progress this session
+__phantom.summary()   // counts per channel and the twenty slowest spans
+__phantom.copy()      // the whole buffer as JSON, onto the clipboard
+__phantom.off()       // and stop
+```
+
+`STREAM_DEBUG=1` does the server's half, onto stdout: relay cache hits, cooldown
+state, upstream latency per scrape.
+
+Switched off, the log costs one `if` per call site and allocates nothing.
+
 ## Local commands
 
 ```sh
 pnpm --filter @phantom/stream dev
-pnpm --filter @phantom/stream test        # scoring, routing policy, providers, subtitles
+pnpm --filter @phantom/stream test        # scoring, routing policy, providers, subtitles, debug
 pnpm --filter @phantom/stream typecheck
 pnpm --filter @phantom/stream build
 ```

@@ -1,7 +1,19 @@
 import { SERVERS } from "./constants.mjs";
 
-const DEFAULT_COOLDOWN_MS = 30_000;
+const DEFAULT_COOLDOWN_MS = 15_000;
 const RATE_LIMIT_COOLDOWN_MS = 90_000;
+
+/**
+ * The ceiling on the ordinary failure ladder.
+ *
+ * It used to climb to two minutes, which is longer than anyone waits and
+ * longer than the client's own sixty-second cooldown — so a source would be
+ * skipped by the router, come back, get an instant 503 from a pool that was
+ * still sulking, and be skipped again. Two layers of cooldown that disagree
+ * about the length is worse than either alone. A minute is what the client
+ * uses, so it is what this uses.
+ */
+const MAX_COOLDOWN_MS = 60_000;
 
 function initialState() {
   return {
@@ -48,7 +60,10 @@ export class ServerPool {
         ? retryAfterMs
         : status === 429
           ? RATE_LIMIT_COOLDOWN_MS
-          : DEFAULT_COOLDOWN_MS * Math.min(state.consecutiveFailures, 4));
+          : Math.min(
+              DEFAULT_COOLDOWN_MS * state.consecutiveFailures,
+              MAX_COOLDOWN_MS,
+            ));
   }
 
   rank(preferred = this.servers, now = Date.now()) {

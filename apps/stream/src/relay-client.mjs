@@ -7,6 +7,7 @@ import {
 import { ServerPool } from "./server-pool.mjs";
 import { SOURCE_ALIASES, SOURCE_IDS } from "./source-ids.mjs";
 import { normalizeVariants, numericResolution } from "./providers/normalize.mjs";
+import { debugEvent } from "./debug.mjs";
 
 export { SOURCE_ALIASES, SOURCE_IDS };
 
@@ -32,6 +33,8 @@ export class RelayError extends Error {
     this.retryable = options.retryable ?? false;
     this.retryAfterMs = options.retryAfterMs ?? null;
     this.details = options.details ?? null;
+    /** Set when the caller hung up, so nothing downstream treats it as a fault. */
+    this.abandoned = options.abandoned ?? false;
   }
 }
 
@@ -146,6 +149,25 @@ function flattenRelaySources(body) {
   return variants;
 }
 
+/**
+ * Whether this request was walked away from rather than failed.
+ *
+ * This distinction is the whole of a bug that made the player slow for minutes
+ * at a time. The router aborts every sibling request the moment one source
+ * wins, which is correct — but each of those aborts arrived here as an error,
+ * and every error put its source into a cooldown that grew with each one. So
+ * every *successful* race punished the four sources it had abandoned, up to two
+ * minutes each, in a pool that outlives the page. Reload, and the sources known
+ * to be good were all cooling: the race was left to be run by whichever hosts
+ * had been slow enough never to be abandoned.
+ *
+ * A request nobody was waiting for says nothing about the source serving it.
+ */
+function wasAbandoned(error, options) {
+  if (!options.abandoned?.aborted) return false;
+  return error?.name === "AbortError" || error?.name === "TimeoutError";
+}
+
 export class RelayClient {
   #cache = new Map();
   #globalCooldownUntil = 0;
@@ -176,10 +198,21 @@ export class RelayClient {
       scraper,
     ]);
     const cached = this.#cache.get(cacheKey);
-    if (!options.fresh && cached?.expiresAt > Date.now()) return cached.value;
+    if (!options.fresh && cached?.expiresAt > Date.now()) {
+      debugEvent("relay", "cache.hit", {
+        source: SOURCE_ALIASES[scraper],
+        candidates: cached.value.candidates.length,
+        expiresInMs: cached.expiresAt - Date.now(),
+      });
+      return cached.value;
+    }
 
     const globalCooldown = Math.max(0, this.#globalCooldownUntil - Date.now());
     if (globalCooldown > 0) {
+      debugEvent("relay", "cooldown.global", {
+        source: SOURCE_ALIASES[scraper],
+        remainingMs: globalCooldown,
+      });
       throw new RelayError("Upstream is rate limited and cooling down", {
         status: 429,
         retryable: true,
@@ -189,6 +222,10 @@ export class RelayClient {
     }
     const scraperCooldown = this.pool.cooldownRemaining(scraper);
     if (scraperCooldown > 0 && !options.ignoreCooldown) {
+      debugEvent("relay", "cooldown.source", {
+        source: SOURCE_ALIASES[scraper],
+        remainingMs: scraperCooldown,
+      });
       throw new RelayError(
         `${SOURCE_ALIASES[scraper]} is cooling down`,
         {
@@ -235,6 +272,11 @@ export class RelayClient {
         // subrequest keeps running after nobody is waiting for it, which on a
         // worker is billed time spent on an answer that will be thrown away.
         signal: options.signal,
+      });
+      debugEvent("relay", "upstream", {
+        source: SOURCE_ALIASES[scraper],
+        status: response.status,
+        ms: Math.round(performance.now() - startedAt),
       });
       const text = await response.text();
       let body;
@@ -286,12 +328,27 @@ export class RelayClient {
         expiresAt: Date.now() + this.cacheTtlMs,
         value: result,
       });
+      debugEvent("relay", "resolved", {
+        source: SOURCE_ALIASES[scraper],
+        latencyMs,
+        candidates: candidates.length,
+        subtitles: result.subtitles.length,
+      });
       return result;
     } catch (error) {
       const wrapped =
         error instanceof RelayError
           ? error
           : new RelayError(error.message, { cause: error, server: scraper });
+
+      // Abandoned is not failed. Charging a cooldown for a request the caller
+      // hung up on is what left the good sources sitting out the next race.
+      if (wasAbandoned(error, options)) {
+        wrapped.abandoned = true;
+        debugEvent("relay", "abandoned", { source: SOURCE_ALIASES[scraper] });
+        throw wrapped;
+      }
+
       if (wrapped.status === 429) {
         const cooldownMs = Math.max(wrapped.retryAfterMs ?? 0, 30_000);
         this.#globalCooldownUntil = Math.max(
@@ -300,6 +357,12 @@ export class RelayClient {
         );
       }
       this.pool.recordFailure(scraper, wrapped);
+      debugEvent("relay", "failed", {
+        source: SOURCE_ALIASES[scraper],
+        status: wrapped.status,
+        message: wrapped.message,
+        cooldownMs: this.pool.cooldownRemaining(scraper),
+      });
       throw wrapped;
     }
   }

@@ -176,3 +176,67 @@ test("a second request for the same episode is served from cache", async () => {
   await client.resolveScraper(tvMedia, "q4", { fresh: true });
   assert.equal(calls, 2);
 });
+
+/**
+ * The router aborts every sibling request the moment one source wins. Each of
+ * those aborts used to land in the pool as that source failing, so a race that
+ * went perfectly still cooled the four sources it had abandoned — in a pool
+ * that outlives the page, which is why the fault survived reloads.
+ */
+test("a request the caller hung up on is not held against the source", async () => {
+  const controller = new AbortController();
+  const client = new RelayClient({
+    fetchImpl: async (_url, init) => {
+      controller.abort();
+      init?.signal?.throwIfAborted?.();
+      throw Object.assign(new Error("aborted"), { name: "AbortError" });
+    },
+  });
+
+  await assert.rejects(
+    client.resolveScraper(tvMedia, "q4", {
+      signal: controller.signal,
+      abandoned: controller.signal,
+    }),
+    (error) => {
+      assert.equal(error.abandoned, true);
+      return true;
+    },
+  );
+
+  assert.equal(
+    client.serverHealth().q4.cooldownUntil,
+    0,
+    "an abandoned request must leave no cooldown behind",
+  );
+  assert.equal(client.serverHealth().q4.consecutiveFailures, 0);
+});
+
+test("a source that really did fail is still cooled", async () => {
+  const client = new RelayClient({
+    fetchImpl: async () => jsonResponse({ error: "upstream fell over" }, 502),
+  });
+
+  await assert.rejects(client.resolveScraper(tvMedia, "k9", {}), { status: 502 });
+  assert.ok(client.serverHealth().k9.cooldownUntil > Date.now());
+});
+
+test("our own deadline firing is a failure, not an abandonment", async () => {
+  // `abandoned` is the browser's signal alone. When it has not aborted, an
+  // abort from the route's own ceiling means upstream was genuinely too slow.
+  const caller = new AbortController();
+  const client = new RelayClient({
+    fetchImpl: async () => {
+      throw Object.assign(new Error("timed out"), { name: "TimeoutError" });
+    },
+  });
+
+  await assert.rejects(
+    client.resolveScraper(tvMedia, "va", { abandoned: caller.signal }),
+    (error) => {
+      assert.notEqual(error.abandoned, true);
+      return true;
+    },
+  );
+  assert.ok(client.serverHealth().va.cooldownUntil > Date.now());
+});

@@ -362,6 +362,7 @@ export default function WatchPageClient({
           progress={{
             sources: state.progress,
             answered: state.answered,
+            asking: state.asking,
             total: state.total,
             elapsedMs: state.raceElapsedMs,
           }}

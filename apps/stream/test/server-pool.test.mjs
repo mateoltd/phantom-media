@@ -29,3 +29,13 @@ test("respects retry-after for rate-limited providers", () => {
   assert.deepEqual(pool.available(undefined, 17_001), ["berkas_", "orion_"]);
   assert.equal(pool.cooldownRemaining("orion_", 16_000), 1_000);
 });
+
+test("the ordinary failure ladder stops at a minute", () => {
+  const pool = new ServerPool(["orion_"]);
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    pool.recordFailure("orion_", Object.assign(new Error("no"), { status: 502 }), 0);
+  }
+  // It used to climb to two minutes, which is longer than the client's own
+  // cooldown — so a source came back, got an instant 503, and went away again.
+  assert.equal(pool.cooldownRemaining("orion_", 0), 60_000);
+});

@@ -11,6 +11,7 @@ import {
   type SourceOffer,
 } from "@/src/router-policy.mjs";
 import { attachCandidate, type PlayerController, type QualityLevel, type QualityState } from "@/lib/player";
+import { debug } from "@/lib/debug";
 import {
   PINNED_STARTUP_TIMEOUT_MS,
   STARTUP_TIMEOUT_MS,
@@ -73,6 +74,15 @@ export interface RouterState {
   quality: QualityState;
   progress: readonly SourceProgress[];
   answered: number;
+  /**
+   * How many are in flight right now.
+   *
+   * Without it the roster reported "0 of 14 answered" for as long as the first
+   * wave took, which is a true sentence that reads as a stuck one — there is no
+   * difference on screen between five sources being asked and nothing
+   * happening at all. Most of the reports of the player hanging were this.
+   */
+  asking: number;
   total: number;
   raceElapsedMs: number;
   retryAt: number;
@@ -89,6 +99,19 @@ const STALL_WINDOW_MS = 30_000;
 /** Fast enough to feel live, slow enough that fourteen sources are not
  *  fourteen renders. */
 const FLUSH_INTERVAL_MS = 150;
+
+/**
+ * How long the element gets to actually start playing before the router stops
+ * waiting on it. The picture is already up by this point — this only decides
+ * when the race is told so.
+ */
+const PLAY_TIMEOUT_MS = 2_000;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
 
 interface Pending {
   resolveMs: number;
@@ -109,6 +132,7 @@ function initialState(total: number): RouterState {
     quality: { selected: -1, effective: -1 },
     progress: [],
     answered: 0,
+    asking: 0,
     total,
     raceElapsedMs: 0,
     retryAt: 0,
@@ -201,6 +225,7 @@ export function useSourceRouter({
           entry.status !== "queued" &&
           entry.status !== "asking",
       ).length,
+      asking: progress.filter((entry) => entry.status === "asking").length,
       raceElapsedMs: raceStartedAtRef.current
         ? Date.now() - raceStartedAtRef.current
         : 0,
@@ -237,7 +262,7 @@ export function useSourceRouter({
       extra: { attached?: boolean; ttffMs?: number | null; stalled?: boolean } = {},
     ) => {
       const pending = pendingRef.current[sourceId];
-      recordObservation({
+      const observation = {
         sourceId,
         titleKey: currentTitleKey,
         outcome,
@@ -247,9 +272,11 @@ export function useSourceRouter({
         attached: extra.attached ?? false,
         ttffMs: extra.ttffMs ?? null,
         stalled: extra.stalled ?? false,
-      });
+      };
+      recordObservation(observation);
+      debug("score", "observed", { ...observation, source: labelOf(sourceId) });
     },
-    [currentTitleKey],
+    [currentTitleKey, labelOf],
   );
 
   /* -------------------------------------------------------------- attach */
@@ -312,12 +339,17 @@ export function useSourceRouter({
       if (resumeFrom !== null) {
         seekWhenReady(video, resumeFrom);
       }
-      try {
-        await video.play();
-      } catch {
-        // Autoplay is commonly refused after an async source swap. The centre
-        // control and the spacebar both still work.
-      }
+      // Bounded, because `play()` does not resolve until playback actually
+      // begins and a stream that stalls at the first fragment never gets
+      // there. Awaiting it unbounded left the whole router sitting in
+      // "attaching" with nothing left running that could time out.
+      await Promise.race([
+        video.play().catch(() => {
+          // Autoplay is commonly refused after an async source swap. The
+          // centre control and the spacebar both still work.
+        }),
+        delay(PLAY_TIMEOUT_MS),
+      ]);
       return controller;
     },
     [adopt, detach, labelOf, patch, record, videoRef],
@@ -381,11 +413,28 @@ export function useSourceRouter({
         subtitles: [],
         progress: Object.values(progressRef.current),
         answered: 0,
+        asking: 0,
         total: sources.length,
         raceElapsedMs: 0,
         pinned,
         resumedFrom: resumeFrom,
       }));
+
+      debug("router", "start", {
+        titleKey: currentTitleKey,
+        pinned: pinned ? labelOf(pinned) : null,
+        wave,
+        order: order.map(labelOf),
+        cooling: Object.entries(coolingRef.current)
+          .filter(([, until]) => until > Date.now())
+          .map(([id, until]) => `${labelOf(id)}:${Math.round((until - Date.now()) / 1_000)}s`),
+        scores: order.map((id) => ({
+          source: labelOf(id),
+          score: Math.round(snapshot.score(id) * 1_000) / 1_000,
+          weight: Math.round(snapshot.weight(id) * 100) / 100,
+          titleWeight: Math.round(snapshot.titleWeight(id) * 100) / 100,
+        })),
+      });
 
       const outcome = await runRace({
         order,
@@ -402,6 +451,12 @@ export function useSourceRouter({
           }),
         onAsking: (sourceId) => {
           setProgress(sourceId, { status: "asking" });
+          // When a slot opened is the other half of why a source answered
+          // late: it may have been quick and simply queued behind four others.
+          debug("router", "slot", {
+            source: labelOf(sourceId),
+            sinceStartMs: Date.now() - raceStartedAtRef.current,
+          });
         },
         onOffer: (offer) => {
           pendingRef.current[offer.sourceId] = {
@@ -433,7 +488,18 @@ export function useSourceRouter({
           setProgress(sourceId, { status: failure.kind });
           record(sourceId, failure.kind);
           if (failure.kind === "unreachable") {
-            coolingRef.current[sourceId] = Date.now() + SOURCE_COOLDOWN_MS;
+            // When the server says how long it wants, take it — but never for
+            // longer than this side would have waited anyway. Two cooldowns
+            // that disagree about the length is how a source ends up skipped
+            // here, refused there, and effectively gone for minutes.
+            const hint = failure.retryAfterMs ?? SOURCE_COOLDOWN_MS;
+            const cooldown = Math.min(Math.max(hint, 0), SOURCE_COOLDOWN_MS);
+            coolingRef.current[sourceId] = Date.now() + cooldown;
+            debug("router", "cooling", {
+              source: labelOf(sourceId),
+              ms: cooldown,
+              hinted: failure.retryAfterMs,
+            });
           }
         },
         attach: async (offer) => {
@@ -475,6 +541,19 @@ export function useSourceRouter({
       });
 
       if (requestIdRef.current !== requestId) return;
+
+      debug("router", "outcome", {
+        ok: outcome.ok,
+        reason: outcome.ok ? null : outcome.reason,
+        elapsedMs: Date.now() - raceStartedAtRef.current,
+        answered: Object.values(progressRef.current).filter(
+          (entry) => !["idle", "queued", "asking"].includes(entry.status),
+        ).length,
+        nextWave: nextWaveSize(
+          waveRef.current,
+          !outcome.ok && outcome.reason === "rateLimited",
+        ),
+      });
 
       if (outcome.ok) {
         waveRef.current = nextWaveSize(waveRef.current, false);
