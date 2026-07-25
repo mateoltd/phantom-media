@@ -9,7 +9,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import Image from "next/image";
+import { Artwork } from "@phantom/ui";
 import {
   IconBadgeCc,
   IconBroadcast,
@@ -301,15 +301,12 @@ export function VideoStage({
       onPointerMove={wake}
       onPointerLeave={() => playingRef.current && setIdle(true)}
     >
-      {showPoster && poster && (
-        <Image
+      {showPoster && (
+        <Artwork
           src={poster}
-          alt=""
-          fill
           sizes="(min-width: 1024px) 80vw, 100vw"
-          unoptimized
           priority
-          className="absolute inset-0 h-full w-full object-cover opacity-45"
+          className="opacity-45"
         />
       )}
       {status !== "ready" && (

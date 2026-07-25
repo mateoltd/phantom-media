@@ -1,6 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { IconInfoCircle, IconPlayerPlayFilled } from "@tabler/icons-react";
+import { Artwork } from "@phantom/ui";
+import { TitleLogo } from "@/components/title-logo";
 import { TitleMeta } from "@/components/title-meta";
 import { mediaHref } from "@/lib/media";
 import type { MediaResult } from "@/lib/types";
@@ -13,36 +14,23 @@ import type { MediaResult } from "@/lib/types";
 export function CinemaHero({ media }: { media: MediaResult }) {
   return (
     <section className="cinema-hero">
-      {media.backdropUrl && (
-        <Image
-          src={media.backdropUrl}
-          alt=""
-          fill
-          sizes="100vw"
-          unoptimized
-          priority
-          className="cinema-hero-art"
-        />
-      )}
+      <Artwork
+        src={media.backdropUrl}
+        sizes="100vw"
+        priority
+        className="cinema-hero-art"
+      />
       <div className="cinema-hero-scrim" aria-hidden="true" />
 
       <div className="app-shell relative z-10 pb-14 pt-36 sm:pb-20">
         <div className="max-w-xl">
-          {media.logoUrl ? (
-            <Image
-              src={media.logoUrl}
-              alt={media.title}
-              width={520}
-              height={220}
-              unoptimized
-              priority
-              className="h-auto max-h-[8.5rem] w-auto max-w-[min(100%,25rem)] object-contain object-left drop-shadow-[0_6px_24px_rgba(0,0,0,0.6)]"
-            />
-          ) : (
-            <h1 className="text-[clamp(2rem,5vw,3.6rem)] font-extrabold leading-[0.95] tracking-[-0.03em] text-text">
-              {media.title}
-            </h1>
-          )}
+          <TitleLogo
+            media={media}
+            priority
+            maxHeight="8.5rem"
+            maxWidth="25rem"
+            headingClassName="text-[clamp(2rem,5vw,3.6rem)] font-extrabold leading-[0.95] tracking-[-0.03em] text-text"
+          />
 
           <div className="mt-5">
             <TitleMeta media={media} tone="over-art" />

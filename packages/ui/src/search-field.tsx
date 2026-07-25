@@ -8,7 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import Image from "next/image";
+import { Artwork } from "./artwork";
 import {
   IconArrowUpRight,
   IconClipboard,
@@ -206,7 +206,7 @@ export function SearchField({
         }}
         className="search-pill flex h-[52px] items-center gap-1 pl-4 pr-1.5 sm:h-14"
       >
-        <IconSearch size={19} stroke={2} className="shrink-0 text-text-tertiary" />
+        <IconSearch size={19} stroke={2} className="shrink-0 text-text-secondary" />
         <input
           ref={inputRef}
           type="text"
@@ -313,20 +313,15 @@ export function SearchField({
                       thumbnail === "poster" ? "h-12 w-8" : "h-11 w-[76px]"
                     }`}
                   >
-                    {suggestion.imageUrl ? (
-                      <Image
-                        src={suggestion.imageUrl}
-                        alt=""
-                        fill
-                        sizes={thumbnail === "poster" ? "32px" : "76px"}
-                        unoptimized
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <span className="flex h-full w-full items-center justify-center text-[13px] font-extrabold text-text-tertiary">
-                        {suggestion.title.slice(0, 1)}
-                      </span>
-                    )}
+                    <Artwork
+                      src={suggestion.imageUrl}
+                      sizes={thumbnail === "poster" ? "32px" : "76px"}
+                      fallback={
+                        <span className="flex h-full w-full items-center justify-center text-[13px] font-extrabold text-text-tertiary">
+                          {suggestion.title.slice(0, 1)}
+                        </span>
+                      }
+                    />
                     {suggestion.badge && (
                       <span className="absolute bottom-1 right-1 rounded bg-black/75 px-1 py-0.5 font-mono text-[8px] text-white">
                         {suggestion.badge}

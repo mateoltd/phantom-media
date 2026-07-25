@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { Artwork } from "@phantom/ui";
 import { IconPlayerPlayFilled } from "@tabler/icons-react";
 import { mediaHref } from "@/lib/media";
 import type { MediaResult } from "@/lib/types";
@@ -19,21 +19,16 @@ export function PosterTile({
   return (
     <Link href={mediaHref(media)} className="tile-hit group block">
       <span className="tile block aspect-[2/3]">
-        {media.posterUrl ? (
-          <Image
-            src={media.posterUrl}
-            alt=""
-            fill
-            sizes="(min-width: 1280px) 12vw, (min-width: 768px) 20vw, 40vw"
-            unoptimized
-            priority={priority}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <span className="flex h-full w-full items-center justify-center px-3 text-center text-[13px] font-extrabold text-text-tertiary">
-            {media.title}
-          </span>
-        )}
+        <Artwork
+          src={media.posterUrl}
+          sizes="(min-width: 1280px) 12vw, (min-width: 768px) 20vw, 40vw"
+          priority={priority}
+          fallback={
+            <span className="flex h-full w-full items-center justify-center px-3 text-center text-[13px] font-extrabold leading-tight text-text-tertiary">
+              {media.title}
+            </span>
+          }
+        />
 
         <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100" />
 

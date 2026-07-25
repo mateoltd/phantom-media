@@ -44,16 +44,23 @@ export function AppHeader({ floating = false, initialQuery }: AppHeaderProps) {
           : "header-scrim border-b border-transparent"
       }`}
     >
-      <div className="app-shell flex flex-wrap items-center gap-x-6 gap-y-3 py-3.5 lg:grid lg:grid-cols-[auto_minmax(0,1fr)_auto]">
-        <Link href="/" aria-label="Phantom Stream home" className="shrink-0">
+      {/* Three columns, the outer two equal: an `auto` column on the left and
+          an empty one on the right centre the field in what is left over, not
+          in the window. */}
+      <div className="app-shell flex flex-wrap items-center gap-x-6 gap-y-3 py-3.5 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+        <Link
+          href="/"
+          aria-label="Phantom Stream home"
+          className="shrink-0 justify-self-start"
+        >
           <Wordmark service="Stream" />
         </Link>
 
-        <div className="order-last w-full min-w-0 lg:order-none lg:mx-auto lg:w-full lg:max-w-[560px]">
+        <div className="order-last w-full min-w-0 lg:order-none lg:w-[min(46vw,560px)]">
           <MediaSearch initialQuery={initialQuery} />
         </div>
 
-        <div className="hidden shrink-0 lg:block" />
+        <div className="hidden lg:block" />
       </div>
     </header>
   );

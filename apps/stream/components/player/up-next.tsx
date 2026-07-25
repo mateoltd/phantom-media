@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import Image from "next/image";
 import { IconPlayerPlayFilled } from "@tabler/icons-react";
+import { Artwork } from "@phantom/ui";
 import type { EpisodeSummary } from "@/lib/types";
 import type { TimeListener } from "./use-video-state";
 
@@ -46,16 +46,7 @@ export function UpNext({ episode, subscribe, onPlay }: UpNextProps) {
 
       <div className="mt-2 flex items-center gap-3">
         <span className="relative aspect-video w-[92px] shrink-0 overflow-hidden rounded-lg bg-stage-raised">
-          {episode.stillUrl && (
-            <Image
-              src={episode.stillUrl}
-              alt=""
-              fill
-              sizes="92px"
-              unoptimized
-              className="h-full w-full object-cover"
-            />
-          )}
+          <Artwork src={episode.stillUrl} sizes="92px" />
         </span>
         <span className="min-w-0">
           <span className="block text-[10px] font-semibold text-stage-muted">

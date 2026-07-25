@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import Image from "next/image";
 import { IconPlayerPlayFilled, IconX } from "@tabler/icons-react";
+import { Artwork } from "@phantom/ui";
 import type { EpisodeSummary, SeasonSummary } from "@/lib/types";
 
 interface EpisodePanelProps {
@@ -91,20 +91,15 @@ export function EpisodePanel({
               }`}
             >
               <span className="relative aspect-video w-[104px] shrink-0 overflow-hidden rounded-lg bg-stage-raised">
-                {item.stillUrl ? (
-                  <Image
-                    src={item.stillUrl}
-                    alt=""
-                    fill
-                    sizes="104px"
-                    unoptimized
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="flex h-full w-full items-center justify-center font-mono text-[11px] text-stage-muted">
-                    {item.episodeNumber}
-                  </span>
-                )}
+                <Artwork
+                  src={item.stillUrl}
+                  sizes="104px"
+                  fallback={
+                    <span className="flex h-full w-full items-center justify-center font-mono text-[11px] text-stage-muted">
+                      {item.episodeNumber}
+                    </span>
+                  }
+                />
                 {playing && (
                   <span className="absolute inset-0 flex items-center justify-center bg-black/45">
                     <IconPlayerPlayFilled size={14} className="text-phantom" />

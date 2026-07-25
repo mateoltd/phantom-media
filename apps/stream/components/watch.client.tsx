@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import { AppHeader } from "@/components/app-header";
 import { BrowseRail } from "@/components/browse-rail";
 import { EpisodeBrowser } from "@/components/episode-browser";
+import { TitleLogo } from "@/components/title-logo";
 import { TitleMeta } from "@/components/title-meta";
 import { SiteFooter } from "@/components/site-footer";
 import {
@@ -745,20 +745,12 @@ export default function WatchPageClient({
 
       <div className="app-shell flex-1 pb-16 pt-7" id="about">
         <div className="max-w-3xl">
-          {media.logoUrl ? (
-            <Image
-              src={media.logoUrl}
-              alt={media.title}
-              width={480}
-              height={200}
-              unoptimized
-              className="h-auto max-h-24 w-auto max-w-[min(100%,20rem)] object-contain object-left"
-            />
-          ) : (
-            <h1 className="text-[clamp(1.5rem,3vw,2.3rem)] font-extrabold leading-[1.05] tracking-[-0.03em] text-text">
-              {media.title}
-            </h1>
-          )}
+          <TitleLogo
+            media={media}
+            maxHeight="6rem"
+            maxWidth="20rem"
+            headingClassName="text-[clamp(1.5rem,3vw,2.3rem)] font-extrabold leading-[1.05] tracking-[-0.03em] text-text"
+          />
 
           {currentEpisode && (
             <p className="mt-3.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">

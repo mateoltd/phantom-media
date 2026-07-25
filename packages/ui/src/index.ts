@@ -1,3 +1,6 @@
+export { Artwork } from "./artwork";
+export type { ArtworkProps } from "./artwork";
+
 export { Button, IconButton } from "./button";
 export type { ButtonProps, IconButtonProps } from "./button";
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useSyncExternalStore } from "react";
-import Image from "next/image";
 import { IconPlayerPlayFilled } from "@tabler/icons-react";
+import { Artwork } from "@phantom/ui";
 import { parseProgress, progressKey, readProgressRaw } from "@/lib/resume";
 import type { EpisodeSummary, MediaResult, SeasonSummary } from "@/lib/types";
 
@@ -140,16 +140,7 @@ export function EpisodeBrowser({
                 </span>
 
                 <span className="relative aspect-video w-[132px] shrink-0 overflow-hidden rounded-xl bg-surface sm:w-[168px]">
-                  {item.stillUrl && (
-                    <Image
-                      src={item.stillUrl}
-                      alt=""
-                      fill
-                      sizes="168px"
-                      unoptimized
-                      className="h-full w-full object-cover"
-                    />
-                  )}
+                  <Artwork src={item.stillUrl} sizes="168px" />
                   <span
                     className={`absolute inset-0 flex items-center justify-center bg-black/45 transition-opacity ${
                       playing
