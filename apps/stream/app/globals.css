@@ -1,0 +1,7 @@
+@import "tailwindcss";
+@import "@phantom/theme";
+@import "@phantom/theme/player.css";
+
+/* Shared components live outside this app's root, so Tailwind is pointed at
+   them explicitly or their classes never make it into the bundle. */
+@source "../../../packages/ui/src";

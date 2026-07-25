@@ -1,0 +1,8 @@
+{
+  "extends": "@phantom/config/tsconfig/library.json",
+  "compilerOptions": {
+    "types": ["react", "react-dom"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules"]
+}

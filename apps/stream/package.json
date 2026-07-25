@@ -1,0 +1,44 @@
+{
+  "name": "@phantom/stream",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Phantom Stream — keyless film and series discovery with a source-routing player.",
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"test/*.test.mjs\"",
+    "clean": "rm -rf .next .turbo .open-next",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+  },
+  "dependencies": {
+    "@phantom/theme": "workspace:*",
+    "@phantom/ui": "workspace:*",
+    "@tabler/icons-react": "catalog:",
+    "hls.js": "^1.6.13",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@opennextjs/cloudflare": "^1.20.2",
+    "@phantom/config": "workspace:*",
+    "@tailwindcss/postcss": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-next": "catalog:",
+    "postcss": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:",
+    "wrangler": "catalog:"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

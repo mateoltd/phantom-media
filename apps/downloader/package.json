@@ -1,0 +1,42 @@
+{
+  "name": "@phantom/downloader",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Phantom Downloader — pull a video or a whole playlist down as a file.",
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit && tsc -p cloudflare/tsconfig.json --noEmit",
+    "clean": "rm -rf .next .turbo",
+    "cf:types": "wrangler types cloudflare/worker-configuration.d.ts",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@phantom/theme": "workspace:*",
+    "@phantom/ui": "workspace:*",
+    "@tabler/icons-react": "catalog:",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "undici": "^7.16.0",
+    "youtubei.js": "^17.0.1",
+    "zustand": "^5.0.12"
+  },
+  "devDependencies": {
+    "@cloudflare/containers": "^0.3.7",
+    "@cloudflare/workers-types": "^5.20260724.1",
+    "@phantom/config": "workspace:*",
+    "@tailwindcss/postcss": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-next": "catalog:",
+    "postcss": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:",
+    "wrangler": "catalog:"
+  }
+}

@@ -1,0 +1,207 @@
+/*
+ * Video chrome. Imported by apps that mount <VideoStage>; kept out of the
+ * default theme bundle so pages without a player ship none of it.
+ */
+
+.stage {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-stage);
+  color: var(--color-stage-text);
+}
+
+.stage video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--color-stage);
+}
+
+/* Controls sit on a gradient rather than a solid bar so the bottom of the
+   picture stays visible while they are up. */
+.stage-chrome {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 3.5rem 0.75rem 0.75rem;
+  background: linear-gradient(
+    to top,
+    rgba(9, 9, 7, 0.92) 0%,
+    rgba(9, 9, 7, 0.72) 38%,
+    transparent 100%
+  );
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+
+.stage-chrome-hidden {
+  opacity: 0;
+  transform: translateY(0.75rem);
+  pointer-events: none;
+}
+
+.stage-idle {
+  cursor: none;
+}
+
+/* ------------------------------------------------------------------ scrub */
+
+.scrub {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 1.25rem;
+  padding: 0;
+  border: none;
+  background: none;
+  touch-action: none;
+}
+
+.scrub-track {
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(246, 241, 230, 0.22);
+  transform: translateY(-50%);
+  transition: height 0.14s ease;
+}
+
+.scrub:hover .scrub-track,
+.scrub:focus-visible .scrub-track,
+.scrub-scrubbing .scrub-track {
+  height: 7px;
+}
+
+.scrub-buffered,
+.scrub-played,
+.scrub-hover {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  border-radius: 999px;
+}
+
+.scrub-buffered {
+  background: rgba(246, 241, 230, 0.3);
+}
+
+.scrub-hover {
+  background: rgba(246, 241, 230, 0.42);
+}
+
+.scrub-played {
+  background: var(--color-phantom);
+}
+
+.scrub-head {
+  position: absolute;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  background: var(--color-phantom);
+  box-shadow: 0 0 0 4px rgba(255, 90, 54, 0.24);
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.scrub:hover .scrub-head,
+.scrub:focus-visible .scrub-head,
+.scrub-scrubbing .scrub-head {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.scrub-tooltip {
+  position: absolute;
+  bottom: calc(100% + 0.4rem);
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  background: rgba(9, 9, 7, 0.92);
+  color: var(--color-stage-text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/* ----------------------------------------------------------------- volume */
+
+.stage-volume {
+  appearance: none;
+  width: 0;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-phantom) var(--level, 100%),
+    rgba(246, 241, 230, 0.24) var(--level, 100%)
+  );
+  opacity: 0;
+  outline: none;
+  transition:
+    width 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s ease;
+}
+
+.stage-volume-group:hover .stage-volume,
+.stage-volume:focus-visible {
+  width: 4.5rem;
+  opacity: 1;
+}
+
+.stage-volume::-webkit-slider-thumb {
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: var(--color-stage-text);
+}
+
+.stage-volume::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border: none;
+  border-radius: 999px;
+  background: var(--color-stage-text);
+}
+
+/* ------------------------------------------------------------- indicators */
+
+/* A one-shot badge for keyboard seeks and volume nudges: it says what just
+   happened without adding a permanent readout to the chrome. */
+.stage-flash {
+  animation: stage-flash 0.62s ease-out both;
+}
+
+@keyframes stage-flash {
+  0% { opacity: 0; transform: scale(0.9); }
+  22% { opacity: 1; transform: scale(1); }
+  70% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.02); }
+}
+
+.stage-spinner {
+  border: 3px solid rgba(246, 241, 230, 0.24);
+  border-top-color: var(--color-phantom);
+  border-radius: 999px;
+  animation: stage-spin 0.8s linear infinite;
+}
+
+@keyframes stage-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-chrome,
+  .scrub-track,
+  .scrub-head,
+  .stage-volume {
+    transition: none;
+  }
+}

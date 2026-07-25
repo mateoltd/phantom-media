@@ -1,0 +1,33 @@
+{
+  "name": "@phantom/ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "React components shared by the Phantom apps. Consumed as source and compiled by each app.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.tsx"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@tabler/icons-react": "*",
+    "next": "*",
+    "react": "*",
+    "react-dom": "*"
+  },
+  "devDependencies": {
+    "@phantom/config": "workspace:*",
+    "@tabler/icons-react": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-next": "catalog:",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:"
+  }
+}

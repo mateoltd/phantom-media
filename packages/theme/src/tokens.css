@@ -1,0 +1,63 @@
+/*
+ * Phantom's palette is a warm paper ground with one vermilion accent. Nothing
+ * else in the system is allowed to compete with that accent for attention.
+ */
+@theme {
+  --color-phantom: #ff5a36;
+  --color-phantom-light: #ff7658;
+  --color-phantom-dark: #d93d1d;
+  --color-phantom-soft: #ffe0d6;
+  --color-phantom-deep: #8f2410;
+
+  --color-bg: #f5efe3;
+  --color-surface: #fffaf0;
+  --color-surface-light: #fffdf7;
+  --color-surface-hover: #f7ebdc;
+  --color-border: #cfc4b4;
+
+  --color-text: #181815;
+  --color-text-secondary: #595952;
+  --color-text-tertiary: #85827a;
+
+  --color-error: #b93825;
+  --color-success: #197a52;
+
+  /* Media surfaces are the one place the palette goes dark: video wants an
+     ink ground so the picture, not the page, carries the colour. */
+  --color-stage: #14130f;
+  --color-stage-raised: #211f1a;
+  --color-stage-line: #3b372f;
+  --color-stage-text: #f6f1e6;
+  --color-stage-muted: #a9a294;
+
+  --font-sans: var(--font-sora), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  --animate-fade-in: fade-in 0.28s ease-out both;
+  --animate-slide-up: slide-up 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(10px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes progress-slide {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(345%); }
+}
+
+@keyframes stagger-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes select-menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}

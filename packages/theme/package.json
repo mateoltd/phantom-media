@@ -1,0 +1,17 @@
+{
+  "name": "@phantom/theme",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Phantom design tokens, base layer and CSS primitives shared by every app.",
+  "main": "./src/index.css",
+  "style": "./src/index.css",
+  "exports": {
+    ".": "./src/index.css",
+    "./tokens.css": "./src/tokens.css",
+    "./base.css": "./src/base.css",
+    "./primitives.css": "./src/primitives.css",
+    "./player.css": "./src/player.css"
+  },
+  "files": ["src"]
+}

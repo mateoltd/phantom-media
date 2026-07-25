@@ -1,0 +1,25 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Both apps ship the same React, Next and Tailwind majors on purpose: the shared
+# UI package is compiled by each app's bundler, so a split would break it.
+catalog:
+  "@tabler/icons-react": ^3.40.0
+  next: ^16.1.7
+  react: ^19.2.4
+  react-dom: ^19.2.4
+  "@types/node": ^25.5.0
+  "@types/react": ^19.2.14
+  "@types/react-dom": ^19.2.3
+  "@tailwindcss/postcss": ^4.2.1
+  tailwindcss: ^4.2.1
+  postcss: ^8.5.8
+  eslint: ^9.39.4
+  eslint-config-next: ^16.1.7
+  typescript: ^5.9.3
+  wrangler: ^4.114.0
+
+onlyBuiltDependencies:
+  - sharp
+  - workerd

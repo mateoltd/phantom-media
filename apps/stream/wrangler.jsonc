@@ -1,0 +1,23 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "phantom-stream",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-07-25",
+  // `nodejs_compat` is required: the resolver decrypts upstream payloads with
+  // node:crypto, and `global_fetch_strictly_public` keeps the Worker from
+  // being able to call back into itself over the public hostname.
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": false,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": true
+    }
+  }
+}

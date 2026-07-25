@@ -1,0 +1,17 @@
+@import "tailwindcss";
+@import "@phantom/theme";
+
+/* Shared components live outside this app's root, so Tailwind is pointed at
+   them explicitly or their classes never make it into the bundle. */
+@source "../../../packages/ui/src";
+
+/* The language switcher is the only element that survives a locale swap, so it
+   opts out of the page-level cross-fade and animates on its own. */
+.locale-switcher {
+  view-transition-name: locale-switcher;
+}
+
+::view-transition-old(locale-switcher),
+::view-transition-new(locale-switcher) {
+  animation-duration: 0.16s;
+}
