@@ -106,5 +106,14 @@ either.
 ## Legal
 
 Phantom Stream hosts nothing. Every stream is played straight from a
-third-party host, and the project is affiliated with none of the catalogs or
-playback providers it talks to.
+third-party host by the viewer's own browser, and the project is affiliated
+with none of the catalogs or playback providers it talks to.
+
+`/disclaimer` states that in full: no hosting, no affiliation, authorized use
+only, no warranty, and a limitation of liability. It is linked from the footer
+of every page.
+
+Set `NEXT_PUBLIC_NOTICE_EMAIL` before deploying. Until it is set, the page
+omits its infringement-reporting section, because a takedown route with no
+address behind it is worse than none — and a reachable takedown route is the
+most useful thing on a page like this.

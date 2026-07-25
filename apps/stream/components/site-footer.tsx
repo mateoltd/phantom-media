@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 /**
  * Metadata sources are credited by name because attribution is owed. Playback
@@ -13,8 +14,14 @@ export function SiteFooter({ className = "" }: { className?: string }) {
     <footer className={className}>
       <div className="flex flex-col gap-2 border-t border-border/60 py-6 text-[11.5px] leading-5 text-text-tertiary sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
         <p>
-          An independent project. No account, no tracking, and nothing hosted
-          here.
+          An independent project that hosts no media. Everything plays straight
+          from third-party sources.{" "}
+          <Link
+            href="/disclaimer"
+            className="font-medium text-text-secondary underline decoration-text-tertiary/35 decoration-1 underline-offset-[3px] transition-colors hover:text-text hover:decoration-text/60"
+          >
+            Legal disclaimer
+          </Link>
         </p>
         <p>
           Metadata from <Credit href="https://www.stremio.com">Cinemeta</Credit>{" "}
