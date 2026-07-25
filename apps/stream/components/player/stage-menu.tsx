@@ -114,7 +114,7 @@ export function StageMenu({
                     {option.label}
                   </span>
                   {option.detail && (
-                    <span className="mt-0.5 block truncate font-mono text-[10px] text-stage-muted">
+                    <span className="mt-0.5 block truncate text-[10px] text-stage-muted">
                       {option.detail}
                     </span>
                   )}

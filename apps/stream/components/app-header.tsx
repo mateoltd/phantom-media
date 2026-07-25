@@ -6,7 +6,11 @@ import { Wordmark } from "@phantom/ui";
 import { MediaSearch } from "@/components/media-search";
 
 interface AppHeaderProps {
-  /** Lets the hero behind it show through until the page is scrolled. */
+  /**
+   * Lifts the bar out of the flow so the artwork below runs to the top of the
+   * window, and replaces its background with a gradient until the page moves.
+   * A filled strip laid across a photograph cuts it in half.
+   */
   floating?: boolean;
   initialQuery?: string;
 }
@@ -32,10 +36,12 @@ export function AppHeader({ floating = false, initialQuery }: AppHeaderProps) {
 
   return (
     <header
-      className={`sticky top-0 z-40 transition-colors duration-200 ${
+      className={`z-40 transition-colors duration-300 ${
+        floating ? "fixed inset-x-0 top-0" : "sticky top-0"
+      } ${
         solid
           ? "border-b border-border/70 bg-bg/85 backdrop-blur-xl"
-          : "border-b border-transparent"
+          : "header-scrim border-b border-transparent"
       }`}
     >
       <div className="app-shell flex flex-wrap items-center gap-x-6 gap-y-3 py-3.5 lg:grid lg:grid-cols-[auto_minmax(0,1fr)_auto]">

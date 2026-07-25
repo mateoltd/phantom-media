@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import WatchPageClient from "@/components/watch.client";
 import {
   IMDB_ID_PATTERN,
+  browseCatalog,
   getTitle,
   placeholderTitle,
   type TitleDetail,
@@ -77,11 +78,23 @@ export default async function Page({ params }: WatchParams) {
   if (!parsed) notFound();
 
   const { media, seasons, episodes } = await loadTitle(...parsed);
+
+  // A page about one title should not be a dead end. The catalog has no
+  // similarity data, so this is honestly what it is: more of the same genre.
+  const genre = media.genres[0];
+  const related = genre
+    ? (await browseCatalog(media.mediaType, "top", { genre, limit: 20 })).filter(
+        (item) => item.id !== media.id,
+      )
+    : [];
+
   return (
     <WatchPageClient
       media={media}
       seasons={seasons}
       episodes={episodes}
+      related={related}
+      relatedTitle={genre ? `More ${genre.toLowerCase()}` : ""}
       sources={SOURCE_ROSTER}
     />
   );

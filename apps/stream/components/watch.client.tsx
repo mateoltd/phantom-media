@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+import Image from "next/image";
 import { AppHeader } from "@/components/app-header";
+import { BrowseRail } from "@/components/browse-rail";
 import { EpisodeBrowser } from "@/components/episode-browser";
+import { TitleMeta } from "@/components/title-meta";
 import { SiteFooter } from "@/components/site-footer";
 import {
   VideoStage,
@@ -15,7 +17,7 @@ import type { StageMenuOption } from "@/components/player/stage-menu";
 import { useChapters } from "@/components/player/use-chapters";
 import { useResumeTracking } from "@/components/player/use-resume-tracking";
 import { asSettled } from "@/lib/concurrent";
-import { formatTimecode, kindLabel } from "@/lib/media";
+import { formatTimecode } from "@/lib/media";
 import {
   attachCandidate,
   probeCandidates,
@@ -163,11 +165,15 @@ export default function WatchPageClient({
   media,
   seasons,
   episodes,
+  related,
+  relatedTitle,
   sources,
 }: {
   media: MediaResult;
   seasons: readonly SeasonSummary[];
   episodes: readonly EpisodeSummary[];
+  related: readonly MediaResult[];
+  relatedTitle: string;
   sources: readonly SourceEntry[];
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -291,7 +297,7 @@ export default function WatchPageClient({
       if (resumeFrom !== null) {
         seekWhenReady(video, resumeFrom);
         setStatusText(
-          `Playing from ${candidate.serverLabel} · resumed at ${formatTimecode(resumeFrom)}`
+          `Resumed at ${formatTimecode(resumeFrom)}, playing from ${candidate.serverLabel}`
         );
       } else {
         setStatusText(`Playing from ${candidate.serverLabel}`);
@@ -672,7 +678,7 @@ export default function WatchPageClient({
   const requestLabel = !playable
     ? "This title has no playable identifier"
     : retrySeconds > 0
-      ? `Cooling down · ${retrySeconds}s`
+      ? `Cooling down, ${retrySeconds}s left`
       : status === "error"
         ? "Try every source again"
         : "Find a source and play";
@@ -737,56 +743,48 @@ export default function WatchPageClient({
           reachable from inside it. */}
       <div className="stage-frame">{stage}</div>
 
-      <div className="app-shell flex-1 pb-16 pt-6" id="about">
-        <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-5">
-          <div className="min-w-0 max-w-2xl">
-            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-phantom">
-              {kindLabel(media.mediaType)}
-              {media.year ? ` · ${media.year}` : ""}
-            </p>
-            <h1 className="mt-1.5 text-[clamp(1.5rem,3vw,2.3rem)] font-extrabold leading-[1.05] tracking-[-0.03em] text-text">
+      <div className="app-shell flex-1 pb-16 pt-7" id="about">
+        <div className="max-w-3xl">
+          {media.logoUrl ? (
+            <Image
+              src={media.logoUrl}
+              alt={media.title}
+              width={480}
+              height={200}
+              unoptimized
+              className="h-auto max-h-24 w-auto max-w-[min(100%,20rem)] object-contain object-left"
+            />
+          ) : (
+            <h1 className="text-[clamp(1.5rem,3vw,2.3rem)] font-extrabold leading-[1.05] tracking-[-0.03em] text-text">
               {media.title}
             </h1>
-            {currentEpisode && (
-              <p className="mt-2 text-[13px] font-bold text-text-secondary">
-                S{currentEpisode.seasonNumber}E{currentEpisode.episodeNumber} ·{" "}
+          )}
+
+          {currentEpisode && (
+            <p className="mt-3.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="eyebrow text-phantom">
+                S{currentEpisode.seasonNumber} E{currentEpisode.episodeNumber}
+              </span>
+              <span className="text-[15px] font-bold text-text">
                 {currentEpisode.name}
-              </p>
-            )}
-            <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-text-tertiary">
-              {media.rating > 0 && (
-                <span className="rounded-md border border-border px-1.5 py-0.5 text-text">
-                  {media.rating.toFixed(1)}
-                </span>
-              )}
-              {media.runtime && <span>{media.runtime}</span>}
-              {media.genres.length > 0 && (
-                <span>{media.genres.slice(0, 3).join(" · ")}</span>
-              )}
+              </span>
             </p>
-            {(currentEpisode?.overview || media.overview) && (
-              <p className="mt-4 text-[13px] leading-6 text-text-secondary">
-                {currentEpisode?.overview || media.overview}
-              </p>
-            )}
+          )}
+
+          <div className="mt-4">
+            <TitleMeta media={media} />
           </div>
 
-          <div className="w-full max-w-xs shrink-0 rounded-2xl border border-border bg-surface/60 p-4">
-            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-text-tertiary">
-              Playback
+          {(currentEpisode?.overview || media.overview) && (
+            <p className="mt-5 text-[13.5px] leading-6 text-text-secondary">
+              {currentEpisode?.overview || media.overview}
             </p>
-            <p className="mt-2 text-[12px] font-bold leading-5 text-text">
-              {statusText}
-            </p>
-            <p className="mt-3 font-mono text-[10px] leading-5 text-text-tertiary">
-              Space plays · J and L jump ten seconds · E lists episodes · N is
-              the next one · F is fullscreen
-            </p>
-          </div>
+          )}
         </div>
 
         {isSeries && (
           <EpisodeBrowser
+            media={media}
             seasons={seasons}
             episodes={episodes}
             season={season}
@@ -796,6 +794,19 @@ export default function WatchPageClient({
           />
         )}
       </div>
+
+      {related.length > 0 && (
+        <div className="pb-10">
+          <BrowseRail
+            row={{
+              id: "related",
+              title: relatedTitle,
+              mediaType: media.mediaType,
+              items: [...related],
+            }}
+          />
+        </div>
+      )}
 
       <div className="app-shell">
         <SiteFooter />

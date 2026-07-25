@@ -60,6 +60,24 @@ export function readResumePoint(key: string): ResumePoint | null {
   return read()[key] ?? null;
 }
 
+/** The raw record, as stored. Stable between reads, so it is safe to snapshot. */
+export function readProgressRaw(): string {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function parseProgress(raw: string): ProgressMap {
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw) as ProgressMap;
+  } catch {
+    return {};
+  }
+}
+
 export function saveResumePoint(
   key: string,
   time: number,

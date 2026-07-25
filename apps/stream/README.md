@@ -30,6 +30,16 @@ Part of the [Phantom monorepo](../../README.md). Install from the root.
 | `/search?q=`       | Results grid.                                                               |
 | `/watch/:type/:id` | Player and episode list. `:type` is `movie` or `tv`, `:id` is an IMDb id (a TMDB id still resolves). |
 
+## Type
+
+Labels, kickers and status words are set in the display face with tracking —
+`.eyebrow` in the theme — not in the monospace one. Monospace is reserved for
+figures that have to line up or be read exactly: timecodes, ratings, bitrates,
+episode numbers.
+
+Metadata rows are separated by space, not by interpuncts, and genres are tags
+rather than a punctuated list. A row of `·` is a habit from printed listings.
+
 ## Surface
 
 This app runs on the cinema surface — `@phantom/theme/cinema.css` — which

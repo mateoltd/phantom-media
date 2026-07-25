@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { IconPlayerPlayFilled } from "@tabler/icons-react";
-import { kindLabel, mediaHref } from "@/lib/media";
+import { mediaHref } from "@/lib/media";
 import type { MediaResult } from "@/lib/types";
 
 /**
@@ -46,10 +46,11 @@ export function PosterTile({
               <span className="line-clamp-2 block text-[12px] font-extrabold leading-tight text-white">
                 {media.title}
               </span>
-              <span className="mt-0.5 block font-mono text-[9px] uppercase tracking-wide text-white/60">
-                {kindLabel(media.mediaType)}
-                {media.year ? ` · ${media.year}` : ""}
-              </span>
+              {media.year && (
+                <span className="mt-0.5 block text-[10px] font-semibold text-white/60">
+                  {media.year}
+                </span>
+              )}
             </span>
           </span>
         </span>

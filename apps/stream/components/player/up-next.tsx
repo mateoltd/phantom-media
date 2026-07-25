@@ -40,7 +40,7 @@ export function UpNext({ episode, subscribe, onPlay }: UpNextProps) {
 
   return (
     <div ref={rootRef} className="stage-upnext">
-      <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-stage-muted">
+      <p className="eyebrow text-stage-muted">
         Up next
       </p>
 
@@ -58,7 +58,7 @@ export function UpNext({ episode, subscribe, onPlay }: UpNextProps) {
           )}
         </span>
         <span className="min-w-0">
-          <span className="block font-mono text-[10px] text-stage-muted">
+          <span className="block text-[10px] font-semibold text-stage-muted">
             S{episode.seasonNumber}E{episode.episodeNumber}
           </span>
           <span className="line-clamp-2 block text-[12px] font-bold leading-tight text-stage-text">

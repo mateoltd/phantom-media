@@ -1,10 +1,13 @@
 "use client";
 
+import { useMemo, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { IconPlayerPlayFilled } from "@tabler/icons-react";
-import type { EpisodeSummary, SeasonSummary } from "@/lib/types";
+import { parseProgress, progressKey, readProgressRaw } from "@/lib/resume";
+import type { EpisodeSummary, MediaResult, SeasonSummary } from "@/lib/types";
 
 interface EpisodeBrowserProps {
+  media: MediaResult;
   seasons: readonly SeasonSummary[];
   episodes: readonly EpisodeSummary[];
   season: number;
@@ -13,12 +16,17 @@ interface EpisodeBrowserProps {
   onSelect: (episode: EpisodeSummary) => void;
 }
 
+/** Nothing else writes to it while the list is on screen. */
+const noStorageUpdates = () => () => {};
+const noProgressOnServer = () => "";
+
 /**
  * The full run, on the page. The same list is available inside the player for
  * when you are already watching; this is the one for deciding what to watch,
  * so it gets the room to show stills and synopses.
  */
 export function EpisodeBrowser({
+  media,
   seasons,
   episodes,
   season,
@@ -28,6 +36,15 @@ export function EpisodeBrowser({
 }: EpisodeBrowserProps) {
   const seasonEpisodes = episodes.filter((item) => item.seasonNumber === season);
   const current = seasons.find((item) => item.seasonNumber === season);
+
+  // Read as a raw string and parsed once: the string is stable between reads,
+  // an object would be a new identity every time and never settle.
+  const storedProgress = useSyncExternalStore(
+    noStorageUpdates,
+    readProgressRaw,
+    noProgressOnServer
+  );
+  const progress = useMemo(() => parseProgress(storedProgress), [storedProgress]);
 
   // Some series carry no listing at all. Typing the numbers still reaches an
   // episode, and is better than a page with no way to leave the pilot.
@@ -74,7 +91,7 @@ export function EpisodeBrowser({
         <h2 className="text-[17px] font-extrabold tracking-[-0.01em] text-text">
           Episodes
           {current && (
-            <span className="ml-2 font-mono text-[11px] font-bold text-text-tertiary">
+            <span className="ml-2 text-[13px] font-semibold text-text-tertiary">
               {current.episodeCount}
             </span>
           )}
@@ -102,6 +119,14 @@ export function EpisodeBrowser({
       <ul className="mt-2">
         {seasonEpisodes.map((item) => {
           const playing = item.episodeNumber === episode;
+          const point =
+            progress[
+              progressKey(media, item.seasonNumber, item.episodeNumber)
+            ];
+          const watched =
+            point && point.duration > 0
+              ? Math.min(100, (point.time / point.duration) * 100)
+              : 0;
           return (
             <li key={`${item.seasonNumber}-${item.episodeNumber}`}>
               <button
@@ -136,6 +161,14 @@ export function EpisodeBrowser({
                       <IconPlayerPlayFilled size={14} />
                     </span>
                   </span>
+                  {watched > 0 && (
+                    <span className="absolute inset-x-0 bottom-0 h-[3px] bg-white/25">
+                      <span
+                        className="block h-full bg-phantom"
+                        style={{ width: `${watched}%` }}
+                      />
+                    </span>
+                  )}
                 </span>
 
                 <span className="min-w-0 flex-1 pt-0.5">
@@ -148,7 +181,7 @@ export function EpisodeBrowser({
                       {item.name}
                     </span>
                     {item.airDate && (
-                      <span className="font-mono text-[10px] text-text-tertiary">
+                      <span className="text-[11px] text-text-tertiary">
                         {item.airDate}
                       </span>
                     )}
@@ -181,7 +214,7 @@ function NumberField({
 }) {
   return (
     <label className="min-w-0">
-      <span className="mb-2 block font-mono text-[10px] font-bold uppercase text-text-tertiary">
+      <span className="eyebrow mb-2 block text-text-tertiary">
         {label}
       </span>
       <input

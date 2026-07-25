@@ -148,6 +148,60 @@
   outline-offset: 2px;
 }
 
+/* ----------------------------------------------------------------- header */
+
+/* Over artwork, the bar is a gradient rather than a panel: a filled strip
+   across the top of a photograph cuts it in half, and the cut is the first
+   thing the eye lands on. Once the page has scrolled there is nothing behind
+   it worth showing through, so it fills in. */
+.header-scrim {
+  background: linear-gradient(
+    to bottom,
+    rgba(6, 5, 5, 0.72) 0%,
+    rgba(6, 5, 5, 0.4) 55%,
+    transparent 100%
+  );
+}
+
+/* ------------------------------------------------------------------- meta */
+
+/* Year, runtime and rating sit in a row with air between them instead of
+   punctuation. Genres are shapes rather than words in a list, which removes
+   the need to separate them at all. */
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 1.15rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+.meta-rating {
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.meta-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.meta-tag {
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
 /* ------------------------------------------------------------------- hero */
 
 .cinema-hero {

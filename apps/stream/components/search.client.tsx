@@ -57,7 +57,7 @@ export default function SearchPageClient() {
       <div className="app-shell flex-1 pb-14 pt-2">
         <div className="flex items-baseline justify-between gap-4 border-b border-border pb-4">
           <div className="min-w-0">
-            <p className="font-mono text-[10px] font-bold uppercase text-phantom">
+            <p className="eyebrow text-phantom">
               Results
             </p>
             <h1 className="mt-1 truncate text-2xl font-extrabold tracking-[-0.02em] text-text">
@@ -65,7 +65,7 @@ export default function SearchPageClient() {
             </h1>
           </div>
           {results && results.length > 0 && (
-            <p className="shrink-0 font-mono text-[11px] text-text-tertiary">
+            <p className="shrink-0 text-[12px] text-text-tertiary">
               {results.length} {results.length === 1 ? "title" : "titles"}
             </p>
           )}

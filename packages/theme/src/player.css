@@ -20,20 +20,12 @@
   border-radius: 0;
 }
 
-/* The player runs the width of the page but is capped by height, so the frame
-   never fills the window on its own — there is always a hand's width of what
-   comes next below it. The gutters either side are the same ink as the stage,
-   which reads as a screen rather than as empty page. */
+/* The picture gets the full width of the page and nothing crops it. */
 .stage-frame {
-  display: flex;
-  justify-content: center;
   background: var(--color-stage);
 }
 
 .stage-frame .stage {
-  width: auto;
-  max-width: 100%;
-  height: min(78svh, calc(100vw * 9 / 16));
   border-radius: 0;
   box-shadow: none;
 }

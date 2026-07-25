@@ -15,7 +15,7 @@ export function SiteFooter({ className = "" }: { className?: string }) {
         <ul className="flex flex-wrap gap-x-4 gap-y-1">
           {CREDITS.map((credit) => (
             <li key={credit.name}>
-              <span className="font-mono uppercase">{credit.label}</span>{" "}
+              <span className="font-semibold uppercase tracking-[0.1em]">{credit.label}</span>{" "}
               <a
                 href={credit.href}
                 target="_blank"

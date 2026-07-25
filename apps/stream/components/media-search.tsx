@@ -94,10 +94,7 @@ export function MediaSearch({
       results.slice(0, 8).map((media) => ({
         id: `${media.mediaType}-${media.id}`,
         title: media.title,
-        subtitle:
-          media.rating > 0
-            ? `${kindLabel(media.mediaType)} · ★ ${media.rating.toFixed(1)}`
-            : kindLabel(media.mediaType),
+        subtitle: kindLabel(media.mediaType),
         meta: media.year,
         imageUrl: media.posterUrl,
       })),
