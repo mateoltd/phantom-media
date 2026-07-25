@@ -7,13 +7,17 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import Image from "next/image";
 import {
   IconBadgeCc,
+  IconBroadcast,
+  IconChevronRight,
   IconMaximize,
   IconMinimize,
   IconPictureInPicture,
+  IconPlayerTrackNextFilled,
   IconPlayerPauseFilled,
   IconPlayerPlayFilled,
   IconRefresh,
@@ -27,9 +31,17 @@ import {
 import { formatTimecode } from "@/lib/media";
 import { ScrubBar } from "./scrub-bar";
 import { StageMenu, type StageMenuOption } from "./stage-menu";
-import { useVideoState } from "./use-video-state";
+import { useVideoState, type TimeListener } from "./use-video-state";
 
 export type StageStatus = "idle" | "working" | "ready" | "error";
+
+export interface StageMenuModel {
+  options: readonly StageMenuOption[];
+  value: string | null;
+  onChange: (value: string) => void;
+  /** Printed beside the icon when there is room. */
+  summary?: string;
+}
 
 interface VideoStageProps {
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -41,9 +53,9 @@ interface VideoStageProps {
   onRequestPlayback: () => void;
   canRequestPlayback: boolean;
   requestLabel: string;
-  qualities?: readonly StageMenuOption[];
-  activeQuality?: string | null;
-  onQualityChange?: (value: string) => void;
+  quality?: StageMenuModel;
+  /** The source roster, kept in here rather than beside the picture. */
+  sources?: StageMenuModel;
   /**
    * Subtitle choices, in the same order as `tracks`. The stage owns which one
    * is showing because track modes live on the media element, not in React.
@@ -51,12 +63,28 @@ interface VideoStageProps {
   captions?: readonly string[];
   /** `<track>` elements, which have to be children of the media element. */
   tracks?: ReactNode;
+  /** Set for a series that has somewhere to go after this episode. */
+  onNextEpisode?: () => void;
+  onEnded?: () => void;
+  /**
+   * A jump offered over the picture for the opening minutes. There is no
+   * chapter data behind it, so the label says the distance, not the intent.
+   */
+  skipAhead?: { seconds: number; untilSeconds: number };
   children?: ReactNode;
 }
 
 const CAPTIONS_OFF = "off";
-
 const IDLE_DELAY_MS = 2600;
+
+/**
+ * Picture-in-picture support is a fact about the browser, and the server has
+ * no browser. Reading it during render is what made the two trees disagree, so
+ * it is read as an external value with an explicit server answer of "no".
+ */
+const NEVER_CHANGES = () => () => {};
+const pipSupported = () => document.pictureInPictureEnabled;
+const pipUnsupportedOnServer = () => false;
 
 export function VideoStage({
   videoRef,
@@ -67,20 +95,30 @@ export function VideoStage({
   onRequestPlayback,
   canRequestPlayback,
   requestLabel,
-  qualities = [],
-  activeQuality = null,
-  onQualityChange,
+  quality,
+  sources,
   captions = [],
   tracks,
+  onNextEpisode,
+  onEnded,
+  skipAhead,
   children,
 }: VideoStageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const skipRef = useRef<HTMLButtonElement>(null);
   const idleTimerRef = useRef<number | null>(null);
-  const [idle, setIdle] = useState(false);
+  const playingRef = useRef(false);
+  const heldAwakeRef = useRef(false);
   const [caption, setCaption] = useState(CAPTIONS_OFF);
   const [flash, setFlash] = useState<{ id: number; text: string } | null>(null);
+  const canPictureInPicture = useSyncExternalStore(
+    NEVER_CHANGES,
+    pipSupported,
+    pipUnsupportedOnServer
+  );
   const {
     state,
+    subscribeTime,
     togglePlay,
     seekBy,
     seekTo,
@@ -96,26 +134,54 @@ export function VideoStage({
     setFlash({ id: Date.now(), text });
   }, []);
 
+  // Hiding the chrome is a class on one element, so the pointer can move
+  // across the picture without React hearing about it at all.
+  const setIdle = useCallback((idle: boolean) => {
+    containerRef.current?.classList.toggle("stage-idle", idle);
+  }, []);
+
   const scheduleIdle = useCallback(() => {
     if (idleTimerRef.current) window.clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = null;
+    if (!playingRef.current || heldAwakeRef.current) return;
     idleTimerRef.current = window.setTimeout(() => setIdle(true), IDLE_DELAY_MS);
-  }, []);
+  }, [setIdle]);
 
   const wake = useCallback(() => {
     setIdle(false);
     scheduleIdle();
-  }, [scheduleIdle]);
+  }, [scheduleIdle, setIdle]);
 
   // Playback starting is enough to begin the countdown; the pointer does not
-  // have to move first. `chromeHidden` gates on `playing`, so a paused player
-  // shows its controls whatever this timer last decided.
+  // have to move first. Pausing brings the chrome back and keeps it up.
   useEffect(() => {
-    if (!state.playing) return;
+    playingRef.current = state.playing;
+    if (!state.playing) setIdle(false);
     scheduleIdle();
     return () => {
       if (idleTimerRef.current) window.clearTimeout(idleTimerRef.current);
     };
-  }, [state.playing, scheduleIdle]);
+  }, [scheduleIdle, setIdle, state.playing]);
+
+  const holdAwake = useCallback(
+    (held: boolean) => {
+      heldAwakeRef.current = held;
+      if (held) setIdle(false);
+      scheduleIdle();
+    },
+    [scheduleIdle, setIdle]
+  );
+
+  // Whether the jump is still on offer depends on the playhead, so it is
+  // decided the same way the scrub bar is: a class, not a render.
+  useEffect(() => {
+    if (!skipAhead) return;
+    return subscribeTime(({ currentTime, duration }) => {
+      const worthOffering =
+        duration > 0 && currentTime > 4 && currentTime < skipAhead.untilSeconds;
+      skipRef.current?.classList.toggle("stage-skip-visible", worthOffering);
+    });
+  }, [skipAhead, subscribeTime]);
 
   const changeCaption = (value: string) => {
     setCaption(value);
@@ -167,6 +233,7 @@ export function VideoStage({
         showFlash(state.muted ? "Sound on" : "Muted");
       },
       f: () => toggleFullscreen(),
+      n: () => onNextEpisode?.(),
       Home: () => seekTo(0),
       End: () => seekTo(state.duration),
     };
@@ -187,43 +254,42 @@ export function VideoStage({
     handler();
   };
 
-  const chromeHidden = idle && state.playing;
   const showPoster = Boolean(poster) && status !== "ready";
-  const volumeIcon = state.muted || state.volume === 0
-    ? IconVolumeOff
-    : state.volume < 0.5
-      ? IconVolume2
-      : IconVolume;
-  const VolumeIcon = volumeIcon;
+  const VolumeIcon =
+    state.muted || state.volume === 0
+      ? IconVolumeOff
+      : state.volume < 0.5
+        ? IconVolume2
+        : IconVolume;
 
   return (
     <div
       ref={containerRef}
-      className={`stage aspect-video w-full rounded-2xl border border-stage-line/60 shadow-[0_24px_70px_rgba(31,25,17,0.28)] outline-none ${
-        chromeHidden ? "stage-idle" : ""
-      }`}
+      className="stage w-full overflow-hidden rounded-2xl shadow-[0_18px_44px_rgba(31,25,17,0.2)] outline-none"
       tabIndex={0}
       role="region"
       aria-label={`${title} player`}
       onKeyDown={handleKeyDown}
       onPointerMove={wake}
-      onPointerLeave={() => state.playing && setIdle(true)}
+      onPointerLeave={() => playingRef.current && setIdle(true)}
     >
       {showPoster && poster && (
         <Image
           src={poster}
           alt=""
           fill
-          sizes="(min-width: 1024px) 70vw, 100vw"
+          sizes="(min-width: 1024px) 80vw, 100vw"
           unoptimized
           priority
           className="absolute inset-0 h-full w-full object-cover opacity-45"
         />
       )}
-      <div
-        className="absolute inset-0 bg-gradient-to-t from-stage via-stage/45 to-stage/70"
-        aria-hidden="true"
-      />
+      {status !== "ready" && (
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-stage via-stage/45 to-stage/70"
+          aria-hidden="true"
+        />
+      )}
 
       <video
         ref={videoRef}
@@ -232,6 +298,7 @@ export function VideoStage({
         className="absolute inset-0"
         onClick={() => status === "ready" && togglePlay()}
         onDoubleClick={toggleFullscreen}
+        onEnded={onEnded}
       >
         {tracks}
       </video>
@@ -289,14 +356,26 @@ export function VideoStage({
         </span>
       )}
 
-      <div
-        className={`stage-chrome ${chromeHidden ? "stage-chrome-hidden" : ""}`}
-      >
+      {skipAhead && (
+        <button
+          ref={skipRef}
+          type="button"
+          className="stage-skip"
+          onClick={() => {
+            seekBy(skipAhead.seconds);
+            wake();
+          }}
+        >
+          Skip {skipAhead.seconds}s
+          <IconChevronRight size={15} stroke={2.4} />
+        </button>
+      )}
+
+      <div className="stage-chrome">
         <ScrubBar
-          currentTime={state.currentTime}
-          duration={state.duration}
-          bufferedTo={state.bufferedTo}
+          subscribe={subscribeTime}
           onSeek={seekTo}
+          onScrubbingChange={holdAwake}
         />
 
         <div className="mt-1 flex items-center gap-1">
@@ -310,6 +389,11 @@ export function VideoStage({
               <IconPlayerPlayFilled size={19} />
             )}
           </StageButton>
+          {onNextEpisode && (
+            <StageButton label="Next episode" onClick={onNextEpisode}>
+              <IconPlayerTrackNextFilled size={17} />
+            </StageButton>
+          )}
           <StageButton label="Back 10 seconds" onClick={() => seekBy(-10)}>
             <IconRewindBackward10 size={19} stroke={1.9} />
           </StageButton>
@@ -317,7 +401,7 @@ export function VideoStage({
             <IconRewindForward10 size={19} stroke={1.9} />
           </StageButton>
 
-          <div className="stage-volume-group flex items-center gap-1 pr-1">
+          <div className="stage-volume-group">
             <StageButton
               label={state.muted ? "Unmute" : "Mute"}
               onClick={toggleMute}
@@ -339,13 +423,7 @@ export function VideoStage({
             />
           </div>
 
-          <p className="ml-1 font-mono text-[11px] text-stage-muted">
-            <span className="text-stage-text">
-              {formatTimecode(state.currentTime)}
-            </span>
-            {" / "}
-            {formatTimecode(state.duration)}
-          </p>
+          <Timecode subscribe={subscribeTime} />
 
           <div className="ml-auto flex items-center gap-0.5">
             {captions.length > 0 && (
@@ -361,30 +439,38 @@ export function VideoStage({
                 ]}
                 value={caption}
                 onValueChange={changeCaption}
+                onOpenChange={holdAwake}
               />
             )}
-            {qualities.length > 0 && onQualityChange && (
+            {sources && sources.options.length > 0 && (
               <StageMenu
-                label="Stream quality"
-                icon={<IconSettings size={19} stroke={1.9} />}
-                summary={
-                  qualities.find((option) => option.value === activeQuality)
-                    ?.label
-                }
-                options={qualities}
-                value={activeQuality}
-                onValueChange={onQualityChange}
+                label="Source"
+                icon={<IconBroadcast size={19} stroke={1.9} />}
+                options={sources.options}
+                value={sources.value}
+                onValueChange={sources.onChange}
+                onOpenChange={holdAwake}
               />
             )}
-            {typeof document !== "undefined" &&
-              document.pictureInPictureEnabled && (
-                <StageButton
-                  label="Picture in picture"
-                  onClick={togglePictureInPicture}
-                >
-                  <IconPictureInPicture size={19} stroke={1.9} />
-                </StageButton>
-              )}
+            {quality && quality.options.length > 1 && (
+              <StageMenu
+                label="Quality"
+                icon={<IconSettings size={19} stroke={1.9} />}
+                summary={quality.summary}
+                options={quality.options}
+                value={quality.value}
+                onValueChange={quality.onChange}
+                onOpenChange={holdAwake}
+              />
+            )}
+            {canPictureInPicture && (
+              <StageButton
+                label="Picture in picture"
+                onClick={togglePictureInPicture}
+              >
+                <IconPictureInPicture size={19} stroke={1.9} />
+              </StageButton>
+            )}
             <StageButton
               label={state.fullscreen ? "Exit fullscreen" : "Fullscreen"}
               onClick={toggleFullscreen}
@@ -402,13 +488,52 @@ export function VideoStage({
   );
 }
 
+/**
+ * Subscribes to the playhead directly and writes it to the DOM. Rendering the
+ * timecode through React would drag the whole chrome along with it once a
+ * second.
+ */
+function Timecode({
+  subscribe,
+}: {
+  subscribe: (listener: TimeListener) => () => void;
+}) {
+  const currentRef = useRef<HTMLSpanElement>(null);
+  const totalRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(
+    () =>
+      subscribe(({ currentTime, duration }) => {
+        if (currentRef.current) {
+          currentRef.current.textContent = formatTimecode(currentTime);
+        }
+        if (totalRef.current) {
+          totalRef.current.textContent = formatTimecode(duration);
+        }
+      }),
+    [subscribe]
+  );
+
+  return (
+    <p className="ml-1 font-mono text-[11px] tabular-nums text-stage-muted">
+      <span ref={currentRef} className="text-stage-text">
+        0:00
+      </span>
+      {" / "}
+      <span ref={totalRef}>0:00</span>
+    </p>
+  );
+}
+
 function StageButton({
   label,
   onClick,
+  className = "",
   children,
 }: {
   label: string;
   onClick: () => void;
+  className?: string;
   children: ReactNode;
 }) {
   return (
@@ -417,7 +542,9 @@ function StageButton({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-stage-text/85 transition-colors hover:bg-white/12 hover:text-stage-text"
+      className={`h-9 w-9 shrink-0 items-center justify-center rounded-lg text-stage-text/85 transition-colors hover:bg-white/12 hover:text-stage-text ${
+        className || "flex"
+      }`}
     >
       {children}
     </button>

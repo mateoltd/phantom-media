@@ -1,11 +1,16 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import WatchPageClient from "@/components/watch.client";
-import { enrichWithCinemeta } from "@/lib/cinemeta";
-import { directMedia, findByTmdb } from "@/lib/wikidata";
+import {
+  IMDB_ID_PATTERN,
+  getTitle,
+  placeholderTitle,
+  type TitleDetail,
+} from "@/lib/catalog";
+import { imdbToTmdb, tmdbToImdb } from "@/lib/id-bridge";
 import { kindLabel } from "@/lib/media";
 import { SOURCE_ROSTER } from "@/src/source-ids.mjs";
-import type { MediaResult, MediaType } from "@/lib/types";
+import type { MediaType } from "@/lib/types";
 
 interface WatchParams {
   params: Promise<{ type: string; id: string }>;
@@ -13,14 +18,39 @@ interface WatchParams {
 
 function parseParams(type: string, id: string): [MediaType, string] | null {
   if (type !== "movie" && type !== "tv") return null;
-  if (!/^\d+$/.test(id)) return null;
+  if (!IMDB_ID_PATTERN.test(id) && !/^\d+$/.test(id)) return null;
   return [type, id];
 }
 
-async function loadMedia(type: MediaType, id: string): Promise<MediaResult> {
-  const found = (await findByTmdb(type, id)) ?? directMedia(type, id);
-  const [enriched] = await enrichWithCinemeta([found]);
-  return enriched ?? found;
+/**
+ * Routing is by IMDb id because that is what the catalog returns, but a pasted
+ * TMDB link has to keep working, so a numeric id is translated first.
+ */
+async function loadTitle(
+  mediaType: MediaType,
+  id: string,
+): Promise<TitleDetail> {
+  const tmdbFromRoute = /^\d+$/.test(id) ? Number(id) : null;
+  const imdbId = tmdbFromRoute
+    ? await tmdbToImdb(mediaType, id)
+    : id.toLowerCase();
+
+  const detail = imdbId ? await getTitle(mediaType, imdbId) : null;
+  if (!detail) {
+    return {
+      media: placeholderTitle(mediaType, { imdbId, tmdbId: tmdbFromRoute }),
+      seasons: [],
+      episodes: [],
+    };
+  }
+
+  // The resolver only speaks TMDB. Cinemeta almost always carries that id; the
+  // bridge covers the rest, so a title never arrives unplayable.
+  if (detail.media.tmdbId === null) {
+    detail.media.tmdbId =
+      tmdbFromRoute ?? (await imdbToTmdb(mediaType, detail.media.imdbId ?? ""));
+  }
+  return detail;
 }
 
 export async function generateMetadata({
@@ -30,7 +60,7 @@ export async function generateMetadata({
   const parsed = parseParams(type, id);
   if (!parsed) return { title: "Not found" };
 
-  const media = await loadMedia(...parsed);
+  const { media } = await loadTitle(...parsed);
   const kind = kindLabel(media.mediaType);
   return {
     title: media.year ? `${media.title} (${media.year})` : media.title,
@@ -46,6 +76,13 @@ export default async function Page({ params }: WatchParams) {
   const parsed = parseParams(type, id);
   if (!parsed) notFound();
 
-  const media = await loadMedia(...parsed);
-  return <WatchPageClient media={media} sources={SOURCE_ROSTER} />;
+  const { media, seasons, episodes } = await loadTitle(...parsed);
+  return (
+    <WatchPageClient
+      media={media}
+      seasons={seasons}
+      episodes={episodes}
+      sources={SOURCE_ROSTER}
+    />
+  );
 }

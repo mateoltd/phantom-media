@@ -1,19 +1,29 @@
 "use client";
 
-import { type FormEvent, type KeyboardEvent, useId, useRef, useState } from "react";
+import {
+  type FormEvent,
+  type KeyboardEvent,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import Image from "next/image";
 import {
   IconArrowUpRight,
   IconClipboard,
   IconSearch,
+  IconX,
 } from "@tabler/icons-react";
 
 export interface SearchSuggestion {
   id: string;
   title: string;
   subtitle?: string;
+  /** Right-aligned column: a year, a rating, anything that separates near-duplicates. */
+  meta?: string;
   imageUrl?: string | null;
-  /** Short overlay printed on the thumbnail, e.g. a duration or a year. */
+  /** Short overlay printed on the thumbnail, e.g. a duration. */
   badge?: string;
 }
 
@@ -25,6 +35,8 @@ export interface SearchFieldLabels {
   looking: string;
   /** Set to show the clipboard button. */
   paste?: string;
+  /** Set to say so when a finished lookup matched nothing. */
+  empty?: string;
 }
 
 export interface SearchFieldProps {
@@ -39,7 +51,7 @@ export interface SearchFieldProps {
   suggestionsLoading?: boolean;
   onSuggestionsOpenChange?: (open: boolean) => void;
   onSuggestionSelect?: (suggestion: SearchSuggestion) => void;
-  /** Fired on hover and focus so callers can warm a fetch. */
+  /** Fired on hover, on keyboard highlight and on press, so callers can warm a fetch. */
   onSuggestionPrefetch?: (suggestion: SearchSuggestion) => void;
   /** Landscape thumbnails for video, 2:3 for posters. */
   thumbnail?: "video" | "poster" | "none";
@@ -71,6 +83,7 @@ export function SearchField({
   className = "",
 }: SearchFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
   // The highlight is held as an id, not an index, so a list that changes
   // underneath the keyboard drops the highlight instead of moving it onto
@@ -80,9 +93,24 @@ export function SearchField({
     (suggestion) => suggestion.id === activeId
   );
 
-  const open = suggestionsOpen && (suggestionsLoading || suggestions.length > 0);
+  const empty = Boolean(labels.empty) && !suggestionsLoading && suggestions.length === 0;
+  const open = suggestionsOpen && (suggestionsLoading || suggestions.length > 0 || empty);
+
+  // Arrowing past the fold has to bring the row with it.
+  useEffect(() => {
+    if (!activeId) return;
+    listRef.current
+      ?.querySelector(`[data-suggestion="${CSS.escape(activeId)}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [activeId]);
 
   const setOpen = (next: boolean) => onSuggestionsOpenChange?.(next);
+
+  const highlight = (id: string | null) => {
+    setActiveId(id);
+    const suggestion = suggestions.find((item) => item.id === id);
+    if (suggestion) onSuggestionPrefetch?.(suggestion);
+  };
 
   const moveHighlight = (direction: 1 | -1) => {
     const count = suggestions.length;
@@ -93,7 +121,7 @@ export function SearchField({
           ? 0
           : count - 1
         : (activeIndex + direction + count) % count;
-    setActiveId(suggestions[next]?.id ?? null);
+    highlight(suggestions[next]?.id ?? null);
   };
 
   const handleSubmit = (event: FormEvent) => {
@@ -155,6 +183,12 @@ export function SearchField({
     }
   };
 
+  const clear = () => {
+    onValueChange("");
+    setActiveId(null);
+    inputRef.current?.focus();
+  };
+
   const activeDescendant =
     activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined;
 
@@ -170,7 +204,7 @@ export function SearchField({
             setOpen(false);
           }
         }}
-        className="soft-input flex h-14 items-center gap-1 rounded-2xl pl-3.5 pr-1.5 shadow-[0_6px_20px_rgba(57,43,28,0.07)] transition-colors focus-within:border-text/30 sm:h-[3.75rem] sm:pl-4 sm:pr-2"
+        className="search-pill flex h-[52px] items-center gap-1 pl-4 pr-1.5 sm:h-14"
       >
         <IconSearch size={19} stroke={2} className="shrink-0 text-text-tertiary" />
         <input
@@ -193,11 +227,22 @@ export function SearchField({
           className="min-w-0 flex-1 bg-transparent px-2.5 text-[15px] font-medium text-text outline-none placeholder:font-normal placeholder:text-text-tertiary disabled:opacity-50 sm:px-3"
         />
 
+        {value && !loading && (
+          <button
+            type="button"
+            onClick={clear}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-bg hover:text-text"
+            aria-label="Clear"
+          >
+            <IconX size={16} stroke={2.2} />
+          </button>
+        )}
+
         {labels.paste && (
           <button
             type="button"
             onClick={handlePaste}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-text-tertiary transition-colors hover:bg-bg hover:text-text"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-bg hover:text-text"
             aria-label={labels.paste}
             title={labels.paste}
           >
@@ -208,31 +253,36 @@ export function SearchField({
         <button
           type="submit"
           disabled={loading}
-          className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-phantom px-3.5 text-sm font-extrabold text-white transition-colors hover:bg-phantom-dark disabled:cursor-wait sm:h-12 sm:px-5"
-          aria-label={labels.submit}
+          className="search-pill-submit flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+          aria-label={loading ? labels.working : labels.submit}
+          title={labels.submit}
         >
-          <span className="hidden sm:inline">
-            {loading ? labels.working : labels.submit}
-          </span>
           {loading ? (
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/35 border-t-white" />
           ) : (
-            <IconArrowUpRight size={17} stroke={2.4} />
+            <IconArrowUpRight size={19} stroke={2.4} />
           )}
         </button>
       </form>
 
       {open && (
         <div
+          ref={listRef}
           id={listboxId}
           role="listbox"
           aria-label={labels.suggestions}
-          className="absolute inset-x-0 top-[calc(100%+8px)] z-50 max-h-[min(52svh,340px)] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-surface/98 p-1.5 shadow-[0_18px_50px_rgba(45,35,24,0.16)] backdrop-blur-md"
+          className="animate-panel-in absolute inset-x-0 top-[calc(100%+10px)] z-50 max-h-[min(52svh,336px)] overflow-y-auto overscroll-contain rounded-[22px] border border-border bg-surface/98 p-2.5 shadow-[0_28px_80px_rgba(36,29,20,0.2)] backdrop-blur-md"
         >
           {suggestionsLoading && suggestions.length === 0 && (
-            <div className="flex h-14 items-center gap-3 px-3 text-xs text-text-tertiary">
+            <div className="flex h-12 items-center gap-3 px-3 text-xs text-text-tertiary">
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-phantom" />
               {labels.looking}
+            </div>
+          )}
+
+          {empty && (
+            <div className="flex h-12 items-center px-3 text-xs text-text-tertiary">
+              {labels.empty}
             </div>
           )}
 
@@ -241,6 +291,7 @@ export function SearchField({
               type="button"
               role="option"
               id={`${listboxId}-option-${index}`}
+              data-suggestion={suggestion.id}
               aria-selected={index === activeIndex}
               key={suggestion.id}
               onMouseDown={(event) => event.preventDefault()}
@@ -248,14 +299,14 @@ export function SearchField({
               onPointerDown={() => onSuggestionPrefetch?.(suggestion)}
               onFocus={() => onSuggestionPrefetch?.(suggestion)}
               onClick={() => choose(suggestion)}
-              className={`flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors ${
+              className={`flex w-full items-center gap-3 rounded-2xl px-2 py-1.5 text-left transition-colors ${
                 index === activeIndex ? "bg-bg" : "hover:bg-bg"
               }`}
             >
               {thumbnail !== "none" && (
                 <span
                   className={`relative shrink-0 overflow-hidden rounded-lg bg-border ${
-                    thumbnail === "poster" ? "h-14 w-[38px]" : "h-12 w-[84px]"
+                    thumbnail === "poster" ? "h-12 w-8" : "h-11 w-[76px]"
                   }`}
                 >
                   {suggestion.imageUrl ? (
@@ -263,7 +314,7 @@ export function SearchField({
                       src={suggestion.imageUrl}
                       alt=""
                       fill
-                      sizes={thumbnail === "poster" ? "38px" : "84px"}
+                      sizes={thumbnail === "poster" ? "32px" : "76px"}
                       unoptimized
                       className="h-full w-full object-cover"
                     />
@@ -279,7 +330,8 @@ export function SearchField({
                   )}
                 </span>
               )}
-              <span className="min-w-0">
+
+              <span className="min-w-0 flex-1">
                 <span className="line-clamp-1 block text-[13px] font-bold text-text">
                   {suggestion.title}
                 </span>
@@ -289,6 +341,12 @@ export function SearchField({
                   </span>
                 )}
               </span>
+
+              {suggestion.meta && (
+                <span className="shrink-0 pr-1 font-mono text-[11px] text-text-tertiary">
+                  {suggestion.meta}
+                </span>
+              )}
             </button>
           ))}
         </div>

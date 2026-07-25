@@ -1,45 +1,65 @@
 "use client";
 
-import { type RefObject, useCallback, useEffect, useState } from "react";
+import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
 
+/**
+ * What the chrome re-renders for. Everything here changes a handful of times
+ * per viewing; the playhead does not, so it is deliberately absent.
+ */
 export interface VideoState {
   playing: boolean;
   waiting: boolean;
-  currentTime: number;
+  ended: boolean;
   duration: number;
-  /** End of the buffered range the playhead is currently inside, in seconds. */
-  bufferedTo: number;
   volume: number;
   muted: boolean;
   fullscreen: boolean;
   pictureInPicture: boolean;
 }
 
+export interface TimeSnapshot {
+  currentTime: number;
+  duration: number;
+  /** End of the buffered range the playhead is currently inside, in seconds. */
+  bufferedTo: number;
+}
+
+export type TimeListener = (snapshot: TimeSnapshot) => void;
+
 const INITIAL: VideoState = {
   playing: false,
   waiting: false,
-  currentTime: 0,
+  ended: false,
   duration: 0,
-  bufferedTo: 0,
   volume: 1,
   muted: false,
   fullscreen: false,
   pictureInPicture: false,
 };
 
-const MEDIA_EVENTS = [
+const EMPTY_TIME: TimeSnapshot = { currentTime: 0, duration: 0, bufferedTo: 0 };
+
+/** Events that change something the chrome renders. All of them are rare. */
+const STATE_EVENTS = [
   "play",
   "playing",
   "pause",
-  "timeupdate",
-  "progress",
+  "ended",
+  "emptied",
   "durationchange",
   "volumechange",
   "loadedmetadata",
   "canplay",
+] as const;
+
+/** Events that move the playhead or the buffer without changing the chrome. */
+const TIME_EVENTS = [
+  "timeupdate",
+  "progress",
+  "seeking",
   "seeked",
-  "ended",
-  "emptied",
+  "durationchange",
+  "loadedmetadata",
 ] as const;
 
 function setTrackMode(track: TextTrack, showing: boolean): void {
@@ -56,16 +76,49 @@ function bufferedAhead(video: HTMLVideoElement): number {
   return currentTime;
 }
 
+function readTime(video: HTMLVideoElement): TimeSnapshot {
+  return {
+    currentTime: video.currentTime || 0,
+    duration: Number.isFinite(video.duration) ? video.duration : 0,
+    bufferedTo: bufferedAhead(video),
+  };
+}
+
 /**
- * Mirrors the media element into React state and hands back the commands the
- * chrome needs. The element stays the single source of truth: nothing here
- * tracks playback independently, so the UI cannot drift from what is playing.
+ * Mirrors the media element into React and hands back the commands the chrome
+ * needs. The element stays the single source of truth, so the UI cannot drift
+ * from what is playing.
+ *
+ * The playhead is published through `subscribeTime` rather than through state:
+ * at sixty frames a second, routing it through React would re-render the whole
+ * stage — controls, menus, poster and all — for every frame of a scrub.
  */
 export function useVideoState(
   videoRef: RefObject<HTMLVideoElement | null>,
   containerRef: RefObject<HTMLElement | null>
 ) {
   const [state, setState] = useState<VideoState>(INITIAL);
+  const listenersRef = useRef(new Set<TimeListener>());
+  const frameRef = useRef<number | null>(null);
+
+  const emitTime = useCallback(() => {
+    const video = videoRef.current;
+    const snapshot = video ? readTime(video) : EMPTY_TIME;
+    for (const listener of listenersRef.current) listener(snapshot);
+  }, [videoRef]);
+
+  const subscribeTime = useCallback(
+    (listener: TimeListener) => {
+      const listeners = listenersRef.current;
+      listeners.add(listener);
+      const video = videoRef.current;
+      listener(video ? readTime(video) : EMPTY_TIME);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    [videoRef]
+  );
 
   useEffect(() => {
     const video = videoRef.current;
@@ -76,36 +129,53 @@ export function useVideoState(
         ...current,
         playing: !video.paused && !video.ended,
         waiting: false,
-        currentTime: video.currentTime || 0,
+        ended: video.ended,
         duration: Number.isFinite(video.duration) ? video.duration : 0,
-        bufferedTo: bufferedAhead(video),
         volume: video.volume,
         muted: video.muted,
       }));
     };
-    const onWaiting = () =>
-      setState((current) => ({ ...current, waiting: true }));
+    const onWaiting = () => setState((current) => ({ ...current, waiting: true }));
     const onPipChange = () =>
       setState((current) => ({
         ...current,
         pictureInPicture: document.pictureInPictureElement === video,
       }));
 
-    for (const event of MEDIA_EVENTS) video.addEventListener(event, sync);
+    for (const event of STATE_EVENTS) video.addEventListener(event, sync);
+    for (const event of TIME_EVENTS) video.addEventListener(event, emitTime);
     video.addEventListener("waiting", onWaiting);
     video.addEventListener("stalled", onWaiting);
     video.addEventListener("enterpictureinpicture", onPipChange);
     video.addEventListener("leavepictureinpicture", onPipChange);
     sync();
+    emitTime();
 
     return () => {
-      for (const event of MEDIA_EVENTS) video.removeEventListener(event, sync);
+      for (const event of STATE_EVENTS) video.removeEventListener(event, sync);
+      for (const event of TIME_EVENTS) video.removeEventListener(event, emitTime);
       video.removeEventListener("waiting", onWaiting);
       video.removeEventListener("stalled", onWaiting);
       video.removeEventListener("enterpictureinpicture", onPipChange);
       video.removeEventListener("leavepictureinpicture", onPipChange);
     };
-  }, [videoRef]);
+  }, [emitTime, videoRef]);
+
+  // `timeupdate` fires about four times a second, which is visibly steppy on a
+  // progress bar. While something is playing the bar is driven off the frame
+  // clock instead, and stops the moment playback does.
+  useEffect(() => {
+    if (!state.playing) return;
+    const tick = () => {
+      emitTime();
+      frameRef.current = window.requestAnimationFrame(tick);
+    };
+    frameRef.current = window.requestAnimationFrame(tick);
+    return () => {
+      if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    };
+  }, [emitTime, state.playing]);
 
   useEffect(() => {
     const onFullscreenChange = () =>
@@ -131,8 +201,9 @@ export function useVideoState(
       const video = videoRef.current;
       if (!video || !Number.isFinite(video.duration)) return;
       video.currentTime = Math.max(0, Math.min(seconds, video.duration));
+      emitTime();
     },
-    [videoRef]
+    [emitTime, videoRef]
   );
 
   const seekBy = useCallback(
@@ -204,6 +275,7 @@ export function useVideoState(
 
   return {
     state,
+    subscribeTime,
     togglePlay,
     seekTo,
     seekBy,

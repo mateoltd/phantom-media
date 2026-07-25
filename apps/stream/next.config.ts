@@ -27,9 +27,9 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@phantom/ui"],
   images: {
     remotePatterns: [
-      { protocol: "https", hostname: "image.tmdb.org", pathname: "/t/p/**" },
       { protocol: "https", hostname: "images.metahub.space" },
-      { protocol: "https", hostname: "static.tvmaze.com" },
+      { protocol: "https", hostname: "episodes.metahub.space" },
+      { protocol: "https", hostname: "m.media-amazon.com" },
     ],
   },
   async redirects() {

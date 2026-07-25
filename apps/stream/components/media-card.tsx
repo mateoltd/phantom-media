@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { IconPlayerPlayFilled, IconStarFilled } from "@tabler/icons-react";
-import { posterUrl } from "@/lib/media-images";
 import { kindLabel, mediaHref } from "@/lib/media";
 import type { MediaResult } from "@/lib/types";
 
@@ -14,7 +13,7 @@ export function MediaCard({
   media: MediaResult;
   priority?: boolean;
 }) {
-  const image = posterUrl(media);
+  const image = media.posterUrl;
 
   return (
     <Link
@@ -55,7 +54,7 @@ export function MediaCard({
           {media.title}
         </span>
         <span className="mt-1 flex items-center gap-2 font-mono text-[10px] text-text-tertiary">
-          {media.year || "Year unknown"}
+          {media.year}
           {media.rating > 0 && (
             <span className="flex items-center gap-0.5 text-text-secondary">
               <IconStarFilled size={9} className="text-phantom" />

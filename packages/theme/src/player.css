@@ -5,9 +5,35 @@
 
 .stage {
   position: relative;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   background: var(--color-stage);
   color: var(--color-stage-text);
+}
+
+/* The stage is its own fullscreen element, so it has to drop the ratio it
+   keeps in the page and fill whatever it is given. */
+.stage:fullscreen {
+  aspect-ratio: auto;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+/* A hairline inside the rounded corner rather than a border outside it: a
+   border would sit in the page's own colour and read as a frame around the
+   picture instead of an edge on it. */
+.stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(246, 241, 230, 0.09);
+  pointer-events: none;
+}
+
+.stage:fullscreen::after {
+  display: none;
 }
 
 .stage video {
@@ -35,19 +61,76 @@
     transform 0.22s ease;
 }
 
-.stage-chrome-hidden {
+/* Idleness is a single class on the stage rather than a piece of React state,
+   so a pointer crossing the picture never re-renders the player. */
+.stage-idle {
+  cursor: none;
+}
+
+.stage-idle .stage-chrome {
   opacity: 0;
   transform: translateY(0.75rem);
   pointer-events: none;
 }
 
-.stage-idle {
-  cursor: none;
+/* --------------------------------------------------------------- skip past */
+
+/* Appears over the picture for as long as a jump is worth offering, and says
+   exactly how far it goes — there is no chapter data here, so it must not
+   pretend to know where an intro ends. */
+.stage-skip {
+  position: absolute;
+  right: 0.9rem;
+  bottom: 4.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid rgba(246, 241, 230, 0.22);
+  border-radius: 999px;
+  background: rgba(9, 9, 7, 0.78);
+  color: var(--color-stage-text);
+  font-size: 12px;
+  font-weight: 800;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(0.4rem);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+  backdrop-filter: blur(8px);
+}
+
+.stage-skip-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.stage-skip:hover {
+  background: rgba(9, 9, 7, 0.92);
+  border-color: rgba(246, 241, 230, 0.4);
+}
+
+.stage-idle .stage-skip {
+  opacity: 0;
+  visibility: hidden;
 }
 
 /* ------------------------------------------------------------------ scrub */
 
+/* The playhead, the buffer and the hover preview are all custom properties
+   written straight onto `.scrub` by the component. Nothing below is rendered
+   by React, which is what keeps a scrub at sixty frames from costing sixty
+   renders of the player. */
 .scrub {
+  --played: 0%;
+  --buffered: 0%;
+  --hover: 0%;
+  position: relative;
+}
+
+.scrub-hit {
   position: relative;
   display: block;
   width: 100%;
@@ -70,8 +153,8 @@
   transition: height 0.14s ease;
 }
 
-.scrub:hover .scrub-track,
-.scrub:focus-visible .scrub-track,
+.scrub-hit:hover .scrub-track,
+.scrub-hit:focus-visible .scrub-track,
 .scrub-scrubbing .scrub-track {
   height: 7px;
 }
@@ -86,20 +169,25 @@
 }
 
 .scrub-buffered {
+  width: var(--buffered);
   background: rgba(246, 241, 230, 0.3);
 }
 
 .scrub-hover {
+  width: var(--hover);
   background: rgba(246, 241, 230, 0.42);
+  opacity: 0;
 }
 
 .scrub-played {
+  width: var(--played);
   background: var(--color-phantom);
 }
 
 .scrub-head {
   position: absolute;
   top: 50%;
+  left: var(--played);
   width: 13px;
   height: 13px;
   border-radius: 999px;
@@ -109,8 +197,8 @@
   transition: transform 0.14s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.scrub:hover .scrub-head,
-.scrub:focus-visible .scrub-head,
+.scrub-hit:hover .scrub-head,
+.scrub-hit:focus-visible .scrub-head,
 .scrub-scrubbing .scrub-head {
   transform: translate(-50%, -50%) scale(1);
 }
@@ -118,6 +206,7 @@
 .scrub-tooltip {
   position: absolute;
   bottom: calc(100% + 0.4rem);
+  left: var(--hover);
   padding: 0.2rem 0.4rem;
   border-radius: 6px;
   background: rgba(9, 9, 7, 0.92);
@@ -127,48 +216,86 @@
   line-height: 1.4;
   white-space: nowrap;
   transform: translateX(-50%);
+  opacity: 0;
   pointer-events: none;
+}
+
+.scrub-hovering .scrub-hover,
+.scrub-hovering .scrub-tooltip {
+  opacity: 1;
 }
 
 /* ----------------------------------------------------------------- volume */
 
+/* The slider used to unfold on hover, which meant aiming at a control that
+   was not there yet and lost it again on the way. It is simply present now,
+   and steps out of the way entirely where there is no room for it. */
+.stage-volume-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-right: 0.4rem;
+}
+
 .stage-volume {
   appearance: none;
-  width: 0;
-  height: 4px;
+  width: 4.75rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+}
+
+.stage-volume::-webkit-slider-runnable-track {
+  height: 5px;
   border-radius: 999px;
   background: linear-gradient(
     to right,
     var(--color-phantom) var(--level, 100%),
-    rgba(246, 241, 230, 0.24) var(--level, 100%)
+    rgba(246, 241, 230, 0.26) var(--level, 100%)
   );
-  opacity: 0;
-  outline: none;
-  transition:
-    width 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.2s ease;
 }
 
-.stage-volume-group:hover .stage-volume,
-.stage-volume:focus-visible {
-  width: 4.5rem;
-  opacity: 1;
+.stage-volume::-moz-range-track {
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-phantom) var(--level, 100%),
+    rgba(246, 241, 230, 0.26) var(--level, 100%)
+  );
 }
 
 .stage-volume::-webkit-slider-thumb {
   appearance: none;
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
+  margin-top: -3.5px;
   border-radius: 999px;
   background: var(--color-stage-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+  transition: transform 0.14s ease;
+}
+
+.stage-volume:hover::-webkit-slider-thumb,
+.stage-volume:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.18);
 }
 
 .stage-volume::-moz-range-thumb {
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   border: none;
   border-radius: 999px;
   background: var(--color-stage-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+@media (max-width: 640px) {
+  .stage-volume {
+    display: none;
+  }
 }
 
 /* ------------------------------------------------------------- indicators */
@@ -201,7 +328,8 @@
   .stage-chrome,
   .scrub-track,
   .scrub-head,
-  .stage-volume {
+  .stage-skip,
+  .stage-volume::-webkit-slider-thumb {
     transition: none;
   }
 }

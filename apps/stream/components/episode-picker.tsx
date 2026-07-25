@@ -1,90 +1,41 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { StyledSelect } from "@phantom/ui";
-import type { EpisodeSummary, MediaResult, SeasonSummary } from "@/lib/types";
-
-type EpisodePayload = {
-  seasons?: SeasonSummary[];
-  episodes?: EpisodeSummary[];
-  error?: string;
-};
+import type { EpisodeSummary, SeasonSummary } from "@/lib/types";
 
 interface EpisodePickerProps {
-  media: MediaResult;
+  seasons: readonly SeasonSummary[];
+  episodes: readonly EpisodeSummary[];
   season: number;
   episode: number;
   onChange: (season: number, episode: number) => void;
+  /** Undefined at either end of the run. */
+  onPrevious?: () => void;
+  onNext?: () => void;
 }
 
+/**
+ * The listing arrives with the page, so there is no loading state here and no
+ * second round trip. When a series has no listing at all the numbers are typed
+ * in instead, which still gets a stream.
+ */
 export function EpisodePicker({
-  media,
+  seasons,
+  episodes,
   season,
   episode,
   onChange,
+  onPrevious,
+  onNext,
 }: EpisodePickerProps) {
-  const [seasons, setSeasons] = useState<SeasonSummary[]>([]);
-  const [episodes, setEpisodes] = useState<EpisodeSummary[]>([]);
-  const [loading, setLoading] = useState(media.mediaType === "tv");
-  // No episode listing available, so the numbers are typed in directly.
-  const [manual, setManual] = useState(false);
-
-  useEffect(() => {
-    if (media.mediaType !== "tv") return;
-
-    const controller = new AbortController();
-    const params = new URLSearchParams({ tmdbId: String(media.id) });
-    if (media.imdbId) params.set("imdbId", media.imdbId);
-
-    fetch(`/api/tv/episodes?${params}`, { signal: controller.signal })
-      .then(async (response) => {
-        const payload = (await response.json()) as EpisodePayload;
-        if (!response.ok) {
-          throw new Error(payload.error ?? `Episode lookup failed`);
-        }
-        return payload;
-      })
-      .then((payload) => {
-        const nextSeasons = payload.seasons ?? [];
-        setSeasons(nextSeasons);
-        setEpisodes(payload.episodes ?? []);
-        setManual(nextSeasons.length === 0);
-        setLoading(false);
-
-        const first =
-          nextSeasons.find((item) => item.seasonNumber > 0) ?? nextSeasons[0];
-        if (first && !nextSeasons.some((item) => item.seasonNumber === season)) {
-          onChange(first.seasonNumber, 1);
-        }
-      })
-      .catch((error: Error) => {
-        if (error.name === "AbortError") return;
-        setManual(true);
-        setLoading(false);
-      });
-
-    return () => controller.abort();
-    // `season` is deliberately absent: this runs once per series, not per pick.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [media.id, media.imdbId, media.mediaType, onChange]);
-
   const seasonEpisodes = useMemo(
     () => episodes.filter((item) => item.seasonNumber === season),
     [episodes, season]
   );
 
-  if (media.mediaType !== "tv") return null;
-
-  if (loading) {
-    return (
-      <div className="flex h-11 items-center gap-2 font-mono text-[11px] text-text-tertiary">
-        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-border border-t-phantom" />
-        Loading episodes
-      </div>
-    );
-  }
-
-  if (manual) {
+  if (seasons.length === 0) {
     return (
       <div className="flex items-end gap-3">
         <NumberField
@@ -118,7 +69,7 @@ export function EpisodePicker({
           compact
         />
       </div>
-      <div className="w-[230px]">
+      <div className="w-[240px]">
         <StyledSelect
           label="Episode"
           value={String(episode)}
@@ -131,7 +82,41 @@ export function EpisodePicker({
           compact
         />
       </div>
+
+      {/* Watching a series in order is the common case, and hunting for the
+          next row in a select is the wrong amount of work for it. */}
+      <div className="flex items-center gap-1.5">
+        <StepButton label="Previous episode" onClick={onPrevious}>
+          <IconChevronLeft size={17} stroke={2.4} />
+        </StepButton>
+        <StepButton label="Next episode" onClick={onNext}>
+          <IconChevronRight size={17} stroke={2.4} />
+        </StepButton>
+      </div>
     </div>
+  );
+}
+
+function StepButton({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!onClick}
+      aria-label={label}
+      title={label}
+      className="soft-input flex h-11 w-10 items-center justify-center rounded-xl text-text-secondary transition-colors hover:border-text/30 hover:text-text disabled:cursor-not-allowed disabled:opacity-35"
+    >
+      {children}
+    </button>
   );
 }
 

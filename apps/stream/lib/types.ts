@@ -1,42 +1,39 @@
 export type MediaType = "movie" | "tv";
 
 export interface MediaResult {
-  id: number;
+  /** What `/watch/:type/:id` carries: an IMDb id when there is one. */
+  id: string;
+  imdbId: string | null;
+  /** The playback resolver speaks TMDB and nothing else. */
+  tmdbId: number | null;
   mediaType: MediaType;
   title: string;
-  originalTitle: string;
-  overview: string;
-  posterPath: string | null;
-  backdropPath: string | null;
-  releaseDate: string;
+  /** `2011`, or `2011–2019` for a series that has finished. */
   year: string;
+  releaseDate: string;
+  overview: string;
+  posterUrl: string | null;
+  backdropUrl: string | null;
+  logoUrl: string | null;
   rating: number;
-  genreIds: number[];
   genres: string[];
-  imdbId?: string | null;
-  posterUrl?: string | null;
-  backdropUrl?: string | null;
-  dataSource?: "wikidata" | "tmdb" | "direct";
+  runtime: string | null;
 }
 
 export interface SeasonSummary {
-  id: number;
-  name: string;
   seasonNumber: number;
+  name: string;
   episodeCount: number;
   airDate: string | null;
-  posterPath: string | null;
 }
 
 export interface EpisodeSummary {
-  id: number;
-  name: string;
-  episodeNumber: number;
   seasonNumber: number;
-  airDate: string | null;
+  episodeNumber: number;
+  name: string;
   overview: string;
-  stillPath: string | null;
-  runtime: number | null;
+  airDate: string | null;
+  stillUrl: string | null;
 }
 
 export interface StreamCandidate {

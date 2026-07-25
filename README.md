@@ -60,9 +60,11 @@ chrome, and neither pays for the other's CSS.
 ## Design
 
 One accent on a paper ground, Sora over JetBrains Mono, generous radii. The
-search field is the same component in both apps and it is rounded, because
-every other surface in the system is: panels, menus, rails, modals. A square
-field would have been the only hard corner on the page.
+search field is the same component in both apps: a pill, with a round icon
+button rather than a labelled one. Every other surface in the system is
+rounded — panels, menus, rails, modals — so a square field would have been the
+only hard corner on the page, and the field is already the loudest thing on a
+landing page without also shouting its own name.
 
 ## Deployment
 

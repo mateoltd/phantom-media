@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { enrichWithCinemeta } from "@/lib/cinemeta";
-import {
-  directMedia,
-  findByImdb,
-  findByTmdb,
-  searchOpenCatalog,
-} from "@/lib/wikidata";
+import { getTitle, searchCatalog } from "@/lib/catalog";
+import { tmdbToImdb } from "@/lib/id-bridge";
 import type { MediaResult, MediaType } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -14,58 +9,58 @@ const IMDB_PATTERN = /(?:imdb\.com\/title\/)?(tt\d{5,12})/i;
 const TMDB_URL_PATTERN = /themoviedb\.org\/(movie|tv)\/(\d+)/i;
 const TYPED_ID_PATTERN = /^(movie|tv)\s*[:/#-]\s*(\d+)$/i;
 
-async function byTmdb(type: MediaType, id: string): Promise<MediaResult[]> {
-  return enrichWithCinemeta([
-    (await findByTmdb(type, id)) ?? directMedia(type, id),
-  ]);
+/** An IMDb id does not say whether it is a film or a series, so ask both. */
+async function byImdb(imdbId: string): Promise<MediaResult[]> {
+  const found = await Promise.all(
+    (["movie", "tv"] as const).map((mediaType) => getTitle(mediaType, imdbId)),
+  );
+  return found
+    .filter((detail): detail is NonNullable<typeof detail> => Boolean(detail))
+    .map((detail) => detail.media);
+}
+
+async function byTmdb(
+  mediaType: MediaType,
+  tmdbId: string,
+): Promise<MediaResult[]> {
+  const imdbId = await tmdbToImdb(mediaType, tmdbId);
+  if (!imdbId) return [];
+  const detail = await getTitle(mediaType, imdbId);
+  return detail ? [detail.media] : [];
 }
 
 export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get("q")?.trim() ?? "";
-  if (!query) return NextResponse.json({ results: [] });
+  if (!query) return NextResponse.json({ query, mode: "text", results: [] });
 
   try {
     const imdb = query.match(IMDB_PATTERN);
     if (imdb) {
-      const results = await enrichWithCinemeta(
-        await findByImdb(imdb[1].toLowerCase()),
-      );
       return NextResponse.json({
         query,
         mode: "imdb",
-        translatedFrom: imdb[1].toLowerCase(),
-        results,
+        results: await byImdb(imdb[1].toLowerCase()),
       });
     }
 
-    const tmdbUrl = query.match(TMDB_URL_PATTERN);
+    const tmdbUrl = query.match(TMDB_URL_PATTERN) ?? query.match(TYPED_ID_PATTERN);
     if (tmdbUrl) {
-      const results = await byTmdb(
-        tmdbUrl[1].toLowerCase() as MediaType,
-        tmdbUrl[2],
-      );
-      return NextResponse.json({ query, mode: "tmdb-id", results });
-    }
-
-    const typed = query.match(TYPED_ID_PATTERN);
-    if (typed) {
-      const results = await byTmdb(
-        typed[1].toLowerCase() as MediaType,
-        typed[2],
-      );
-      return NextResponse.json({ query, mode: "tmdb-id", results });
+      return NextResponse.json({
+        query,
+        mode: "tmdb-id",
+        results: await byTmdb(tmdbUrl[1].toLowerCase() as MediaType, tmdbUrl[2]),
+      });
     }
 
     return NextResponse.json({
       query,
       mode: "text",
-      results: await enrichWithCinemeta(await searchOpenCatalog(query)),
+      results: await searchCatalog(query),
     });
   } catch (error) {
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : "Open catalog search failed",
+        error: error instanceof Error ? error.message : "The catalog search failed",
       },
       { status: 502 },
     );

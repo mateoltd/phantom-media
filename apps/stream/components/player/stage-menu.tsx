@@ -17,6 +17,8 @@ interface StageMenuProps {
   options: readonly StageMenuOption[];
   value: string | null;
   onValueChange: (value: string) => void;
+  /** The chrome has to stay up while a menu is open over it. */
+  onOpenChange?: (open: boolean) => void;
   disabled?: boolean;
 }
 
@@ -32,12 +34,14 @@ export function StageMenu({
   options,
   value,
   onValueChange,
+  onOpenChange,
   disabled = false,
 }: StageMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    onOpenChange?.(open);
     if (!open) return;
 
     const closeOnOutside = (event: PointerEvent) => {
@@ -56,7 +60,7 @@ export function StageMenu({
       document.removeEventListener("pointerdown", closeOnOutside);
       document.removeEventListener("keydown", closeOnEscape, true);
     };
-  }, [open]);
+  }, [onOpenChange, open]);
 
   return (
     <div ref={rootRef} className="relative">

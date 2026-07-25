@@ -7,16 +7,20 @@ Part of the [Phantom monorepo](../../README.md). Install from the root.
 
 ## What it does
 
-- Searches open catalogs by title, IMDb link, TMDB URL or `movie:ID` / `tv:ID`.
-  No API key and no account are involved at any point.
-- Fills in artwork, ratings and synopses from Cinemeta, and episode listings
-  from TVmaze.
-- Resolves playback across a roster of sources, probes every manifest they
-  offer before trusting one, and starts the fastest that answers.
+- Searches by title, IMDb link, TMDB URL or `movie:ID` / `tv:ID`. No API key
+  and no account are involved at any point.
+- Reads artwork, ratings, synopses and the full episode listing from Cinemeta
+  in a single request, which is also where the TMDB id the resolver needs
+  comes from. Wikidata bridges the identifiers on the rare title that lacks it.
+- Starts routing the moment the page opens, asking several sources at once and
+  taking the first that answers with something playable.
+- Prefers 1080p and above when ranking what a source offers, because the
+  difference is plain to see and half a second of extra latency is not.
+- Reports what it learned about every source it asked, so picking one by hand
+  is an informed choice rather than a guess.
 - Hands off to the next source when one stalls mid-play, rather than dropping
   you back to a dead player.
-- Puts failing sources on a cooldown so the next search does not spend time on
-  them again.
+- Remembers where you stopped, per episode, and resumes there.
 
 ## Routes
 
@@ -46,10 +50,19 @@ has to reach into attachment and failure handling.
   any pointer move.
 - Keyboard: <kbd>Space</kbd> or <kbd>K</kbd> to play, <kbd>J</kbd>/<kbd>L</kbd>
   for ten seconds, arrows to seek and set volume, <kbd>M</kbd> to mute,
-  <kbd>F</kbd> for fullscreen, <kbd>0</kbd>–<kbd>9</kbd> to jump by tenths.
-- Quality and subtitle menus, picture-in-picture, and fullscreen.
+  <kbd>N</kbd> for the next episode, <kbd>F</kbd> for fullscreen,
+  <kbd>0</kbd>–<kbd>9</kbd> to jump by tenths.
+- A quality menu of the stream's actual renditions, not of its URLs, with
+  automatic switching that opens high rather than climbing up from 360p.
+- Next and previous episode in the chrome, an end-of-episode hand-off, and a
+  jump offered over the opening minutes. It is labelled by the distance it
+  covers, not as "skip intro" — there is no chapter data behind it.
+- Subtitle menu, picture-in-picture and fullscreen.
 - Adaptive HLS through `hls.js`, native HLS where the browser has it, and
   progressive MP4 as the fallback.
+- The playhead, the buffer, the hover preview and the auto-hiding chrome are
+  written to the DOM directly rather than held in React state. Sixty frames a
+  second of scrubbing costs sixty style writes, not sixty renders.
 
 ## Local commands
 

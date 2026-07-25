@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { SearchField, type SearchSuggestion } from "@phantom/ui";
-import { posterUrl } from "@/lib/media-images";
 import { kindLabel, looksLikeIdentifier, mediaHref } from "@/lib/media";
 import type { MediaResult } from "@/lib/types";
 
@@ -18,15 +17,27 @@ interface MediaSearchProps {
   autoFocus?: boolean;
 }
 
+const MIN_QUERY_LENGTH = 2;
+const DEBOUNCE_MS = 200;
+
+function isLookupWorthy(query: string): boolean {
+  return query.length >= MIN_QUERY_LENGTH || looksLikeIdentifier(query);
+}
+
 /**
  * The stream app's half of the shared search field: it owns the debounce and
  * decides whether a query lands on the results grid or straight on a title.
+ *
+ * Results from the previous query stay on screen while the next one is in
+ * flight. Blanking the list on every keystroke is what made typing feel like
+ * the field had stopped responding.
  */
 export function MediaSearch({
   initialQuery = "",
   autoFocus = false,
 }: MediaSearchProps) {
   const router = useRouter();
+  const [navigating, startNavigation] = useTransition();
   const [value, setValue] = useState(initialQuery);
   const [results, setResults] = useState<MediaResult[]>([]);
   const [open, setOpen] = useState(false);
@@ -41,43 +52,36 @@ export function MediaSearch({
     }
 
     const query = value.trim();
-    const identifier = looksLikeIdentifier(query);
-    if (!query || (!identifier && query.length < 3)) return;
+    if (!isLookupWorthy(query)) return;
 
     const cached = cacheRef.current.get(query);
     const controller = new AbortController();
-    const timer = window.setTimeout(
-      async () => {
-        if (cached) {
-          setResults(cached);
-          setOpen(true);
-          setLookingUp(false);
-          return;
-        }
+    const timer = window.setTimeout(async () => {
+      if (cached) {
+        setResults(cached);
+        setLookingUp(false);
+        return;
+      }
 
-        setLookingUp(true);
-        try {
-          const response = await fetch(
-            `/api/search?q=${encodeURIComponent(query)}`,
-            { signal: controller.signal }
-          );
-          const payload = (await response.json()) as SearchPayload;
-          if (!response.ok) throw new Error(payload.error ?? "Search failed");
+      setLookingUp(true);
+      try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
+          signal: controller.signal,
+        });
+        const payload = (await response.json()) as SearchPayload;
+        if (!response.ok) throw new Error(payload.error ?? "Search failed");
 
-          const found = payload.results ?? [];
-          cacheRef.current.set(query, found);
-          setResults(found);
-          setOpen(true);
-        } catch (error) {
-          if (!(error instanceof DOMException && error.name === "AbortError")) {
-            setResults([]);
-          }
-        } finally {
-          if (!controller.signal.aborted) setLookingUp(false);
+        const found = payload.results ?? [];
+        cacheRef.current.set(query, found);
+        setResults(found);
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setResults([]);
         }
-      },
-      cached ? 0 : identifier ? 150 : 340
-    );
+      } finally {
+        if (!controller.signal.aborted) setLookingUp(false);
+      }
+    }, cached ? 0 : DEBOUNCE_MS);
 
     return () => {
       window.clearTimeout(timer);
@@ -87,44 +91,52 @@ export function MediaSearch({
 
   const suggestions = useMemo<SearchSuggestion[]>(
     () =>
-      results.slice(0, 7).map((media) => ({
+      results.slice(0, 8).map((media) => ({
         id: `${media.mediaType}-${media.id}`,
         title: media.title,
-        subtitle: `${kindLabel(media.mediaType)} · ${media.year || "Year unknown"}`,
-        imageUrl: posterUrl(media, "w154"),
+        subtitle:
+          media.rating > 0
+            ? `${kindLabel(media.mediaType)} · ★ ${media.rating.toFixed(1)}`
+            : kindLabel(media.mediaType),
+        meta: media.year,
+        imageUrl: media.posterUrl,
       })),
     [results]
   );
 
+  const findMedia = (suggestionId: string) =>
+    results.find((item) => `${item.mediaType}-${item.id}` === suggestionId);
+
+  const go = (href: string) => startNavigation(() => router.push(href));
+
   return (
     <SearchField
       value={value}
+      loading={navigating}
       onValueChange={(next) => {
         setValue(next);
         setOpen(true);
-        const query = next.trim();
-        if (!query || (!looksLikeIdentifier(query) && query.length < 3)) {
+        if (!isLookupWorthy(next.trim())) {
           setResults([]);
           setLookingUp(false);
         }
       }}
       onSubmit={(query) => {
         // One work, one destination: an identifier goes straight to the player.
-        const only = looksLikeIdentifier(query) && results.length === 1
-          ? results[0]
-          : null;
-        router.push(
-          only ? mediaHref(only) : `/search?q=${encodeURIComponent(query)}`
-        );
+        const only =
+          looksLikeIdentifier(query) && results.length === 1 ? results[0] : null;
+        go(only ? mediaHref(only) : `/search?q=${encodeURIComponent(query)}`);
       }}
       onSuggestionSelect={(suggestion) => {
-        const media = results.find(
-          (item) => `${item.mediaType}-${item.id}` === suggestion.id
-        );
+        const media = findMedia(suggestion.id);
         if (!media) return;
         skipNextLookupRef.current = true;
         setValue(media.title);
-        router.push(mediaHref(media));
+        go(mediaHref(media));
+      }}
+      onSuggestionPrefetch={(suggestion) => {
+        const media = findMedia(suggestion.id);
+        if (media) router.prefetch(mediaHref(media));
       }}
       suggestions={suggestions}
       suggestionsOpen={open}
@@ -135,10 +147,10 @@ export function MediaSearch({
       labels={{
         placeholder: "Search a title, or paste an IMDb link",
         submit: "Search",
-        working: "Searching",
+        working: "Opening",
         suggestions: "Matching titles",
-        looking: "Looking through the catalog",
-        paste: "Paste from clipboard",
+        looking: "Searching the catalog",
+        empty: "Nothing matched that",
       }}
     />
   );

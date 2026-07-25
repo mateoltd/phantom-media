@@ -1,7 +1,6 @@
 const CREDITS = [
+  { label: "Catalog", name: "Cinemeta", href: "https://www.stremio.com" },
   { label: "Identifiers", name: "Wikidata", href: "https://www.wikidata.org" },
-  { label: "Episodes", name: "TVmaze", href: "https://www.tvmaze.com" },
-  { label: "Artwork", name: "Cinemeta", href: "https://www.stremio.com" },
 ] as const;
 
 /**

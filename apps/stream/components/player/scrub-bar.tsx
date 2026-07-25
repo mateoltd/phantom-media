@@ -1,95 +1,138 @@
 "use client";
 
-import { type PointerEvent, useRef, useState } from "react";
+import { type PointerEvent, useEffect, useRef } from "react";
 import { formatTimecode } from "@/lib/media";
+import type { TimeListener } from "./use-video-state";
 
 interface ScrubBarProps {
-  currentTime: number;
-  duration: number;
-  bufferedTo: number;
+  subscribe: (listener: TimeListener) => () => void;
   onSeek: (seconds: number) => void;
+  /** Called on press and release so the chrome can stay awake during a drag. */
+  onScrubbingChange?: (scrubbing: boolean) => void;
+}
+
+function percent(value: number, total: number): string {
+  if (!(total > 0)) return "0%";
+  return `${Math.max(0, Math.min(1, value / total)) * 100}%`;
 }
 
 /**
  * A pointer-driven timeline rather than an `<input type="range">`: it has to
  * show how much is buffered and preview the time under the cursor, neither of
- * which a native range control can do. Keyboard seeking lives on the stage, so
- * this stays focusable and arrow keys still work through it.
+ * which a native range control can do.
+ *
+ * Nothing here is React state. The playhead, the buffer and the hover preview
+ * are written straight onto the element as custom properties, so sixty updates
+ * a second cost sixty style writes rather than sixty renders of the player.
  */
 export function ScrubBar({
-  currentTime,
-  duration,
-  bufferedTo,
+  subscribe,
   onSeek,
+  onScrubbingChange,
 }: ScrubBarProps) {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [scrubbing, setScrubbing] = useState(false);
-  const [hoverRatio, setHoverRatio] = useState<number | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const railRef = useRef<HTMLButtonElement>(null);
+  const tooltipRef = useRef<HTMLSpanElement>(null);
+  const durationRef = useRef(0);
+  const scrubbingRef = useRef(false);
+
+  useEffect(
+    () =>
+      subscribe(({ currentTime, duration, bufferedTo }) => {
+        durationRef.current = duration;
+        const rail = railRef.current;
+        const root = rootRef.current;
+        if (!rail || !root) return;
+
+        root.style.setProperty("--buffered", percent(bufferedTo, duration));
+        // A drag owns the playhead until it ends, so the element's own time —
+        // which lags a seek on a slow source — cannot pull the head backwards.
+        if (!scrubbingRef.current) {
+          root.style.setProperty("--played", percent(currentTime, duration));
+        }
+        rail.setAttribute("aria-valuemax", String(Math.round(duration)));
+        rail.setAttribute("aria-valuenow", String(Math.round(currentTime)));
+        rail.setAttribute(
+          "aria-valuetext",
+          `${formatTimecode(currentTime)} of ${formatTimecode(duration)}`
+        );
+      }),
+    [subscribe]
+  );
 
   const ratioAt = (clientX: number): number => {
-    const track = trackRef.current;
-    if (!track) return 0;
-    const rect = track.getBoundingClientRect();
+    const rail = railRef.current;
+    if (!rail) return 0;
+    const rect = rail.getBoundingClientRect();
     if (rect.width === 0) return 0;
     return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
   };
 
-  const seekToPointer = (clientX: number) => {
-    if (duration > 0) onSeek(ratioAt(clientX) * duration);
+  const previewAt = (ratio: number) => {
+    const root = rootRef.current;
+    if (!root) return;
+    root.style.setProperty("--hover", `${ratio * 100}%`);
+    if (tooltipRef.current) {
+      tooltipRef.current.textContent = formatTimecode(ratio * durationRef.current);
+    }
+  };
+
+  const setScrubbing = (scrubbing: boolean) => {
+    scrubbingRef.current = scrubbing;
+    rootRef.current?.classList.toggle("scrub-scrubbing", scrubbing);
+    onScrubbingChange?.(scrubbing);
+  };
+
+  const seekToRatio = (ratio: number) => {
+    rootRef.current?.style.setProperty("--played", `${ratio * 100}%`);
+    onSeek(ratio * durationRef.current);
   };
 
   const handlePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
-    if (duration <= 0) return;
+    if (durationRef.current <= 0) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     setScrubbing(true);
-    seekToPointer(event.clientX);
+    seekToRatio(ratioAt(event.clientX));
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLButtonElement>) => {
-    setHoverRatio(ratioAt(event.clientX));
-    if (scrubbing) seekToPointer(event.clientX);
+    const ratio = ratioAt(event.clientX);
+    rootRef.current?.classList.add("scrub-hovering");
+    previewAt(ratio);
+    if (scrubbingRef.current) seekToRatio(ratio);
   };
 
   const endScrub = (event: PointerEvent<HTMLButtonElement>) => {
-    if (!scrubbing) return;
+    if (!scrubbingRef.current) return;
     event.currentTarget.releasePointerCapture(event.pointerId);
     setScrubbing(false);
   };
 
-  const played = duration > 0 ? (currentTime / duration) * 100 : 0;
-  const buffered = duration > 0 ? (bufferedTo / duration) * 100 : 0;
-  const hoverPercent = hoverRatio === null ? null : hoverRatio * 100;
-
   return (
-    <button
-      type="button"
-      className={`scrub ${scrubbing ? "scrub-scrubbing" : ""}`}
-      aria-label="Seek"
-      aria-valuemin={0}
-      aria-valuemax={Math.round(duration)}
-      aria-valuenow={Math.round(currentTime)}
-      aria-valuetext={`${formatTimecode(currentTime)} of ${formatTimecode(duration)}`}
-      role="slider"
-      tabIndex={0}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={endScrub}
-      onPointerCancel={endScrub}
-      onPointerLeave={() => setHoverRatio(null)}
-    >
-      <div ref={trackRef} className="scrub-track">
-        <span className="scrub-buffered" style={{ width: `${buffered}%` }} />
-        {hoverPercent !== null && (
-          <span className="scrub-hover" style={{ width: `${hoverPercent}%` }} />
-        )}
-        <span className="scrub-played" style={{ width: `${played}%` }} />
-      </div>
-      <span className="scrub-head" style={{ left: `${played}%` }} />
-      {hoverPercent !== null && duration > 0 && (
-        <span className="scrub-tooltip" style={{ left: `${hoverPercent}%` }}>
-          {formatTimecode((hoverRatio ?? 0) * duration)}
+    <div ref={rootRef} className="scrub">
+      <button
+        ref={railRef}
+        type="button"
+        className="scrub-hit"
+        aria-label="Seek"
+        role="slider"
+        aria-valuemin={0}
+        aria-valuemax={0}
+        aria-valuenow={0}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={endScrub}
+        onPointerCancel={endScrub}
+        onPointerLeave={() => rootRef.current?.classList.remove("scrub-hovering")}
+      >
+        <span className="scrub-track">
+          <span className="scrub-buffered" />
+          <span className="scrub-hover" />
+          <span className="scrub-played" />
         </span>
-      )}
-    </button>
+        <span className="scrub-head" />
+      </button>
+      <span ref={tooltipRef} className="scrub-tooltip" aria-hidden="true" />
+    </div>
   );
 }
