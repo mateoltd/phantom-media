@@ -542,8 +542,7 @@ export function VideoStage({
       });
       sections.push({
         id: "text",
-        title: "Text",
-        note: "Subtitle appearance",
+        title: "Style",
         options: [
           ...(["small", "medium", "large"] as CaptionSize[]).map((size) => ({
             value: `size:${size}`,
@@ -573,7 +572,9 @@ export function VideoStage({
       sections.push({
         id: "source",
         title: "Source",
-        note: "Where this is playing from",
+        // The tab already says Source. What it does not say is that choosing
+        // one keeps it, which is the part nobody would guess.
+        note: "Choosing a source keeps it. Automatic races all of them.",
         options: sources.options,
         value: sources.value,
         onChange: sources.onChange,

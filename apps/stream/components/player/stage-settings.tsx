@@ -111,9 +111,7 @@ export function StageSettings({
           )}
 
           <div className="stage-sheet-body" role="tabpanel">
-            {section?.note && (
-              <p className="stage-sheet-heading eyebrow">{section.note}</p>
-            )}
+            {section?.note && <p className="stage-sheet-note">{section.note}</p>}
 
             {section?.options.length === 0 && (
               <p className="px-2 py-6 text-center text-[12px] text-stage-muted">
