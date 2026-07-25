@@ -1,10 +1,9 @@
 import { Innertube, Platform } from "youtubei.js";
 import type { Types } from "youtubei.js";
 import {
-  fetch as undiciFetch,
-  ProxyAgent,
-  type RequestInit as UndiciRequestInit,
-} from "undici";
+  fetchThroughProxyPool,
+  hasConfiguredProxySource,
+} from "@/lib/server/proxy-pool";
 import evaluate from "./evaluate";
 
 export type InnerTubeClient = Types.InnerTubeClient;
@@ -21,7 +20,6 @@ export const CLIENT_FALLBACK_ORDER: InnerTubeClient[] = [
 let innertubeInstance: Innertube | null = null;
 let innertubePromise: Promise<Innertube> | null = null;
 let platformPatched = false;
-let proxyAgent: ProxyAgent | null = null;
 
 // Serialize session resets to prevent a thundering herd after a shared failure.
 let resetLock: Promise<Innertube> | null = null;
@@ -32,22 +30,23 @@ const RESET_COOLDOWN_MS = 5000;
 function patchPlatform() {
   if (platformPatched) return;
 
-  const proxyUrl = process.env.EWYOUTUBE_PROXY_URL?.trim();
-  const fetch = proxyUrl ? createProxyFetch(proxyUrl) : Platform.shim.fetch;
-  Platform.load({ ...Platform.shim, eval: evaluate, fetch });
+  Platform.load({
+    ...Platform.shim,
+    eval: evaluate,
+    fetch: hasConfiguredProxySource()
+      ? (fetchThroughProxyPool as typeof fetch)
+      : Platform.shim.fetch,
+  });
   platformPatched = true;
 }
 
-function createProxyFetch(proxyUrl: string): typeof fetch {
-  proxyAgent ??= new ProxyAgent(proxyUrl);
-
-  return (async (input, init) => {
-    const response = await undiciFetch(input as never, {
-      ...(init as unknown as UndiciRequestInit),
-      dispatcher: proxyAgent!,
-    });
-    return response as unknown as Response;
-  }) as typeof fetch;
+export function fetchYouTube(
+  input: RequestInfo | URL,
+  init?: RequestInit
+): Promise<Response> {
+  return hasConfiguredProxySource()
+    ? fetchThroughProxyPool(input, init)
+    : fetch(input, init);
 }
 
 async function createInnertube(): Promise<Innertube> {

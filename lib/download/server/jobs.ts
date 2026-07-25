@@ -5,6 +5,15 @@ import { randomUUID } from "node:crypto";
 import { mkdir, mkdtemp, readdir, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
+import {
+  getProxyCandidates,
+  hasConfiguredProxySource,
+  isDirectProxyFallbackAllowed,
+  isRetryableProxyFailure,
+  redactProxySecrets,
+  reportProxyFailure,
+  reportProxySuccess,
+} from "@/lib/server/proxy-pool";
 import type {
   Container,
   CreateDownloadJobRequest,
@@ -266,59 +275,75 @@ async function runJob(job: DownloadJob): Promise<void> {
     }
 
     const outputTemplate = join(job.directory, "output.%(ext)s");
-    const args = buildYtDlpArgs(job, outputTemplate);
-    const executable = process.env.YT_DLP_PATH ?? "yt-dlp";
-    const child = spawn(executable, args, {
-      stdio: ["ignore", "pipe", "pipe"],
-      detached: process.platform !== "win32",
-      env: {
-        ...process.env,
-        NO_COLOR: "1",
-      },
-    });
-    job.process = child;
-    let timedOut = false;
     const timeoutMs =
       readPositiveInteger(process.env.DOWNLOAD_JOB_TIMEOUT_SECONDS, 1_800) *
       1_000;
-    const timeout = setTimeout(() => {
-      timedOut = true;
-      terminateProcess(child);
-    }, timeoutMs);
-    timeout.unref();
-
-    let diagnostic = "";
-    const capture = (chunk: Buffer) => {
-      const text = chunk.toString("utf8");
-      diagnostic = `${diagnostic}${text}`.slice(-MAX_ERROR_LENGTH);
-      updateJobOutput(job, text);
-    };
-
-    child.stdout?.on("data", capture);
-    child.stderr?.on("data", capture);
-
-    let exitCode: number;
-    try {
-      exitCode = await new Promise<number>((resolve, reject) => {
-        child.once("error", reject);
-        child.once("close", (code) => resolve(code ?? 1));
-      });
-    } finally {
-      clearTimeout(timeout);
-      job.process = undefined;
+    const deadline = Date.now() + timeoutMs;
+    let proxyCandidates: Array<string | undefined>;
+    if (hasConfiguredProxySource()) {
+      try {
+        proxyCandidates = await getProxyCandidates();
+      } catch (error) {
+        if (!isDirectProxyFallbackAllowed()) throw error;
+        proxyCandidates = [undefined];
+      }
+    } else {
+      proxyCandidates = [undefined];
     }
 
-    if (isJobCanceled(job)) {
-      await cleanupJobDirectory(job);
-      return;
+    if (proxyCandidates.length === 0) {
+      if (isDirectProxyFallbackAllowed()) {
+        proxyCandidates = [undefined];
+      } else {
+        throw new Error("No healthy proxy exit is currently available");
+      }
     }
 
-    if (timedOut) {
-      throw new Error("The download exceeded the server time limit");
+    let completed = false;
+    let lastDiagnostic = "";
+    let lastExitCode = 1;
+
+    for (const [index, proxyUrl] of proxyCandidates.entries()) {
+      const remainingMs = deadline - Date.now();
+      if (remainingMs <= 0) {
+        throw new Error("The download exceeded the server time limit");
+      }
+
+      const attempt = await runYtDlpAttempt(
+        job,
+        outputTemplate,
+        proxyUrl,
+        remainingMs
+      );
+      lastDiagnostic = attempt.diagnostic;
+      lastExitCode = attempt.exitCode;
+
+      if (isJobCanceled(job)) {
+        await cleanupJobDirectory(job);
+        return;
+      }
+      if (attempt.timedOut) {
+        throw new Error("The download exceeded the server time limit");
+      }
+      if (attempt.exitCode === 0) {
+        if (proxyUrl) reportProxySuccess(proxyUrl);
+        completed = true;
+        break;
+      }
+
+      const canRotate =
+        Boolean(proxyUrl) &&
+        index < proxyCandidates.length - 1 &&
+        isRetryableProxyFailure(attempt.diagnostic);
+      if (!canRotate) break;
+
+      reportProxyFailure(proxyUrl!);
+      job.phase = "resolving";
+      job.updatedAt = Date.now();
     }
 
-    if (exitCode !== 0) {
-      throw new Error(extractSafeError(diagnostic, exitCode));
+    if (!completed) {
+      throw new Error(extractSafeError(lastDiagnostic, lastExitCode));
     }
 
     const outputPath = await findOutputFile(job.directory);
@@ -346,7 +371,58 @@ async function runJob(job: DownloadJob): Promise<void> {
   }
 }
 
-function buildYtDlpArgs(job: DownloadJob, outputTemplate: string): string[] {
+async function runYtDlpAttempt(
+  job: DownloadJob,
+  outputTemplate: string,
+  proxyUrl: string | undefined,
+  timeoutMs: number
+): Promise<{ exitCode: number; diagnostic: string; timedOut: boolean }> {
+  const args = buildYtDlpArgs(job, outputTemplate, proxyUrl);
+  const executable = process.env.YT_DLP_PATH ?? "yt-dlp";
+  const child = spawn(executable, args, {
+    stdio: ["ignore", "pipe", "pipe"],
+    detached: process.platform !== "win32",
+    env: {
+      ...process.env,
+      NO_COLOR: "1",
+    },
+  });
+  job.process = child;
+
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    terminateProcess(child);
+  }, timeoutMs);
+  timeout.unref();
+
+  let diagnostic = "";
+  const capture = (chunk: Buffer) => {
+    const text = chunk.toString("utf8");
+    diagnostic = `${diagnostic}${text}`.slice(-MAX_ERROR_LENGTH);
+    updateJobOutput(job, text);
+  };
+
+  child.stdout?.on("data", capture);
+  child.stderr?.on("data", capture);
+
+  try {
+    const exitCode = await new Promise<number>((resolve, reject) => {
+      child.once("error", reject);
+      child.once("close", (code) => resolve(code ?? 1));
+    });
+    return { exitCode, diagnostic, timedOut };
+  } finally {
+    clearTimeout(timeout);
+    job.process = undefined;
+  }
+}
+
+function buildYtDlpArgs(
+  job: DownloadJob,
+  outputTemplate: string,
+  proxyUrl?: string
+): string[] {
   const maxDuration = readPositiveInteger(
     process.env.DOWNLOAD_MAX_DURATION_SECONDS,
     14_400
@@ -358,6 +434,8 @@ function buildYtDlpArgs(job: DownloadJob, outputTemplate: string): string[] {
     "--no-playlist",
     "--no-warnings",
     "--no-colors",
+    "--js-runtimes",
+    "node",
     "--newline",
     "--progress",
     "--progress-delta",
@@ -367,9 +445,9 @@ function buildYtDlpArgs(job: DownloadJob, outputTemplate: string): string[] {
     "--concurrent-fragments",
     "4",
     "--retries",
-    "5",
+    "2",
     "--fragment-retries",
-    "5",
+    "2",
     "--socket-timeout",
     "20",
     "--max-filesize",
@@ -382,13 +460,15 @@ function buildYtDlpArgs(job: DownloadJob, outputTemplate: string): string[] {
     outputTemplate,
   ];
 
-  const proxyUrl = process.env.EWYOUTUBE_PROXY_URL?.trim();
   if (proxyUrl) {
     args.push("--proxy", proxyUrl);
   }
 
   const ffmpegPath = process.env.FFMPEG_PATH?.trim();
-  if (ffmpegPath) {
+  // A bare executable name should be resolved through PATH. yt-dlp interprets
+  // --ffmpeg-location as a filesystem path, so passing "ffmpeg" makes it look
+  // for /app/ffmpeg instead of the executable available on PATH.
+  if (ffmpegPath && /[\\/]/.test(ffmpegPath)) {
     args.push("--ffmpeg-location", ffmpegPath);
   }
 
@@ -673,12 +753,7 @@ async function cleanupJobDirectory(job: DownloadJob): Promise<boolean> {
 }
 
 function extractSafeError(output: string, exitCode: number): string {
-  const proxyUrl = process.env.EWYOUTUBE_PROXY_URL?.trim();
-  const redacted = (proxyUrl
-    ? output.replaceAll(proxyUrl, "[configured proxy]")
-    : output
-  )
-    .replace(/([a-z][a-z0-9+.-]*:\/\/)[^@\s/]+@/gi, "$1[credentials]@")
+  const redacted = redactProxySecrets(output)
     .replace(/https?:\/\/\S+/gi, "[source URL]")
     .replace(/\/(?:private\/)?tmp\/ewyoutube-[^\s/]+/g, "[temporary directory]");
   const errorLine = redacted

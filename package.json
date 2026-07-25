@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p cloudflare/tsconfig.json --noEmit",
+    "cf:types": "wrangler types cloudflare/worker-configuration.d.ts",
     "check": "pnpm typecheck && pnpm lint && pnpm build"
   },
   "dependencies": {
@@ -20,6 +21,8 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@cloudflare/containers": "^0.3.7",
+    "@cloudflare/workers-types": "^5.20260724.1",
     "@tailwindcss/postcss": "^4.2.1",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
@@ -28,7 +31,8 @@
     "eslint-config-next": "^16.1.7",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "wrangler": "^4.114.0"
   },
   "packageManager": "pnpm@10.13.1"
 }

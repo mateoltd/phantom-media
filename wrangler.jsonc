@@ -1,0 +1,51 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "ewyoutube",
+  "main": "cloudflare/worker.ts",
+  "compatibility_date": "2026-07-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "ewyoutube.com",
+      "custom_domain": true
+    }
+  ],
+  "secrets": {
+    "required": ["EWYOUTUBE_PROXY_URLS"]
+  },
+  "containers": [
+    {
+      "class_name": "PhantomContainer",
+      "image": "./Dockerfile",
+      "instance_type": "standard-2",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "PHANTOM_CONTAINER",
+        "class_name": "PhantomContainer"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["PhantomContainer"]
+    }
+  ],
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.05
+    }
+  }
+}

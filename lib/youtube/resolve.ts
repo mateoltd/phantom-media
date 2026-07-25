@@ -1,11 +1,18 @@
 import { Innertube } from "youtubei.js";
 import type { QueryResult, VideoInfo } from "@/lib/types";
 import { SEARCH_RESULT_LIMIT } from "@/lib/constants";
+import { hasConfiguredProxySource } from "@/lib/server/proxy-pool";
 import {
   getInnertube,
   CLIENT_FALLBACK_ORDER,
+  fetchYouTube,
   withSessionRetry,
 } from "@/lib/youtube/client";
+import {
+  resolveCollectionWithYtDlp,
+  resolveVideoWithYtDlp,
+  searchWithYtDlp,
+} from "@/lib/youtube/yt-dlp-metadata";
 
 function isYouTubeHostname(hostname: string): boolean {
   const normalized = hostname.toLowerCase();
@@ -200,7 +207,7 @@ async function tryResolveVideo(
     url.searchParams.set("url", `https://www.youtube.com/watch?v=${videoId}`);
     url.searchParams.set("format", "json");
 
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetchYouTube(url, { cache: "no-store" });
     if (!response.ok) return null;
 
     const data = (await response.json()) as {
@@ -307,6 +314,45 @@ export async function resolveQuery(
   query: string
 ): Promise<QueryResult> {
   query = query.trim();
+
+  if (hasConfiguredProxySource()) {
+    if (query.startsWith("?")) {
+      return searchWithYtDlp(
+        query.slice(1).trim(),
+        SEARCH_RESULT_LIMIT
+      );
+    }
+
+    const videoId = tryParseVideoId(query);
+    if (videoId) return resolveVideoWithYtDlp(videoId);
+
+    const playlistId = tryParsePlaylistId(query);
+    if (playlistId) {
+      const maxItems = readPositiveInteger(
+        process.env.RESOLVE_MAX_PLAYLIST_ITEMS,
+        100
+      );
+      return resolveCollectionWithYtDlp(
+        `https://www.youtube.com/playlist?list=${playlistId}`,
+        "playlist",
+        maxItems
+      );
+    }
+
+    if (tryParseChannelIdentifier(query)) {
+      const maxItems = readPositiveInteger(
+        process.env.RESOLVE_MAX_PLAYLIST_ITEMS,
+        100
+      );
+      return resolveCollectionWithYtDlp(
+        query,
+        "channel",
+        maxItems
+      );
+    }
+
+    return searchWithYtDlp(query, SEARCH_RESULT_LIMIT);
+  }
 
   if (query.startsWith("?")) {
     yt ??= await getInnertube();

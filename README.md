@@ -165,9 +165,17 @@ downloads when video and audio need to be merged.
 
 ### Handling datacenter ASN restrictions
 
-`EWYOUTUBE_PROXY_URL` can send both metadata and media traffic through the same
-HTTP(S) egress route. Use a static address or sticky session so a job
-does not change source IP halfway through.
+`EWYOUTUBE_PROXY_URLS` can send metadata and media traffic through an ordered
+pool of authorized HTTP(S) egress routes. Supply a newline/comma-delimited list
+or a JSON string array. Phantom rotates the starting proxy across requests,
+retries another proxy after network failures, rate limits, source blocks, or
+anti-bot responses, and temporarily cools down unhealthy entries. A download
+attempt stays on one proxy from metadata resolution through media transfer.
+
+`EWYOUTUBE_PROXY_LIST_URL` can optionally refresh the pool from an authorized
+HTTPS endpoint. The last valid snapshot remains available if a refresh fails.
+Keep `PROXY_ALLOW_DIRECT_FALLBACK=false` when direct datacenter egress
+must never be used.
 
 This is an operational compatibility option, not a guarantee or a mechanism
 for evading access controls. Use only a provider that explicitly permits the
@@ -261,7 +269,11 @@ pnpm start
 | --- | ---: | --- |
 | `NEXT_PUBLIC_BASE_URL` | `http://localhost:3000` | Absolute production URL used by SEO metadata |
 | `NEXT_PUBLIC_DOWNLOADS_RESTRICTED` | `false` | Build-time switch that disables download actions while retaining search |
-| `EWYOUTUBE_PROXY_URL` | unset | Authorized HTTP(S) proxy used for metadata and media egress |
+| `EWYOUTUBE_PROXY_URLS` | unset | Authorized HTTP(S) proxy pool, as a newline/comma-delimited list or JSON string array |
+| `EWYOUTUBE_PROXY_LIST_URL` | unset | Optional authorized HTTPS endpoint that refreshes the proxy pool |
+| `PROXY_MAX_ATTEMPTS` | `4` | Maximum distinct proxies tried for one source operation |
+| `PROXY_COOLDOWN_BASE_SECONDS` | `30` | Initial cooldown for an unhealthy proxy; repeated failures back off further |
+| `PROXY_ALLOW_DIRECT_FALLBACK` | `false` in the Cloudflare deployment | Whether source requests may bypass the proxy pool after all entries fail |
 | `DOWNLOAD_MAX_CONCURRENT` | `2` | Simultaneous server-side `yt-dlp` jobs |
 | `DOWNLOAD_MAX_PENDING` | `20` | Global queued/active job cap |
 | `DOWNLOAD_MAX_JOBS_PER_IP` | `3` | Queued/active job cap per client address |
@@ -330,7 +342,7 @@ Fly Machines can build and run the included Dockerfile.
 
 ```sh
 fly launch --no-deploy
-fly secrets set EWYOUTUBE_PROXY_URL='...'
+fly secrets set EWYOUTUBE_PROXY_URLS='...'
 fly deploy
 fly scale count 1
 ```
@@ -370,15 +382,22 @@ Cloudflare Containers are the Cloudflare-native compute product that matches
 this workload. Unlike ordinary Workers, Containers can run the existing Linux
 image with `yt-dlp`, FFmpeg, writable disk, and a normal Node.js process.
 
-The repository is **not yet wired directly to Cloudflare Containers**. A
-Cloudflare deployment needs:
+The repository includes a production Worker entry point, Durable Object
+binding, Container configuration, and custom-domain route in `wrangler.jsonc`.
+Every request is routed to one named container so in-memory job state and its
+temporary file remain colocated. The container exposes port `3000`, sleeps
+after ten idle minutes, and is capped at one instance until job state moves to
+durable shared storage.
 
-1. a Worker entry point;
-2. a Container class and Durable Object binding;
-3. a container entry point exposing port `3000`;
-4. routing that keeps a job's requests on the same container;
-5. an appropriate sleep timeout so active jobs are not stopped;
-6. one configured instance initially, or explicit job-to-container affinity.
+Authenticate Wrangler, store the proxy pool as a secret, and deploy:
+
+```sh
+pnpm wrangler secret put EWYOUTUBE_PROXY_URLS
+pnpm wrangler deploy --containers-rollout immediate
+```
+
+The checked-in configuration publishes the apex custom domain
+`https://ewyoutube.com`. Change the route before deploying another environment.
 
 Containers are generally available, can scale to zero, and include an initial
 usage allowance in the Workers Paid plan. They also meter Workers, Durable
@@ -443,14 +462,14 @@ Before launch:
 - [ ] Confirm `yt-dlp --version` and `ffmpeg -version` inside the image.
 - [ ] Use exactly one application replica.
 - [ ] Size ephemeral disk for the configured limits.
-- [ ] Configure trusted proxy headers.
+- [x] Configure trusted proxy headers.
 - [ ] Add CDN bot protection to job creation.
 - [ ] Set host spending and egress alerts.
 - [ ] Confirm cancellation removes the process and temporary directory.
 - [ ] Test MP4, adaptive merge, source audio, and converted audio.
 - [ ] Test interrupted and resumed browser downloads.
 - [ ] Test the complete 0-100% progress lifecycle.
-- [ ] Confirm proxy credentials never appear in logs or API errors.
+- [x] Confirm proxy credentials never appear in logs or API errors.
 - [ ] Review copyright, platform terms, and provider acceptable-use policies.
 
 ## License and legal status

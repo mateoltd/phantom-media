@@ -1,9 +1,11 @@
 import type { Container, DownloadOption } from "@/lib/types";
+import { hasConfiguredProxySource } from "@/lib/server/proxy-pool";
 import {
   CLIENT_FALLBACK_ORDER,
   withSessionRetry,
 } from "@/lib/youtube/client";
 import type { Innertube, Misc } from "youtubei.js";
+import { resolveDownloadOptionsWithYtDlp } from "@/lib/youtube/yt-dlp-metadata";
 
 type Format = Misc.Format;
 
@@ -29,7 +31,9 @@ export async function resolveDownloadOptions(
   const existingResolution = inFlightResolutions.get(videoId);
   if (existingResolution) return existingResolution;
 
-  const resolution = withSessionRetry((yt) => tryAllClients(yt, videoId));
+  const resolution = hasConfiguredProxySource()
+    ? resolveDownloadOptionsWithYtDlp(videoId)
+    : withSessionRetry((yt) => tryAllClients(yt, videoId));
   inFlightResolutions.set(videoId, resolution);
 
   try {
