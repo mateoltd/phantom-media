@@ -13,10 +13,8 @@ export function useDownloadQueue() {
   const removeInactiveDownloads = useDownloadStore((s) => s.removeInactiveDownloads);
   const restartDownload = useDownloadStore((s) => s.restartDownload);
   const restartFailedDownloads = useDownloadStore((s) => s.restartFailedDownloads);
-  const clearDownloads = useDownloadStore((s) => s.clearDownloads);
   const prevEnqueuedCount = useRef(0);
 
-  // Process queue whenever new downloads are enqueued
   useEffect(() => {
     const enqueuedCount = downloads.filter((d) => d.status === "enqueued").length;
     if (enqueuedCount > prevEnqueuedCount.current) {
@@ -55,6 +53,5 @@ export function useDownloadQueue() {
     removeInactiveDownloads,
     restartDownload,
     restartFailedDownloads,
-    clearDownloads,
   };
 }

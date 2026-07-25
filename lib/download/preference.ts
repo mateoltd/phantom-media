@@ -5,10 +5,6 @@ import type {
 } from "@/lib/types";
 import { isAudioOnlyContainer } from "@/lib/types";
 
-/**
- * Port of VideoDownloadPreference.TryGetBestOption from C#.
- * Selects the best download option based on user preferences.
- */
 export function getBestOption(
   options: DownloadOption[],
   preferredContainer: Container,
@@ -16,7 +12,6 @@ export function getBestOption(
 ): DownloadOption | null {
   if (options.length === 0) return null;
 
-  // Audio-only containers: just match the container
   if (isAudioOnlyContainer(preferredContainer)) {
     return (
       options.find(
@@ -25,7 +20,6 @@ export function getBestOption(
     );
   }
 
-  // Video: filter to non-audio-only options
   const videoOptions = options.filter((o) => !o.isAudioOnly);
   const sorted = [...videoOptions].sort(
     (a, b) => (a.height ?? 0) - (b.height ?? 0)
@@ -50,12 +44,10 @@ export function getBestOption(
       (o) => o.container === preferredContainer
     );
   } else if (maxHeight === null) {
-    // Highest: last matching container
     preferredOption = sorted
       .filter((o) => o.container === preferredContainer)
       .pop();
   } else {
-    // UpToXXXp: filter to ≤maxHeight then take last matching container
     preferredOption = sorted
       .filter(
         (o) =>
@@ -64,7 +56,6 @@ export function getBestOption(
       .pop();
   }
 
-  // Fallback: first option matching preferred container regardless of quality
   return (
     preferredOption ??
     sorted.find((o) => o.container === preferredContainer) ??

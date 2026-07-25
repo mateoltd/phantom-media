@@ -1,4 +1,3 @@
-# dependencies
 /node_modules
 /.pnp
 .pnp.*
@@ -8,35 +7,26 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
 /coverage
 
-# next.js
 /.next/
 /out/
 
-# production
 /build
 
-# misc
 .DS_Store
 *.pem
 
-# internal docs (not for VCS)
 /.internal/
 
-# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files
 .env*.local
 
-# vercel
 .vercel
 
-# typescript
 *.tsbuildinfo
 next-env.d.ts

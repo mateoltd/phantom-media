@@ -1,5 +1,3 @@
-// Shared types used across client and server
-
 export type Container = "mp4" | "webm" | "mp3" | "ogg";
 
 export type VideoQualityPreference =
@@ -20,20 +18,34 @@ export type QueryResultKind =
 export type DownloadStatus =
   | "enqueued"
   | "started"
-  | "bridging"      // WebSocket bridge connecting
-  | "uploading"     // Browser fetching, uploading to server
-  | "server_muxing" // Server muxing video+audio
-  | "receiving"     // Receiving muxed output from server
   | "completed"
   | "failed"
   | "canceled";
+
+export type DownloadJobStatus =
+  | "queued"
+  | "processing"
+  | "ready"
+  | "serving"
+  | "served"
+  | "failed"
+  | "canceled";
+
+export type DownloadJobPhase =
+  | "queued"
+  | "resolving"
+  | "downloading"
+  | "processing"
+  | "ready"
+  | "transferring"
+  | "complete";
 
 export interface VideoInfo {
   id: string;
   title: string;
   author: string;
   authorId: string;
-  duration: number; // seconds
+  duration: number;
   thumbnailUrl: string;
   viewCount?: number;
   uploadDate?: string;
@@ -47,12 +59,10 @@ export interface StreamInfo {
   bitrate: number;
   contentLength: number;
   isAudioOnly: boolean;
-  // Video-specific
   qualityLabel?: string;
   width?: number;
   height?: number;
   fps?: number;
-  // Audio-specific
   audioSampleRate?: number;
   audioChannels?: number;
   language?: string;
@@ -60,15 +70,15 @@ export interface StreamInfo {
 }
 
 export interface DownloadOption {
-  id: string; // unique key for this option
+  id: string;
   formatSpec?: string;
   container: Container;
   isAudioOnly: boolean;
-  qualityLabel: string | null; // e.g. "1080p", "720p"
+  qualityLabel: string | null;
   height: number | null;
-  needsMuxing: boolean; // true if video+audio are separate streams
+  needsMuxing: boolean;
   streams: StreamInfo[];
-  totalSize: number; // estimated bytes
+  totalSize: number;
 }
 
 export interface QueryResult {
@@ -106,13 +116,36 @@ export interface DownloadItem {
   video: VideoInfo;
   option: DownloadOption;
   status: DownloadStatus;
-  progress: number; // 0-1
+  progress: number;
+  phase?: DownloadJobPhase;
+  downloadedBytes?: number;
+  totalBytes?: number;
+  bytesPerSecond?: number;
+  etaSeconds?: number;
   errorMessage?: string;
   fileName: string;
-  // WebSocket bridge fields
-  wsSessionId?: string;
-  wsDownloadId?: string;
-  useBridge?: boolean;
+}
+
+export interface CreateDownloadJobRequest {
+  videoId: string;
+  formatSpec: string;
+  container: Container;
+  isAudioOnly: boolean;
+  fileName: string;
+  expectedSize?: number;
+}
+
+export interface DownloadJobStatusResponse {
+  id: string;
+  status: DownloadJobStatus;
+  progress: number;
+  phase: DownloadJobPhase;
+  downloadedBytes?: number;
+  totalBytes?: number;
+  bytesPerSecond?: number;
+  etaSeconds?: number;
+  error?: string;
+  fileUrl?: string;
 }
 
 export function isAudioOnlyContainer(container: Container): boolean {

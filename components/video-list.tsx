@@ -1,6 +1,7 @@
 "use client";
 
 import type { VideoInfo } from "@/lib/types";
+import { useI18n } from "@/components/locale-provider";
 import { VideoCard } from "./video-card";
 
 interface VideoListProps {
@@ -18,17 +19,28 @@ export function VideoList({
   onToggleSelect,
   onVideoClick,
 }: VideoListProps) {
+  const { messages: t } = useI18n();
+
   if (videos.length === 0) {
     return (
-      <div className="py-8 text-center text-[13px] text-text-tertiary">
-        No videos found
+      <div className="py-12 text-center">
+        <p className="text-sm font-bold text-text">{t.results.empty}</p>
+        <p className="mt-1 text-[12px] text-text-tertiary">
+          {t.results.emptyHelp}
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-px">
-      {videos.map((video, i) => (
+    <div
+      className={
+        selectable
+          ? "divide-y divide-black/[0.07]"
+          : "grid grid-cols-1 gap-x-5 gap-y-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+      }
+    >
+      {videos.map((video, index) => (
         <VideoCard
           key={video.id}
           video={video}
@@ -36,7 +48,11 @@ export function VideoList({
           selected={selectedIds?.has(video.id)}
           onSelect={onToggleSelect}
           onClick={onVideoClick}
-          style={{ animationDelay: `${0.03 * i}s` }}
+          style={
+            selectable
+              ? undefined
+              : { animationDelay: `${0.03 * Math.min(index, 10)}s` }
+          }
         />
       ))}
     </div>

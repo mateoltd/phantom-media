@@ -7,27 +7,29 @@ import {
   withSessionRetry,
 } from "@/lib/youtube/client";
 
-// Extract video ID from URL or string
+function isYouTubeHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase();
+  return (
+    normalized === "youtube.com" ||
+    normalized.endsWith(".youtube.com") ||
+    normalized === "youtube-nocookie.com" ||
+    normalized.endsWith(".youtube-nocookie.com")
+  );
+}
+
 function tryParseVideoId(query: string): string | null {
-  // Direct ID: 11 chars alphanumeric + dash + underscore
   if (/^[a-zA-Z0-9_-]{11}$/.test(query)) return query;
 
   try {
     const url = new URL(query);
-    // youtube.com/watch?v=ID
-    if (
-      url.hostname.includes("youtube.com") ||
-      url.hostname.includes("youtube-nocookie.com")
-    ) {
+    if (isYouTubeHostname(url.hostname)) {
       const v = url.searchParams.get("v");
       if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
-      // youtube.com/embed/ID or /v/ID or /shorts/ID
       const pathMatch = url.pathname.match(
         /^\/(?:embed|v|shorts)\/([a-zA-Z0-9_-]{11})/
       );
       if (pathMatch) return pathMatch[1];
     }
-    // youtu.be/ID
     if (url.hostname === "youtu.be") {
       const id = url.pathname.slice(1).split("/")[0];
       if (/^[a-zA-Z0-9_-]{11}$/.test(id)) return id;
@@ -38,18 +40,13 @@ function tryParseVideoId(query: string): string | null {
   return null;
 }
 
-// Extract playlist ID from URL or string
 function tryParsePlaylistId(query: string): string | null {
-  // Direct playlist ID (starts with PL, RD, UU, OL, LL, WL, etc.)
   if (/^(PL|RD|UU|OL|LL|WL|FL|ML|UL)[a-zA-Z0-9_-]+$/.test(query))
     return query;
 
   try {
     const url = new URL(query);
-    if (
-      url.hostname.includes("youtube.com") ||
-      url.hostname.includes("youtube-nocookie.com")
-    ) {
+    if (isYouTubeHostname(url.hostname)) {
       const list = url.searchParams.get("list");
       if (list) return list;
     }
@@ -59,23 +56,19 @@ function tryParsePlaylistId(query: string): string | null {
   return null;
 }
 
-// Extract channel identifier from URL
 function tryParseChannelIdentifier(
   query: string
 ): { type: "id" | "handle" | "slug"; value: string } | null {
   try {
     const url = new URL(query);
-    if (!url.hostname.includes("youtube.com")) return null;
+    if (!isYouTubeHostname(url.hostname)) return null;
 
-    // /channel/UC...
     const channelMatch = url.pathname.match(/^\/channel\/(UC[a-zA-Z0-9_-]+)/);
     if (channelMatch) return { type: "id", value: channelMatch[1] };
 
-    // /@handle
     const handleMatch = url.pathname.match(/^\/@([a-zA-Z0-9._-]+)/);
     if (handleMatch) return { type: "handle", value: handleMatch[1] };
 
-    // /c/slug or /user/name
     const slugMatch = url.pathname.match(/^\/(?:c|user)\/([a-zA-Z0-9._-]+)/);
     if (slugMatch) return { type: "slug", value: slugMatch[1] };
   } catch {
@@ -120,16 +113,21 @@ async function tryResolvePlaylist(
 
   try {
     const playlist = await yt.getPlaylist(playlistId);
+    const maxItems = readPositiveInteger(
+      process.env.RESOLVE_MAX_PLAYLIST_ITEMS,
+      100
+    );
     let items = [...playlist.items];
 
-    // Load all pages
+    // Continuations are bounded so one request cannot exhaust the server.
     let page = playlist;
-    while (page.has_continuation) {
+    while (page.has_continuation && items.length < maxItems) {
       page = await page.getContinuation();
       items.push(...page.items);
     }
 
     const videos: VideoInfo[] = items
+      .slice(0, maxItems)
       .filter(
         (item) => "id" in item && "title" in item && "author" in item
       )
@@ -161,7 +159,6 @@ async function tryResolveVideo(
   const videoId = tryParseVideoId(query);
   if (!videoId) return null;
 
-  // Try youtubei.js with session retry (new PO token if stale)
   try {
     return await withSessionRetry(async (yt) => {
       for (const client of CLIENT_FALLBACK_ORDER) {
@@ -195,10 +192,9 @@ async function tryResolveVideo(
       throw new Error("All clients failed");
     });
   } catch {
-    // All innertube attempts failed — fall through to oEmbed
+    // All Innertube attempts failed, so fall through to oEmbed.
   }
 
-  // Final fallback: oEmbed (lightweight, usually not bot-checked)
   try {
     const url = new URL("https://www.youtube.com/oembed");
     url.searchParams.set("url", `https://www.youtube.com/watch?v=${videoId}`);
@@ -306,17 +302,12 @@ async function resolveSearch(
   };
 }
 
-/**
- * Port of QueryResolver.cs - Resolves a query string to videos.
- * Priority: ? prefix search → playlist → video → channel → search fallback
- */
 export async function resolveQuery(
   yt: Innertube | null,
   query: string
 ): Promise<QueryResult> {
   query = query.trim();
 
-  // Force search with ? prefix
   if (query.startsWith("?")) {
     yt ??= await getInnertube();
     return resolveSearch(yt, query.slice(1).trim());
@@ -334,4 +325,9 @@ export async function resolveQuery(
     (await tryResolveChannel(yt, query)) ??
     (await resolveSearch(yt, query))
   );
+}
+
+function readPositiveInteger(value: string | undefined, fallback: number): number {
+  const parsed = Number.parseInt(value ?? "", 10);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
 }

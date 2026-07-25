@@ -1,173 +1,127 @@
 "use client";
 
-import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import {
-  IconAlertTriangle,
-  IconArrowLeft,
-  IconDownload,
-} from "@tabler/icons-react";
+import Image from "next/image";
+import Link from "next/link";
+import { IconDownload } from "@tabler/icons-react";
+import { AppHeader } from "@/components/app-header";
 import { DownloadOptionsDialog } from "@/components/download-options-dialog";
-import { DownloadQueue } from "@/components/download-queue";
-import { LogoMark } from "@/components/Logo";
+import { useI18n } from "@/components/locale-provider";
+import { PageFallback } from "@/components/page-fallback";
 import { SiteFooter } from "@/components/site-footer";
-import { useDownloadQueue } from "@/hooks/use-download-queue";
 import { useResolve } from "@/hooks/use-youtube";
-import type { DownloadOption, VideoInfo } from "@/lib/types";
-
-function Navbar() {
-  return (
-    <nav className="flex items-center justify-between px-5 py-4 sm:px-8 sm:py-5">
-      <Link
-        href="/"
-        className="flex items-center gap-1.5 text-[13px] font-medium text-text-tertiary transition-colors hover:text-text-secondary active:scale-95"
-      >
-        <IconArrowLeft size={14} stroke={2} />
-        Back
-      </Link>
-      <Link href="/" className="flex items-center gap-2">
-        <LogoMark size={18} className="text-text-secondary" />
-        <span className="text-[13px] font-semibold tracking-tight text-text-secondary">
-          Phantom
-        </span>
-      </Link>
-    </nav>
-  );
-}
+import { localePath } from "@/lib/i18n";
+import { formatDuration } from "@/lib/types";
 
 function WatchPageContent() {
+  const { locale, messages: t } = useI18n();
   const searchParams = useSearchParams();
   const videoId = searchParams.get("v");
   const { resolve, loading, error, result } = useResolve();
-  const { enqueue } = useDownloadQueue();
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     if (videoId) {
-      resolve(videoId).then((res) => {
-        if (res && res.videos.length === 1) {
-          setDialogOpen(true);
-        }
+      resolve(videoId).then((resolved) => {
+        if (resolved && resolved.videos.length === 1) setDialogOpen(true);
       });
     }
   }, [videoId, resolve]);
 
   const video = result?.videos[0] ?? null;
 
-  const handleDownload = (v: VideoInfo, option: DownloadOption) => {
-    enqueue(v, option);
-    setDialogOpen(false);
-  };
-
   return (
-    <main className="min-h-screen">
-      <Navbar />
+    <main className="workspace-canvas flex min-h-screen flex-col">
+      <AppHeader loading={loading} />
 
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+      <div className="app-shell flex-1 pb-14 pt-2">
         {loading && (
-          <div className="mx-auto mt-16 w-full max-w-sm animate-fade-in">
-            <div className="overflow-hidden rounded-full bg-white/[0.05]">
-              <div
-                className="h-[3px] w-1/5 rounded-full bg-phantom/50"
-                style={{ animation: "progress-slide 1.5s ease-in-out infinite" }}
-              />
-            </div>
-            <p className="mt-3 text-center text-[12px] text-text-tertiary">
-              Loading video info...
+          <div className="flex min-h-52 flex-col items-center justify-center">
+            <span className="h-7 w-7 animate-spin rounded-full border-[3px] border-border border-t-phantom" />
+            <p className="mt-4 text-[13px] font-bold text-text-secondary">
+              {t.watch.loading}
             </p>
           </div>
         )}
 
         {error && (
-          <div className="mx-auto mt-16 max-w-md animate-slide-up text-center">
-            <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-error/10 text-error">
-              <IconAlertTriangle size={20} stroke={1.8} />
-            </div>
-            <p className="text-[15px] font-semibold tracking-tight text-text">
+          <div className="max-w-md py-6">
+            <p className="border-l-2 border-error py-1 pl-3 text-sm font-bold text-error">
               {error}
             </p>
             <Link
-              href="/"
-              className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-phantom px-4 py-2.5 text-[13px] font-semibold text-white transition-all hover:bg-phantom-dark active:scale-[0.97]"
+              href={localePath(locale, "/")}
+              className="mt-5 inline-flex h-10 items-center rounded-xl border border-border px-4 text-xs font-bold text-text-secondary transition-colors hover:border-text/30 hover:text-text"
             >
-              Try again
+              {t.watch.tryAgain}
             </Link>
           </div>
         )}
 
-        {!videoId && (
-          <p className="mt-16 text-center text-[13px] text-text-tertiary">
-            No video ID provided. Use /watch?v=VIDEO_ID
+        {!videoId && !loading && (
+          <p className="py-10 text-[13px] text-text-tertiary">
+            {t.watch.missing}
           </p>
         )}
 
-        {video && !dialogOpen && (
-          <div className="mt-6 flex animate-slide-up items-center gap-4 rounded-lg border border-white/[0.04] bg-white/[0.02] p-3 sm:p-4">
-            <div className="h-16 w-28 shrink-0 overflow-hidden rounded-md bg-surface sm:h-20 sm:w-36">
-              <img
+        {video && (
+          <section className="grid gap-6 sm:grid-cols-[minmax(0,320px)_minmax(0,1fr)] sm:items-start">
+            <span className="relative block aspect-video w-full overflow-hidden rounded-2xl border border-border bg-[#ded9cf]">
+              <Image
                 src={video.thumbnailUrl}
-                alt={video.title}
+                alt=""
+                fill
+                sizes="(min-width: 640px) 320px, 100vw"
+                unoptimized
                 className="h-full w-full object-cover"
               />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="line-clamp-2 text-[13px] font-semibold tracking-tight text-text sm:text-[14px]">
+              {video.duration > 0 && (
+                <span className="absolute bottom-2 right-2 rounded-md bg-black/75 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-white">
+                  {formatDuration(video.duration)}
+                </span>
+              )}
+            </span>
+
+            <div className="min-w-0">
+              <h1 className="text-2xl font-extrabold tracking-[-0.03em] text-text sm:text-[28px]">
                 {video.title}
-              </h2>
-              <p className="mt-1 text-[11px] text-text-tertiary sm:text-[12px]">
+              </h1>
+              <p className="mt-2 text-[13px] font-medium text-text-secondary">
                 {video.author}
               </p>
+              <button
+                type="button"
+                onClick={() => setDialogOpen(true)}
+                className="mt-6 flex h-11 items-center gap-2 rounded-xl bg-phantom px-5 text-[13px] font-bold text-white transition-colors hover:bg-phantom-dark"
+              >
+                <IconDownload size={16} stroke={2.1} />
+                {t.watch.download}
+              </button>
             </div>
-            <button
-              onClick={() => setDialogOpen(true)}
-              className="hidden shrink-0 items-center gap-1.5 rounded-lg bg-phantom px-4 py-2.5 text-[13px] font-semibold text-white transition-all hover:bg-phantom-dark active:scale-[0.97] sm:flex"
-            >
-              <IconDownload size={14} stroke={2} />
-              Download
-            </button>
-            <button
-              onClick={() => setDialogOpen(true)}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-phantom text-white transition-all hover:bg-phantom-dark active:scale-95 sm:hidden"
-            >
-              <IconDownload size={16} stroke={2} />
-            </button>
-          </div>
+          </section>
         )}
 
-        <div className="mt-6">
-          <DownloadQueue />
-        </div>
-
-        {video && (
-          <DownloadOptionsDialog
-            video={video}
-            open={dialogOpen}
-            onClose={() => setDialogOpen(false)}
-            onDownload={handleDownload}
-          />
-        )}
-
-        <SiteFooter className="mt-8 pb-6 text-center" />
       </div>
+
+      <div className="app-shell mt-auto">
+        <SiteFooter />
+      </div>
+
+      {video && (
+        <DownloadOptionsDialog
+          video={video}
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+        />
+      )}
     </main>
   );
 }
 
 export default function WatchPageClient() {
   return (
-    <Suspense
-      fallback={
-        <main className="flex min-h-screen items-center justify-center">
-          <div className="overflow-hidden rounded-full bg-white/[0.05]">
-            <div
-              className="h-[3px] w-16 rounded-full bg-phantom/50"
-              style={{ animation: "progress-slide 1.5s ease-in-out infinite" }}
-            />
-          </div>
-        </main>
-      }
-    >
+    <Suspense fallback={<PageFallback />}>
       <WatchPageContent />
     </Suspense>
   );

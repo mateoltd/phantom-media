@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { Locale } from "@/lib/i18n";
 
 export const siteConfig = {
   name: "Phantom YouTube",
@@ -6,7 +7,7 @@ export const siteConfig = {
   description:
     "Download YouTube videos, audio, and playlists in a fast interface built for personal and authorized use.",
   creator: "mateoltd",
-  publisher: "Phantom Research",
+  publisher: "Phantom",
   keywords: [
     "youtube downloader",
     "download youtube videos",
@@ -37,6 +38,11 @@ type RouteMetadataOptions = {
   path?: string;
   keywords?: string[];
   noIndex?: boolean;
+  locale?: Locale;
+  languagePaths?: {
+    en: string;
+    es: string;
+  };
 };
 
 export function buildMetadata({
@@ -45,8 +51,14 @@ export function buildMetadata({
   path = "/",
   keywords = [],
   noIndex = false,
+  locale = "en",
+  languagePaths,
 }: RouteMetadataOptions): Metadata {
   const url = new URL(path, getBaseUrl()).toString();
+  const imageAlt =
+    locale === "es"
+      ? "Phantom, descarga vídeo y audio desde tu navegador"
+      : "Phantom, save video and audio from your browser";
 
   return {
     title,
@@ -54,20 +66,44 @@ export function buildMetadata({
     keywords: [...siteConfig.keywords, ...keywords],
     alternates: {
       canonical: path,
+      ...(languagePaths
+        ? {
+            languages: {
+              "en-US": languagePaths.en,
+              "es-ES": languagePaths.es,
+              "x-default": languagePaths.en,
+            },
+          }
+        : {}),
     },
     openGraph: {
       title,
       description,
       url,
       siteName: siteConfig.name,
-      locale: "en_US",
+      locale: locale === "es" ? "es_ES" : "en_US",
+      alternateLocale: locale === "es" ? ["en_US"] : ["es_ES"],
       type: "website",
+      images: [
+        {
+          url: "/og.png",
+          width: 1730,
+          height: 909,
+          alt: imageAlt,
+        },
+      ],
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title,
       description,
       creator: "@mateoltd",
+      images: [
+        {
+          url: "/og.png",
+          alt: imageAlt,
+        },
+      ],
     },
     robots: noIndex
       ? {

@@ -1,383 +1,243 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
 import {
-  IconAlertTriangle,
-  IconArrowLeft,
+  IconBolt,
+  IconCircleCheckFilled,
   IconDownload,
-  IconExternalLink,
-  IconSettings,
+  IconLink,
+  IconArrowRight,
 } from "@tabler/icons-react";
-import { DOWNLOADS_RESTRICTED } from "@/lib/config";
-import { BatchDownloadDialog } from "@/components/batch-download-dialog";
-import { DownloadOptionsDialog } from "@/components/download-options-dialog";
-import { DownloadQueue } from "@/components/download-queue";
-import { LogoMark } from "@/components/Logo";
-import { SearchBar } from "@/components/search-bar";
-import { SettingsPanel } from "@/components/settings-panel";
+import { AppHeader } from "@/components/app-header";
+import { useI18n } from "@/components/locale-provider";
+import { Logo } from "@/components/Logo";
 import { SiteFooter } from "@/components/site-footer";
-import { VideoList } from "@/components/video-list";
-import { useDownloadQueue } from "@/hooks/use-download-queue";
-import { useSettings } from "@/hooks/use-settings";
-import { useResolve } from "@/hooks/use-youtube";
-import { getBestOption } from "@/lib/download/preference";
-import type {
-  Container,
-  DownloadOption,
-  VideoInfo,
-  VideoQualityPreference,
-} from "@/lib/types";
+import { localePath } from "@/lib/i18n";
 
-function Navbar({
-  onSettingsClick,
-  showBack = false,
-}: {
-  onSettingsClick: () => void;
-  showBack?: boolean;
-}) {
+export default function HomePageClient() {
   return (
-    <nav className="flex items-center justify-between px-5 py-4 sm:px-8 sm:py-5">
-      {showBack ? (
-        <button
-          type="button"
-          onClick={() => window.location.assign("/")}
-          className="flex items-center gap-1.5 text-[13px] font-medium text-text-tertiary transition-colors hover:text-text-secondary active:scale-95"
-        >
-          <IconArrowLeft size={14} stroke={2} />
-          Back
-        </button>
-      ) : (
-        <Link href="/" className="flex items-center gap-2">
-          <LogoMark size={18} className="text-text-secondary" />
-          <span className="text-[13px] font-semibold tracking-tight text-text-secondary">
-            Phantom
-          </span>
-        </Link>
-      )}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={onSettingsClick}
-          className="rounded-md p-1.5 text-text-tertiary transition-colors hover:bg-white/5 hover:text-text-secondary active:scale-95"
-          title="Settings"
-        >
-          <IconSettings size={16} stroke={2} />
-        </button>
-        <span className="rounded-full bg-white/4 px-2.5 py-1 text-[10px] font-medium tracking-wider text-text-tertiary/80">
-          v1.0
-        </span>
+    <main className="landing-canvas flex min-h-screen flex-col">
+      <AppHeader hideBrandOnDesktop />
+      <Hero />
+      <HomeDetails />
+
+      <div className="app-shell mt-auto">
+        <SiteFooter />
       </div>
-    </nav>
+    </main>
   );
 }
 
-function HomeSeoContent() {
-  const questions = [
-    {
-      question: "What can Phantom YouTube resolve?",
-      answer:
-        "The app can resolve individual videos, playlists, and search-based YouTube queries so you can review available downloads before saving them.",
-    },
-    {
-      question: "Which formats are supported?",
-      answer:
-        "Available formats depend on the source video, but the app is designed around common video and audio download workflows such as MP4 and audio-oriented options.",
-    },
-    {
-      question: "Is Phantom YouTube affiliated with YouTube?",
-      answer:
-        "No. Phantom YouTube is an independent tool and is not endorsed by or affiliated with YouTube or Google.",
-    },
-  ];
+function Hero() {
+  const { messages: t } = useI18n();
 
   return (
-    <section className="mx-auto mt-20 max-w-3xl px-5 pb-16 sm:px-6 lg:px-8">
-      <div className="space-y-8 border-t border-white/8 pt-8">
-        <section>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-text-tertiary">
-            Overview
-          </p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-text sm:text-3xl">
-            A simpler YouTube downloader workflow
-          </h2>
-          <p className="mt-4 text-sm leading-7 text-text-secondary sm:text-[15px]">
-            Phantom YouTube is built to resolve individual videos, playlists,
-            and search queries so you can review available download options
-            quickly without a cluttered interface. The goal is a direct workflow
-            for personal use and other situations where you already have the
-            right to access, copy, or save the material.
-          </p>
-          <p className="mt-4 text-sm leading-7 text-text-secondary sm:text-[15px]">
-            Available formats depend on the source media and the streams exposed
-            at the time of the request. Queueing and stream selection are there
-            to keep the process straightforward, not to change the rights status
-            of any content.
-          </p>
-        </section>
+    <section className="editorial-hero">
+      <span className="poster-dots" aria-hidden="true" />
+      <span className="paint-scratch" aria-hidden="true" />
 
-        <section className="border-t border-white/8 pt-8">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-text-tertiary">
-            Responsible use
-          </p>
-          <p className="mt-4 text-sm leading-7 text-text-secondary sm:text-[15px]">
-            Only download content you own or are authorized to save. You are
-            responsible for complying with copyright law, platform terms,
-            licenses, contractual restrictions, and local regulations. Phantom
-            YouTube is independent and is not affiliated with or endorsed by
-            YouTube or Google.
-          </p>
-          <Link
-            href="/disclaimer"
-            className="mt-5 inline-flex text-sm font-semibold text-text-secondary transition-colors hover:text-text"
-          >
-            Read the legal disclaimer
-          </Link>
-        </section>
+      <div className="editorial-stage app-shell">
+        <div className="grid w-full items-center gap-12 pb-8 pt-4 lg:grid-cols-[minmax(380px,0.86fr)_minmax(560px,1.14fr)] lg:gap-14 lg:pb-20 lg:pt-4">
+          <div className="hero-column relative z-10 max-w-2xl">
+            <div
+              className="hidden items-center gap-3.5 sm:gap-5 lg:flex"
+              aria-label="Phantom"
+            >
+              <Logo
+                size={72}
+                decorative
+                priority
+                className="h-[clamp(3rem,4vw,4.4rem)] w-auto"
+              />
+              <p className="text-[clamp(2rem,4vw,4.5rem)] font-extrabold leading-none text-text">
+                Phantom
+              </p>
+            </div>
+            <span className="ink-underline hidden lg:block" aria-hidden="true" />
 
-        <section className="border-t border-white/8 pt-8">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-text-tertiary">
-            FAQ
-          </p>
-          <div className="mt-4 space-y-5">
-            {questions.map((item) => (
-              <article key={item.question}>
-                <h3 className="text-sm font-semibold text-text sm:text-[15px]">
-                  {item.question}
-                </h3>
-                <p className="mt-2 text-sm leading-7 text-text-secondary sm:text-[15px]">
-                  {item.answer}
-                </p>
-              </article>
-            ))}
+            <h1 className="hero-headline font-extrabold text-text lg:mt-8">
+              {t.home.headlineTop}
+              <br />
+              {t.home.headlineBottom}
+              <span className="text-phantom">.</span>
+            </h1>
+
+            <p className="mt-6 max-w-lg text-base font-bold leading-relaxed text-text lg:mt-7 lg:text-[clamp(1rem,1.5vw,1.4rem)]">
+              {t.home.promise}
+            </p>
           </div>
-        </section>
+
+          <div className="relative z-10 mx-auto hidden w-full max-w-[720px] lg:block">
+            <div className="grid items-stretch gap-0 sm:grid-cols-[1fr_auto_1fr_auto_1fr]">
+              <WorkflowStep
+                index="1"
+                icon={<IconLink size={40} stroke={2.35} />}
+                title={t.home.desktopSteps[0]}
+                tone="neutral"
+              />
+              <span className="poster-arrow" aria-hidden="true">
+                <IconArrowRight size={20} stroke={2.4} />
+              </span>
+              <WorkflowStep
+                index="2"
+                icon={<IconBolt size={44} fill="currentColor" stroke={1.4} />}
+                title={t.home.desktopSteps[1]}
+                tone="active"
+              />
+              <span className="poster-arrow" aria-hidden="true">
+                <IconArrowRight size={20} stroke={2.4} />
+              </span>
+              <WorkflowStep
+                index="3"
+                icon={<IconDownload size={42} stroke={2.35} />}
+                title={t.home.desktopSteps[2]}
+                tone="complete"
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
 }
 
-export default function HomePageClient() {
-  const { resolve, loading, error, result } = useResolve();
-  const { enqueue, enqueueBatch, downloads } = useDownloadQueue();
-  const { setLastContainer, setLastQualityPreference } = useSettings();
-
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [singleDialogVideo, setSingleDialogVideo] = useState<VideoInfo | null>(
-    null
+function WorkflowStep({
+  index,
+  icon,
+  title,
+  tone,
+}: {
+  index: string;
+  icon: React.ReactNode;
+  title: string;
+  tone: "neutral" | "active" | "complete";
+}) {
+  return (
+    <article className="poster-card flex min-h-[300px] flex-col items-center px-5 py-6 text-center">
+      <span className="absolute left-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-text font-mono text-xs font-extrabold text-white">
+        {index}
+      </span>
+      <span
+        className={`mt-9 flex h-28 w-28 items-center justify-center rounded-full ${
+          tone === "active"
+            ? "bg-phantom-soft text-phantom"
+            : tone === "complete"
+              ? "bg-[#dfe5d5] text-text"
+              : "bg-[#e9e3d8] text-text"
+        }`}
+      >
+        {icon}
+      </span>
+      <p className="mt-6 text-sm font-extrabold text-text">{title}</p>
+      {tone === "active" && (
+        <span className="mt-auto block h-3 w-full overflow-hidden rounded-full border border-text/10 bg-[#e8ddca]">
+          <span className="block h-full w-[68%] rounded-full bg-phantom" />
+        </span>
+      )}
+      {tone === "complete" && (
+        <IconCircleCheckFilled size={35} className="mt-auto text-[#65ad4c]" />
+      )}
+      {tone === "neutral" && (
+        <span className="mt-auto flex h-10 w-full items-center overflow-hidden rounded-xl border border-border bg-surface text-left">
+          <span className="min-w-0 flex-1 truncate px-2 font-mono text-[8px] text-text-secondary">
+            https://example.com/video
+          </span>
+          <span className="flex h-full w-10 shrink-0 items-center justify-center bg-phantom text-lg font-bold text-white">
+            <IconArrowRight size={18} stroke={2.4} />
+          </span>
+        </span>
+      )}
+    </article>
   );
-  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+}
 
-  const handleSubmit = useCallback(
-    async (query: string) => {
-      const res = await resolve(query);
-      if (!res) return;
-
-      if (res.videos.length === 1 && res.kind === "video") {
-        setSingleDialogVideo(res.videos[0]);
-      } else if (
-        res.videos.length > 1 &&
-        res.kind !== "search" &&
-        res.kind !== "aggregate"
-      ) {
-        setBatchDialogOpen(true);
-      }
-    },
-    [resolve]
-  );
-
-  const handleVideoClick = useCallback((video: VideoInfo) => {
-    setSingleDialogVideo(video);
-  }, []);
-
-  const handleSingleDownload = useCallback(
-    (video: VideoInfo, option: DownloadOption) => {
-      enqueue(video, option);
-      setSingleDialogVideo(null);
-    },
-    [enqueue]
-  );
-
-  const handleBatchDownload = useCallback(
-    async (
-      videos: VideoInfo[],
-      container: Container,
-      quality: VideoQualityPreference
-    ) => {
-      setLastContainer(container);
-      setLastQualityPreference(quality);
-
-      const items: { video: VideoInfo; option: DownloadOption }[] = [];
-      for (const video of videos) {
-        try {
-          const res = await fetch("/api/streams", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ videoId: video.id }),
-          });
-          if (!res.ok) continue;
-          const data = await res.json();
-          const bestOption = getBestOption(data.options, container, quality);
-          if (bestOption) {
-            items.push({ video, option: bestOption });
-          }
-        } catch {
-          // Skip videos that fail
-        }
-      }
-
-      if (items.length > 0) {
-        enqueueBatch(items);
-      }
-    },
-    [enqueueBatch, setLastContainer, setLastQualityPreference]
-  );
-
-  const hasContent = result || downloads.length > 0;
-  const isHero = !hasContent && !loading;
+function HomeDetails() {
+  const { locale, messages: t } = useI18n();
 
   return (
-    <main className="relative min-h-screen">
-      {isHero && (
-        <div className="flex min-h-screen flex-col animate-fade-in">
-          <Navbar onSettingsClick={() => setSettingsOpen(true)} />
-
-          <div className="mx-auto w-full max-w-5xl flex-1 px-4 sm:px-6 lg:px-8">
-            {DOWNLOADS_RESTRICTED && (
-              <div className="mx-auto mb-6 max-w-xl">
-                <div className="flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
-                  <IconAlertTriangle
-                    size={18}
-                    stroke={1.8}
-                    className="mt-0.5 shrink-0 text-amber-500"
-                  />
-                  <div className="space-y-1">
-                    <p className="text-[13px] font-medium text-text">
-                      Downloads Temporarily Unavailable
-                    </p>
-                    <p className="text-[12px] leading-relaxed text-text-secondary">
-                      YouTube has implemented new restrictions affecting download services.
-                      We are working on a solution. In the meantime, you can use{" "}
-                      <a
-                        href="https://github.com/yt-dlp/yt-dlp"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-phantom hover:underline"
-                      >
-                        yt-dlp
-                        <IconExternalLink size={11} />
-                      </a>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-            <SearchBar
-              onSubmit={handleSubmit}
-              loading={loading}
-              compact={false}
-            />
-          </div>
-
-          <SiteFooter className="px-5 pb-4 text-center sm:px-8" />
-        </div>
-      )}
-
-      {!isHero && (
-        <div className="min-h-screen animate-fade-in">
-          <Navbar onSettingsClick={() => setSettingsOpen(true)} showBack />
-
-          <div className="mx-auto max-w-5xl px-2 sm:px-6 lg:px-8">
-            <div className="mb-5 px-1 animate-slide-up sm:px-0">
-              <SearchBar
-                onSubmit={handleSubmit}
-                loading={loading}
-                compact={true}
-              />
-            </div>
-
-            {loading && !result && (
-              <div className="mx-auto mt-10 w-full max-w-sm animate-fade-in">
-                <div className="overflow-hidden rounded-full bg-white/5">
-                  <div
-                    className="h-[3px] w-1/5 rounded-full bg-phantom/50"
-                    style={{ animation: "progress-slide 1.5s ease-in-out infinite" }}
-                  />
-                </div>
-                <p className="mt-3 text-center text-[12px] text-text-tertiary">
-                  Resolving...
-                </p>
-              </div>
-            )}
-
-            {error && (
-              <div className="mx-auto mt-10 max-w-md animate-slide-up text-center">
-                <p className="text-[15px] font-semibold tracking-tight text-text">
-                  {error}
-                </p>
-              </div>
-            )}
-
-            {downloads.length > 0 && (
-              <div className="mb-5 animate-fade-in px-1 sm:px-0">
-                <DownloadQueue />
-              </div>
-            )}
-
-            {result && result.videos.length >= 1 && !batchDialogOpen && (
-              <div
-                className="stagger-child px-1 sm:px-0"
-                style={{ animationDelay: "0.05s" }}
+    <section className="app-shell pb-12 pt-4 sm:pb-16 sm:pt-6">
+      <div className="grid gap-x-12 gap-y-9 border-t-2 border-text/85 pt-7 md:grid-cols-3 md:pt-8">
+        <Column index="01" title={t.home.accepts.title}>
+          <ul className="flex flex-wrap gap-1.5">
+            {t.home.accepts.items.map((item) => (
+              <li
+                key={item}
+                className="rounded-full border border-border bg-surface/60 px-2.5 py-1 font-mono text-[10px] text-text-secondary"
               >
-                <div className="mb-3 flex items-center justify-between px-1">
-                  <span className="text-[11px] font-medium text-text-tertiary">
-                    {result.title}
-                  </span>
-                  <button
-                    onClick={() => setBatchDialogOpen(true)}
-                    className="flex items-center gap-1.5 rounded-lg bg-phantom px-3 py-1.5 text-[11px] font-semibold text-white transition-all hover:bg-phantom-dark active:scale-[0.97]"
-                  >
-                    <IconDownload size={12} stroke={2} />
-                    Download All
-                  </button>
-                </div>
-                <VideoList
-                  videos={result.videos}
-                  onVideoClick={handleVideoClick}
+                {item}
+              </li>
+            ))}
+          </ul>
+        </Column>
+
+        <Column index="02" title={t.home.formats.title}>
+          <ul>
+            {t.home.formats.items.map((format) => (
+              <li
+                key={format.name}
+                className="flex items-baseline justify-between gap-4 border-b border-black/[0.07] py-1.5 last:border-b-0"
+              >
+                <span className="font-mono text-[12px] font-extrabold text-text">
+                  {format.name}
+                </span>
+                <span className="text-[12px] text-text-secondary">
+                  {format.copy}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-[12px] leading-5 text-text-tertiary">
+            {t.home.formats.note}
+          </p>
+        </Column>
+
+        <Column index="03" title={t.home.delivery.title}>
+          <ul className="space-y-2.5">
+            {t.home.delivery.lines.map((line) => (
+              <li
+                key={line}
+                className="relative pl-4 text-[12px] leading-5 text-text-secondary"
+              >
+                <span
+                  className="absolute left-0 top-[0.55em] h-[2px] w-2 bg-phantom"
+                  aria-hidden="true"
                 />
-              </div>
-            )}
+                {line}
+              </li>
+            ))}
+          </ul>
+        </Column>
+      </div>
 
-            <SiteFooter className="mt-8 pb-4 text-center" />
-          </div>
-        </div>
-      )}
+      <p className="mt-9 max-w-2xl text-[11px] leading-5 text-text-tertiary">
+        {t.home.independent} {t.home.authorizedOnly}{" "}
+        <Link
+          href={localePath(locale, "/disclaimer")}
+          className="font-bold underline underline-offset-4"
+        >
+          {t.home.disclaimer}.
+        </Link>
+      </p>
+    </section>
+  );
+}
 
-      {isHero && <HomeSeoContent />}
-
-      {singleDialogVideo && (
-        <DownloadOptionsDialog
-          video={singleDialogVideo}
-          open={!!singleDialogVideo}
-          onClose={() => setSingleDialogVideo(null)}
-          onDownload={handleSingleDownload}
-        />
-      )}
-
-      {result && result.videos.length > 1 && (
-        <BatchDownloadDialog
-          title={result.title}
-          videos={result.videos}
-          preselectAll={result.kind !== "search" && result.kind !== "aggregate"}
-          open={batchDialogOpen}
-          onClose={() => setBatchDialogOpen(false)}
-          onDownload={handleBatchDownload}
-        />
-      )}
-
-      <SettingsPanel
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-      />
-    </main>
+function Column({
+  index,
+  title,
+  children,
+}: {
+  index: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <article>
+      <span className="font-mono text-[11px] font-extrabold text-phantom">
+        {index}
+      </span>
+      <h2 className="mb-4 mt-2 text-[15px] font-extrabold text-text">{title}</h2>
+      {children}
+    </article>
   );
 }

@@ -7,46 +7,48 @@ import type { Innertube, Misc } from "youtubei.js";
 
 type Format = Misc.Format;
 
-// Server-side cache: videoId → { options, expiresAt }
-// Dramatically reduces YouTube API calls for repeated requests
 const streamCache = new Map<
   string,
   { options: DownloadOption[]; expiresAt: number }
 >();
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const inFlightResolutions = new Map<string, Promise<DownloadOption[]>>();
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_MAX_ENTRIES = 100;
 
-/**
- * Resolves all available download options using youtubei.js directly.
- * Results are cached server-side to reduce YouTube API pressure.
- */
 export async function resolveDownloadOptions(
   videoId: string
 ): Promise<DownloadOption[]> {
-  // Check cache first
   const cached = streamCache.get(videoId);
   if (cached && cached.expiresAt > Date.now()) {
+    streamCache.delete(videoId);
+    streamCache.set(videoId, cached);
     return cached.options;
   }
+  if (cached) streamCache.delete(videoId);
 
-  const options = await withSessionRetry((yt) => tryAllClients(yt, videoId));
+  const existingResolution = inFlightResolutions.get(videoId);
+  if (existingResolution) return existingResolution;
 
-  // Cache successful results
-  streamCache.set(videoId, {
-    options,
-    expiresAt: Date.now() + CACHE_TTL_MS,
-  });
+  const resolution = withSessionRetry((yt) => tryAllClients(yt, videoId));
+  inFlightResolutions.set(videoId, resolution);
 
-  // Prune old entries periodically (keep cache size bounded)
-  if (streamCache.size > 100) {
-    const now = Date.now();
-    for (const [key, value] of streamCache) {
-      if (value.expiresAt < now) {
-        streamCache.delete(key);
-      }
+  try {
+    const options = await resolution;
+    streamCache.set(videoId, {
+      options,
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    });
+
+    while (streamCache.size > CACHE_MAX_ENTRIES) {
+      const oldestKey = streamCache.keys().next().value;
+      if (!oldestKey) break;
+      streamCache.delete(oldestKey);
     }
-  }
 
-  return options;
+    return options;
+  } finally {
+    inFlightResolutions.delete(videoId);
+  }
 }
 
 async function tryAllClients(
@@ -87,7 +89,6 @@ function buildDownloadOptions(formats: Format[]): DownloadOption[] {
 
   const options: DownloadOption[] = [];
 
-  // Muxed formats (video+audio in one stream)
   for (const format of muxedFormats) {
     const container = mimeToContainer(format.mime_type, false);
     if (!container) continue;
@@ -119,7 +120,6 @@ function buildDownloadOptions(formats: Format[]): DownloadOption[] {
     });
   }
 
-  // Adaptive video + best audio
   for (const videoFormat of videoFormats) {
     const container = mimeToContainer(videoFormat.mime_type, false);
     if (!container) continue;
@@ -170,7 +170,6 @@ function buildDownloadOptions(formats: Format[]): DownloadOption[] {
     });
   }
 
-  // Audio-only options
   const bestWebmAudio = audioFormats
     .filter((f) => f.mime_type.includes("webm"))
     .sort((a, b) => (b.bitrate ?? 0) - (a.bitrate ?? 0))[0];
@@ -205,29 +204,6 @@ function buildDownloadOptions(formats: Format[]): DownloadOption[] {
       totalSize: audioStream.contentLength,
     });
 
-    options.push({
-      id: `audio-mp3-${bestWebmAudio.itag}`,
-      formatSpec: String(bestWebmAudio.itag),
-      container: "mp3",
-      isAudioOnly: true,
-      qualityLabel: null,
-      height: null,
-      needsMuxing: true,
-      streams: [audioStream],
-      totalSize: audioStream.contentLength,
-    });
-
-    options.push({
-      id: `audio-ogg-${bestWebmAudio.itag}`,
-      formatSpec: String(bestWebmAudio.itag),
-      container: "ogg",
-      isAudioOnly: true,
-      qualityLabel: null,
-      height: null,
-      needsMuxing: true,
-      streams: [audioStream],
-      totalSize: audioStream.contentLength,
-    });
   }
 
   if (bestMp4Audio) {
@@ -255,6 +231,42 @@ function buildDownloadOptions(formats: Format[]): DownloadOption[] {
       ],
       totalSize: bestMp4Audio.content_length ?? 0,
     });
+  }
+
+  const conversionSource = bestWebmAudio ?? bestMp4Audio;
+  if (conversionSource) {
+    const sourceContainer = mimeToContainer(
+      conversionSource.mime_type,
+      true
+    );
+    if (sourceContainer) {
+      const audioStream = {
+        url: "",
+        formatSpec: String(conversionSource.itag),
+        container: sourceContainer,
+        mimeType: conversionSource.mime_type,
+        bitrate: conversionSource.bitrate ?? 0,
+        contentLength: conversionSource.content_length ?? 0,
+        isAudioOnly: true,
+        audioSampleRate: conversionSource.audio_sample_rate,
+        audioChannels: conversionSource.audio_channels,
+        language: conversionSource.language ?? undefined,
+      };
+
+      for (const container of ["mp3", "ogg"] as const) {
+        options.push({
+          id: `audio-${container}-${conversionSource.itag}`,
+          formatSpec: String(conversionSource.itag),
+          container,
+          isAudioOnly: true,
+          qualityLabel: null,
+          height: null,
+          needsMuxing: true,
+          streams: [audioStream],
+          totalSize: audioStream.contentLength,
+        });
+      }
+    }
   }
 
   return deduplicateOptions(options);
@@ -297,10 +309,7 @@ function findBestAudio(
     .filter((f) => f.mime_type.includes(preferredMime))
     .sort((a, b) => (b.bitrate ?? 0) - (a.bitrate ?? 0));
 
-  if (matching.length > 0) return matching[0];
-  return [...audioFormats].sort(
-    (a, b) => (b.bitrate ?? 0) - (a.bitrate ?? 0)
-  )[0];
+  return matching[0];
 }
 
 function deduplicateOptions(options: DownloadOption[]): DownloadOption[] {

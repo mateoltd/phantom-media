@@ -1,6 +1,3 @@
-/**
- * Sanitize a filename by removing/replacing invalid characters.
- */
 export function sanitizeFileName(name: string): string {
   return name
     .replace(/[<>:"/\\|?*\x00-\x1F]/g, "_")
@@ -9,9 +6,6 @@ export function sanitizeFileName(name: string): string {
     .replace(/^\.+|\.+$/g, "");
 }
 
-/**
- * Generate a download filename for a video.
- */
 export function generateFileName(
   title: string,
   container: string,
@@ -22,9 +16,6 @@ export function generateFileName(
   return `${prefix}${sanitized}.${container}`;
 }
 
-/**
- * Generate a unique ID for download items.
- */
 export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }

@@ -10,24 +10,30 @@ import type {
   Container,
   VideoQualityPreference,
 } from "@/lib/types";
-import { DEFAULT_PARALLEL_LIMIT } from "@/lib/constants";
 import { generateId, generateFileName } from "@/lib/utils";
-import { USE_WS_BRIDGE } from "@/lib/config";
 
 export interface DownloadStoreState {
-  // Downloads
   downloads: DownloadItem[];
 
-  // Settings
-  parallelLimit: number;
   lastContainer: Container;
   lastQualityPreference: VideoQualityPreference;
 
-  // Actions
   addDownload: (video: VideoInfo, option: DownloadOption, index?: number) => string;
   updateDownload: (
     id: string,
-    updates: Partial<Pick<DownloadItem, "status" | "progress" | "errorMessage">>
+    updates: Partial<
+      Pick<
+        DownloadItem,
+        | "status"
+        | "progress"
+        | "phase"
+        | "downloadedBytes"
+        | "totalBytes"
+        | "bytesPerSecond"
+        | "etaSeconds"
+        | "errorMessage"
+      >
+    >
   ) => void;
   removeDownload: (id: string) => void;
   removeCompletedDownloads: () => void;
@@ -36,10 +42,7 @@ export interface DownloadStoreState {
   restartFailedDownloads: () => void;
   cancelDownload: (id: string) => void;
   cancelAllDownloads: () => void;
-  clearDownloads: () => void;
 
-  // Settings actions
-  setParallelLimit: (limit: number) => void;
   setLastContainer: (container: Container) => void;
   setLastQualityPreference: (pref: VideoQualityPreference) => void;
 }
@@ -47,13 +50,10 @@ export interface DownloadStoreState {
 export const useDownloadStore = create<DownloadStoreState>()(
   persist(
     (set) => ({
-      // Initial state
       downloads: [],
-      parallelLimit: DEFAULT_PARALLEL_LIMIT,
       lastContainer: "mp4",
       lastQualityPreference: "highest",
 
-      // Download actions
       addDownload: (video, option, index) => {
         const id = generateId();
         const item: DownloadItem = {
@@ -62,8 +62,8 @@ export const useDownloadStore = create<DownloadStoreState>()(
           option,
           status: "enqueued",
           progress: 0,
+          phase: "queued",
           fileName: generateFileName(video.title, option.container, index),
-          useBridge: USE_WS_BRIDGE,
         };
         set((state) => ({
           downloads: [...state.downloads, item],
@@ -106,7 +106,17 @@ export const useDownloadStore = create<DownloadStoreState>()(
         set((state) => ({
           downloads: state.downloads.map((d) =>
             d.id === id
-              ? { ...d, status: "enqueued" as DownloadStatus, progress: 0, errorMessage: undefined }
+              ? {
+                  ...d,
+                  status: "enqueued" as DownloadStatus,
+                  progress: 0,
+                  phase: "queued" as const,
+                  downloadedBytes: undefined,
+                  totalBytes: undefined,
+                  bytesPerSecond: undefined,
+                  etaSeconds: undefined,
+                  errorMessage: undefined,
+                }
               : d
           ),
         }));
@@ -116,7 +126,17 @@ export const useDownloadStore = create<DownloadStoreState>()(
         set((state) => ({
           downloads: state.downloads.map((d) =>
             d.status === "failed"
-              ? { ...d, status: "enqueued" as DownloadStatus, progress: 0, errorMessage: undefined }
+              ? {
+                  ...d,
+                  status: "enqueued" as DownloadStatus,
+                  progress: 0,
+                  phase: "queued" as const,
+                  downloadedBytes: undefined,
+                  totalBytes: undefined,
+                  bytesPerSecond: undefined,
+                  etaSeconds: undefined,
+                  errorMessage: undefined,
+                }
               : d
           ),
         }));
@@ -127,11 +147,7 @@ export const useDownloadStore = create<DownloadStoreState>()(
           downloads: state.downloads.map((d) =>
             d.id === id &&
             (d.status === "enqueued" ||
-              d.status === "started" ||
-              d.status === "bridging" ||
-              d.status === "uploading" ||
-              d.status === "server_muxing" ||
-              d.status === "receiving")
+              d.status === "started")
               ? { ...d, status: "canceled" as DownloadStatus }
               : d
           ),
@@ -142,23 +158,13 @@ export const useDownloadStore = create<DownloadStoreState>()(
         set((state) => ({
           downloads: state.downloads.map((d) =>
             d.status === "enqueued" ||
-            d.status === "started" ||
-            d.status === "bridging" ||
-            d.status === "uploading" ||
-            d.status === "server_muxing" ||
-            d.status === "receiving"
+            d.status === "started"
               ? { ...d, status: "canceled" as DownloadStatus }
               : d
           ),
         }));
       },
 
-      clearDownloads: () => {
-        set({ downloads: [] });
-      },
-
-      // Settings actions
-      setParallelLimit: (limit) => set({ parallelLimit: limit }),
       setLastContainer: (container) => set({ lastContainer: container }),
       setLastQualityPreference: (pref) =>
         set({ lastQualityPreference: pref }),
@@ -167,7 +173,6 @@ export const useDownloadStore = create<DownloadStoreState>()(
       name: "ewyoutube-settings",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        parallelLimit: state.parallelLimit,
         lastContainer: state.lastContainer,
         lastQualityPreference: state.lastQualityPreference,
       }),

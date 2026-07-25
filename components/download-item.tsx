@@ -1,9 +1,11 @@
 "use client";
 
+import Image from "next/image";
+import { IconCheck, IconRefresh, IconTrash, IconX } from "@tabler/icons-react";
 import type { DownloadItem as DownloadItemType } from "@/lib/types";
-import { formatFileSize, containerDisplayName } from "@/lib/types";
-import { ProgressBar } from "./progress-bar";
-import { IconX, IconRefresh, IconTrash } from "@tabler/icons-react";
+import { containerDisplayName, formatFileSize } from "@/lib/types";
+import { useI18n } from "@/components/locale-provider";
+import { getPhaseLabel, getProgressStats } from "@/components/download-progress";
 
 interface DownloadItemProps {
   item: DownloadItemType;
@@ -12,111 +14,151 @@ interface DownloadItemProps {
   onRemove: (id: string) => void;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  enqueued: "Queued",
-  started: "Downloading",
-  completed: "Completed",
-  failed: "Failed",
-  canceled: "Canceled",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  enqueued: "text-text-tertiary",
-  started: "text-phantom",
-  completed: "text-success",
-  failed: "text-error",
-  canceled: "text-text-tertiary",
-};
-
 export function DownloadItemRow({
   item,
   onCancel,
   onRestart,
   onRemove,
 }: DownloadItemProps) {
+  const { messages: t } = useI18n();
+  const completed = item.status === "completed";
+  const failed = item.status === "failed";
+  const running = item.status === "started" && item.phase !== "queued";
+  const active = item.status === "started" || item.status === "enqueued";
+  const percent = completed ? 100 : Math.round(item.progress * 100);
+  const stats = getProgressStats(item, t.queue);
+
+  const specs = [containerDisplayName(item.option.container)];
+  if (item.option.qualityLabel) specs.push(item.option.qualityLabel);
+  if (item.option.isAudioOnly) specs.push(t.queue.audio);
+  if (item.option.totalSize > 0) specs.push(formatFileSize(item.option.totalSize));
+
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-white/[0.04] bg-white/[0.02] p-3">
-      <div className="flex items-start gap-3">
-        {/* Thumbnail */}
-        <div className="h-12 w-20 shrink-0 overflow-hidden rounded-md bg-surface">
-          <img
+    <article className="job-row">
+      <div className="flex gap-3">
+        <div className="relative h-[50px] w-[88px] shrink-0 overflow-hidden rounded-lg bg-[#ded9cf]">
+          <Image
             src={item.video.thumbnailUrl}
-            alt={item.video.title}
+            alt=""
+            fill
+            sizes="88px"
+            unoptimized
             className="h-full w-full object-cover"
-            loading="lazy"
           />
+          {completed && (
+            <span className="absolute inset-0 flex items-center justify-center bg-success/85 text-white">
+              <IconCheck size={18} stroke={2.6} />
+            </span>
+          )}
         </div>
 
-        {/* Info */}
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-1 text-[13px] font-medium text-text-secondary">
-            {item.video.title}
-          </p>
-          <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-text-tertiary">
-            <span className="rounded bg-white/[0.04] px-1 py-0.5 font-mono font-medium">
-              {containerDisplayName(item.option.container)}
-            </span>
-            {item.option.qualityLabel && (
-              <span>{item.option.qualityLabel}</span>
-            )}
-            {item.option.isAudioOnly && <span>Audio</span>}
-            <span>&middot;</span>
-            <span>{formatFileSize(item.option.totalSize)}</span>
+          <div className="flex items-start gap-2">
+            <p className="line-clamp-2 min-w-0 flex-1 text-[13px] font-bold leading-[1.35] text-text">
+              {item.video.title}
+            </p>
+            <div className="-mt-1 flex shrink-0 items-center">
+              {(item.status === "enqueued" ||
+                (item.status === "started" &&
+                  item.phase !== "transferring")) && (
+                <RowAction label={t.queue.cancel} onClick={() => onCancel(item.id)}>
+                  <IconX size={14} stroke={2.2} />
+                </RowAction>
+              )}
+              {(failed || item.status === "canceled") && (
+                <RowAction
+                  label={t.queue.restart}
+                  onClick={() => onRestart(item.id)}
+                >
+                  <IconRefresh size={14} stroke={2.2} />
+                </RowAction>
+              )}
+              {(completed || failed || item.status === "canceled") && (
+                <RowAction label={t.queue.remove} onClick={() => onRemove(item.id)}>
+                  <IconTrash size={14} stroke={2} />
+                </RowAction>
+              )}
+            </div>
           </div>
-          <div className="mt-0.5">
-            <span
-              className={`text-[11px] font-medium ${STATUS_COLORS[item.status]}`}
-            >
-              {STATUS_LABELS[item.status]}
-              {item.status === "started" &&
-                ` ${Math.round(item.progress * 100)}%`}
-            </span>
-          </div>
-        </div>
 
-        {/* Actions */}
-        <div className="flex shrink-0 items-center gap-0.5">
-          {(item.status === "enqueued" || item.status === "started") && (
-            <button
-              onClick={() => onCancel(item.id)}
-              className="rounded-md p-1.5 text-text-tertiary transition-colors hover:bg-white/[0.05] hover:text-text-secondary"
-              title="Cancel"
+          <p className="mt-1 font-mono text-[10px] text-text-tertiary">
+            {specs.join(", ")}
+          </p>
+
+          <div className="mt-2 flex items-baseline justify-between gap-3">
+            <span
+              className={`text-[11px] font-bold ${
+                completed
+                  ? "text-success"
+                  : failed
+                    ? "text-error"
+                    : running
+                      ? "text-text"
+                      : "text-text-secondary"
+              }`}
             >
-              <IconX size={14} stroke={2} />
-            </button>
+              {getPhaseLabel(item, t.queue)}
+            </span>
+            <span className="shrink-0 font-mono text-[11px] font-bold text-text">
+              {percent}%
+            </span>
+          </div>
+
+          {stats && (
+            <p className="mt-1 font-mono text-[10px] text-text-tertiary">
+              {stats}
+            </p>
           )}
-          {(item.status === "failed" || item.status === "canceled") && (
-            <button
-              onClick={() => onRestart(item.id)}
-              className="rounded-md p-1.5 text-text-tertiary transition-colors hover:bg-white/[0.05] hover:text-text-secondary"
-              title="Restart"
-            >
-              <IconRefresh size={14} stroke={2} />
-            </button>
-          )}
-          {(item.status === "completed" ||
-            item.status === "failed" ||
-            item.status === "canceled") && (
-            <button
-              onClick={() => onRemove(item.id)}
-              className="rounded-md p-1.5 text-text-tertiary transition-colors hover:bg-white/[0.05] hover:text-text-secondary"
-              title="Remove"
-            >
-              <IconTrash size={14} stroke={2} />
-            </button>
+
+          {item.errorMessage && (
+            <p className="mt-2 text-[11px] leading-4 text-error">
+              {item.errorMessage}
+            </p>
           )}
         </div>
       </div>
 
-      {/* Progress bar */}
-      {(item.status === "started" || item.status === "enqueued") && (
-        <ProgressBar progress={item.progress} />
+      {active && (
+        <span
+          className="job-rail job-rail-slim mt-3"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={percent}
+          aria-label={item.video.title}
+        >
+          {running && percent === 0 ? (
+            <span className="job-rail-indeterminate" />
+          ) : (
+            <span
+              className={`job-fill ${running ? "" : "job-fill-idle"}`}
+              style={{ width: `${percent}%` }}
+            />
+          )}
+        </span>
       )}
+    </article>
+  );
+}
 
-      {/* Error message */}
-      {item.errorMessage && (
-        <p className="text-[11px] text-error">{item.errorMessage}</p>
-      )}
-    </div>
+function RowAction({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-8 w-8 items-center justify-center rounded-lg text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text"
+      aria-label={label}
+      title={label}
+    >
+      {children}
+    </button>
   );
 }

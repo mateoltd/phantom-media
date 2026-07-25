@@ -1,5 +1,10 @@
 import { Innertube, Platform } from "youtubei.js";
 import type { Types } from "youtubei.js";
+import {
+  fetch as undiciFetch,
+  ProxyAgent,
+  type RequestInit as UndiciRequestInit,
+} from "undici";
 import evaluate from "./evaluate";
 
 export type InnerTubeClient = Types.InnerTubeClient;
@@ -13,29 +18,36 @@ export const CLIENT_FALLBACK_ORDER: InnerTubeClient[] = [
   "ANDROID",
 ];
 
-/**
- * These clients return pre-signed URLs — use format.url directly.
- */
-export const NO_CIPHER_CLIENTS = new Set<InnerTubeClient>([
-  "IOS",
-  "ANDROID",
-]);
-
 let innertubeInstance: Innertube | null = null;
 let innertubePromise: Promise<Innertube> | null = null;
 let platformPatched = false;
+let proxyAgent: ProxyAgent | null = null;
 
-// Mutex to prevent concurrent session resets (thundering herd)
+// Serialize session resets to prevent a thundering herd after a shared failure.
 let resetLock: Promise<Innertube> | null = null;
 
-// Cooldown: don't reset more than once per 5 seconds
 let lastResetTime = 0;
 const RESET_COOLDOWN_MS = 5000;
 
 function patchPlatform() {
   if (platformPatched) return;
-  Platform.load({ ...Platform.shim, eval: evaluate });
+
+  const proxyUrl = process.env.EWYOUTUBE_PROXY_URL?.trim();
+  const fetch = proxyUrl ? createProxyFetch(proxyUrl) : Platform.shim.fetch;
+  Platform.load({ ...Platform.shim, eval: evaluate, fetch });
   platformPatched = true;
+}
+
+function createProxyFetch(proxyUrl: string): typeof fetch {
+  proxyAgent ??= new ProxyAgent(proxyUrl);
+
+  return (async (input, init) => {
+    const response = await undiciFetch(input as never, {
+      ...(init as unknown as UndiciRequestInit),
+      dispatcher: proxyAgent!,
+    });
+    return response as unknown as Response;
+  }) as typeof fetch;
 }
 
 async function createInnertube(): Promise<Innertube> {
@@ -47,15 +59,12 @@ async function createInnertube(): Promise<Innertube> {
 }
 
 export async function getInnertube(): Promise<Innertube> {
-  // If instance exists, return it
   if (innertubeInstance) {
     return innertubeInstance;
   }
-  // If creation is in progress, wait for it (prevents duplicate creation)
   if (innertubePromise) {
     return innertubePromise;
   }
-  // Create new instance
   innertubePromise = createInnertube();
   try {
     innertubeInstance = await innertubePromise;
@@ -66,18 +75,15 @@ export async function getInnertube(): Promise<Innertube> {
 }
 
 export async function resetInnertube(): Promise<Innertube> {
-  // If a reset is already in progress, wait for it instead of starting another
   if (resetLock) {
     return resetLock;
   }
 
-  // Respect cooldown to avoid hammering YouTube
   const now = Date.now();
   if (now - lastResetTime < RESET_COOLDOWN_MS && innertubeInstance) {
     return innertubeInstance;
   }
 
-  // Acquire the lock
   resetLock = (async () => {
     innertubeInstance = null;
     innertubePromise = null;

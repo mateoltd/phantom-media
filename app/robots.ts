@@ -9,7 +9,14 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/results", "/playlist", "/watch"],
+        disallow: [
+          "/search",
+          "/playlist",
+          "/watch",
+          "/es/search",
+          "/es/playlist",
+          "/es/watch",
+        ],
       },
     ],
     sitemap: new URL("/sitemap.xml", baseUrl).toString(),

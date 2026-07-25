@@ -3,42 +3,31 @@
 import { useDownloadStore } from "@/stores/download-store";
 import { executeDownload } from "./worker";
 import type { DownloadItem } from "@/lib/types";
+import { DEFAULT_PARALLEL_LIMIT } from "@/lib/constants";
 
-// Track active downloads and their abort controllers
 const activeDownloads = new Map<string, AbortController>();
 let processingQueue = false;
 
-/**
- * Semaphore-based download manager.
- * Processes the download queue respecting the parallel limit.
- */
 export function processQueue(): void {
   if (processingQueue) return;
   processingQueue = true;
 
   const check = () => {
     const state = useDownloadStore.getState();
-    const { downloads, parallelLimit, updateDownload } = state;
+    const { downloads, updateDownload } = state;
 
     const activeCount = downloads.filter(
-      (d) =>
-        d.status === "started" ||
-        d.status === "bridging" ||
-        d.status === "uploading" ||
-        d.status === "server_muxing" ||
-        d.status === "receiving"
+      (d) => d.status === "started"
     ).length;
     const enqueued = downloads.filter((d) => d.status === "enqueued");
 
-    // Start downloads up to the parallel limit
-    const slotsAvailable = parallelLimit - activeCount;
+    const slotsAvailable = DEFAULT_PARALLEL_LIMIT - activeCount;
     const toStart = enqueued.slice(0, Math.max(0, slotsAvailable));
 
     for (const item of toStart) {
       startDownload(item, updateDownload);
     }
 
-    // Stop processing if nothing left to do
     if (
       enqueued.length === 0 &&
       downloads.filter((d) => d.status === "started").length === 0
@@ -47,7 +36,6 @@ export function processQueue(): void {
       return;
     }
 
-    // Check again shortly
     setTimeout(check, 500);
   };
 
@@ -58,13 +46,24 @@ function startDownload(
   item: DownloadItem,
   updateDownload: (
     id: string,
-    updates: Partial<Pick<DownloadItem, "status" | "progress" | "errorMessage">>
+    updates: Partial<
+      Pick<
+        DownloadItem,
+        | "status"
+        | "progress"
+        | "phase"
+        | "downloadedBytes"
+        | "totalBytes"
+        | "bytesPerSecond"
+        | "etaSeconds"
+        | "errorMessage"
+      >
+    >
   ) => void
 ): void {
   const controller = new AbortController();
   activeDownloads.set(item.id, controller);
 
-  // Watch for external cancellation
   const unsubscribe = useDownloadStore.subscribe((state) => {
     const current = state.downloads.find((d) => d.id === item.id);
     if (current?.status === "canceled") {
@@ -79,8 +78,8 @@ function startDownload(
     item.video.id,
     item.fileName,
     {
-      onProgress: (progress) => {
-        updateDownload(item.id, { progress });
+      onProgress: (progress, details) => {
+        updateDownload(item.id, { progress, ...details });
       },
       onStatusChange: (status) => {
         updateDownload(item.id, { status });
@@ -93,14 +92,10 @@ function startDownload(
         updateDownload(item.id, { errorMessage: message });
       },
       signal: controller.signal,
-    },
-    item.useBridge ?? false
+    }
   );
 }
 
-/**
- * Cancel a specific download.
- */
 export function cancelDownload(id: string): void {
   const controller = activeDownloads.get(id);
   if (controller) {
@@ -110,9 +105,6 @@ export function cancelDownload(id: string): void {
   useDownloadStore.getState().cancelDownload(id);
 }
 
-/**
- * Cancel all active downloads.
- */
 export function cancelAllDownloads(): void {
   for (const [id, controller] of activeDownloads) {
     controller.abort();
