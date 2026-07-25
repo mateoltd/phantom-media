@@ -68,6 +68,16 @@
   display: none;
 }
 
+/* The hairline was an edge on a picture that ran the full width of the page.
+   Once the stage is inset — because the height available under the header
+   decides its width — the same line closes into a rectangle and reads as a
+   frame drawn around the film. The surround and the stage are the same colour,
+   so with the line gone the letterbox is one continuous dark field rather than
+   a bordered box floating in one. */
+.stage-frame .stage::after {
+  display: none;
+}
+
 .stage video {
   display: block;
   width: 100%;
