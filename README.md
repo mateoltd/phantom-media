@@ -57,6 +57,11 @@ Anything genuinely local stays local — the downloader keeps its locale-switche
 transition, the stream app pulls in `@phantom/theme/player.css` for video
 chrome, and neither pays for the other's CSS.
 
+The theme also ships a second surface. `@phantom/theme/cinema.css` re-points
+the palette variables to ink, which repaints every primitive and every shared
+component without any of them knowing about it. The stream app imports it
+because its content is moving pictures; the downloader stays on paper.
+
 ## Design
 
 One accent on a paper ground, Sora over JetBrains Mono, generous radii. The

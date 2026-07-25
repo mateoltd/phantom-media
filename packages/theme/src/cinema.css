@@ -1,0 +1,189 @@
+/*
+ * The cinema surface. Imported by apps whose content is moving pictures, where
+ * a paper ground would sit in front of the thing you came for. Everything is
+ * the same system — same accent, same type, same radii — repainted onto ink.
+ *
+ * Only the theme's own variables are re-pointed here, so every component in
+ * `@phantom/ui` and every primitive follows without knowing which surface it
+ * is on.
+ */
+:root {
+  --color-bg: #0c0b0a;
+  --color-surface: #171512;
+  --color-surface-light: #1f1c18;
+  --color-surface-hover: #232019;
+  --color-border: #302c25;
+
+  --color-text: #f6f1e6;
+  --color-text-secondary: #b5ad9f;
+  --color-text-tertiary: #857d70;
+
+  --color-phantom-soft: #4a1a0d;
+  --color-error: #ff7a63;
+  --color-success: #56cf95;
+
+  --surface-scheme: dark;
+  --surface-glow: rgba(255, 90, 54, 0.1);
+  --surface-weave: rgba(255, 255, 255, 0.02);
+  --surface-grain: rgba(255, 255, 255, 0.055);
+  --surface-grain-opacity: 0.1;
+  --surface-grain-blend: screen;
+  --surface-hairline: rgba(255, 255, 255, 0.05);
+  --surface-shadow: rgba(0, 0, 0, 0.45);
+  --scrollbar-thumb: #3a352d;
+}
+
+::selection {
+  color: var(--color-text);
+}
+
+/* ------------------------------------------------------- repainted surfaces */
+
+.surface-card {
+  border: 1px solid var(--color-border);
+  background: color-mix(in oklab, var(--color-surface) 88%, transparent);
+  box-shadow:
+    0 1px 0 var(--surface-hairline) inset,
+    0 14px 40px rgba(0, 0, 0, 0.4);
+}
+
+.panel-soft {
+  border: 1px solid var(--color-border);
+  background: color-mix(in oklab, var(--color-surface-light) 97%, transparent);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.6);
+}
+
+.panel-subtle {
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.workspace-canvas,
+.landing-canvas {
+  background:
+    radial-gradient(
+      ellipse 44rem 30rem at calc(100% - 6rem) -4rem,
+      rgba(255, 90, 54, 0.12),
+      transparent 70%
+    ),
+    linear-gradient(115deg, var(--surface-weave) 1px, transparent 1px),
+    var(--color-bg);
+  background-size: auto, 18px 18px, auto;
+}
+
+/* ------------------------------------------------------------------- rails */
+
+/* A row of titles scrolls sideways and snaps, and its scrollbar is not part of
+   the design — the cards are. */
+.rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--tile-width, 10.5rem);
+  gap: 0.9rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 1rem;
+  scrollbar-width: none;
+  padding-block: 0.35rem 1.1rem;
+  /* Matches `.app-shell`'s gutter so the first card lines up with the heading,
+     while the row itself still runs to the edge of the window. */
+  padding-inline: max(1rem, calc((100% - 1440px) / 2));
+}
+
+.rail::-webkit-scrollbar {
+  display: none;
+}
+
+.rail > * {
+  scroll-snap-align: start;
+}
+
+.rail-wide {
+  --tile-width: 17rem;
+}
+
+/* The row runs to the edge of the window, so it needs to look cut rather than
+   ended. */
+.rail-edges {
+  position: relative;
+}
+
+.rail-edges::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  width: 4rem;
+  pointer-events: none;
+  background: linear-gradient(to left, var(--color-bg), transparent);
+}
+
+/* ------------------------------------------------------------------ tiles */
+
+.tile {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--color-surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  transition:
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.22s ease;
+}
+
+.tile-hit:hover .tile,
+.tile-hit:focus-visible .tile {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.55);
+}
+
+.tile-hit:focus-visible {
+  outline: none;
+}
+
+.tile-hit:focus-visible .tile {
+  outline: 2px solid var(--color-phantom);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------- hero */
+
+.cinema-hero {
+  position: relative;
+  min-height: min(76svh, 44rem);
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+/* Two scrims rather than one: the vertical lift carries the copy at the
+   bottom, the horizontal keeps the left column legible over a busy frame. */
+.cinema-hero-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, var(--color-bg) 2%, rgba(12, 11, 10, 0.35) 46%, transparent 78%),
+    linear-gradient(to right, var(--color-bg) 0%, rgba(12, 11, 10, 0.55) 34%, transparent 68%);
+}
+
+.cinema-hero-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 22%;
+}
+
+/* ------------------------------------------------------------------ inset */
+
+/* A scrolling list inside a rounded panel: the browser draws the scrollbar on
+   the padding edge, where the corner radius clips it into a sliver. Giving the
+   scroll its own box inside the radius is the only reliable fix. */
+.inset-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}

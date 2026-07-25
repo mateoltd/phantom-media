@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { AppHeader } from "@/components/app-header";
-import { MediaCard } from "@/components/media-card";
+import { PosterTile } from "@/components/poster-tile";
 import { SiteFooter } from "@/components/site-footer";
 import { looksLikeIdentifier } from "@/lib/media";
 import type { MediaResult } from "@/lib/types";
@@ -55,7 +55,7 @@ export default function SearchPageClient() {
       <AppHeader initialQuery={query} />
 
       <div className="app-shell flex-1 pb-14 pt-2">
-        <div className="flex items-baseline justify-between gap-4 border-b border-black/[0.07] pb-4">
+        <div className="flex items-baseline justify-between gap-4 border-b border-border pb-4">
           <div className="min-w-0">
             <p className="font-mono text-[10px] font-bold uppercase text-phantom">
               Results
@@ -94,9 +94,9 @@ export default function SearchPageClient() {
         )}
 
         {results && results.length > 0 && (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-7 pt-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          <div className="grid grid-cols-3 gap-3 pt-6 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8">
             {results.map((media, index) => (
-              <MediaCard
+              <PosterTile
                 key={`${media.mediaType}-${media.id}`}
                 media={media}
                 priority={index < 6}
@@ -125,7 +125,7 @@ function EmptyState({ title, body }: { title: string; body: string }) {
       </p>
       <Link
         href="/"
-        className="mt-5 inline-flex h-10 items-center rounded-xl border border-border px-4 text-xs font-bold text-text-secondary transition-colors hover:border-text/30 hover:text-text"
+        className="mt-5 inline-flex h-10 items-center rounded-full border border-border px-5 text-xs font-bold text-text-secondary transition-colors hover:border-text/30 hover:text-text"
       >
         Start over
       </Link>

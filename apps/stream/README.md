@@ -24,11 +24,18 @@ Part of the [Phantom monorepo](../../README.md). Install from the root.
 
 ## Routes
 
-| Route                | What it serves                                        |
-| -------------------- | ----------------------------------------------------- |
-| `/`                  | Landing page and search.                              |
-| `/search?q=`         | Results grid.                                         |
-| `/watch/:type/:id`   | Player. `:type` is `movie` or `tv`, `:id` is a TMDB id. |
+| Route              | What it serves                                                              |
+| ------------------ | --------------------------------------------------------------------------- |
+| `/`                | Browse: a featured title over rails of popular and highly rated films and series. |
+| `/search?q=`       | Results grid.                                                               |
+| `/watch/:type/:id` | Player and episode list. `:type` is `movie` or `tv`, `:id` is an IMDb id (a TMDB id still resolves). |
+
+## Surface
+
+This app runs on the cinema surface — `@phantom/theme/cinema.css` — which
+re-points the theme's own variables to ink. Same accent, same type, same radii
+as the paper apps; nothing else in the system has to know which one it is on. A
+paper ground would have sat in front of the thing you came to look at.
 
 ## Sources
 
@@ -54,9 +61,17 @@ has to reach into attachment and failure handling.
   <kbd>0</kbd>–<kbd>9</kbd> to jump by tenths.
 - A quality menu of the stream's actual renditions, not of its URLs, with
   automatic switching that opens high rather than climbing up from 360p.
-- Next and previous episode in the chrome, an end-of-episode hand-off, and a
-  jump offered over the opening minutes. It is labelled by the distance it
-  covers, not as "skip intro" — there is no chapter data behind it.
+- The full episode list inside the picture, so changing episode never means
+  leaving what you are watching. It opens on what is playing and survives
+  fullscreen, because it is part of the stage rather than part of the page.
+- An "up next" card over the closing stretch, sized to the runtime rather than
+  to a fixed number of seconds, and an end-of-episode hand-off.
+- Chapter skipping when — and only when — the stream declares chapters. There
+  is no public source of intro and credit timings for film and television: the
+  services that offer "skip intro" generate those markers from the files they
+  host, and the one open dataset (AniSkip) covers anime only. A fixed guess
+  would be wrong for most of what it was applied to, so nothing is offered
+  where nothing is known.
 - Subtitle menu, picture-in-picture and fullscreen.
 - Adaptive HLS through `hls.js`, native HLS where the browser has it, and
   progressive MP4 as the fallback.

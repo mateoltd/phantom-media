@@ -265,90 +265,95 @@ export function SearchField({
         </button>
       </form>
 
+      {/* The rounded panel and the scrolling list are two elements on purpose:
+          a browser draws the scrollbar on the padding edge, where the corner
+          radius slices it into a sliver that hangs outside the panel. */}
       {open && (
-        <div
-          ref={listRef}
-          id={listboxId}
-          role="listbox"
-          aria-label={labels.suggestions}
-          className="animate-panel-in absolute inset-x-0 top-[calc(100%+10px)] z-50 max-h-[min(52svh,336px)] overflow-y-auto overscroll-contain rounded-[22px] border border-border bg-surface/98 p-2.5 shadow-[0_28px_80px_rgba(36,29,20,0.2)] backdrop-blur-md"
-        >
-          {suggestionsLoading && suggestions.length === 0 && (
-            <div className="flex h-12 items-center gap-3 px-3 text-xs text-text-tertiary">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-phantom" />
-              {labels.looking}
-            </div>
-          )}
+        <div className="animate-panel-in absolute inset-x-0 top-[calc(100%+10px)] z-50 overflow-hidden rounded-[22px] border border-border bg-surface/98 shadow-[0_28px_80px_var(--surface-shadow)] backdrop-blur-md">
+          <div
+            ref={listRef}
+            id={listboxId}
+            role="listbox"
+            aria-label={labels.suggestions}
+            className="inset-scroll max-h-[min(52svh,336px)] p-2.5"
+          >
+            {suggestionsLoading && suggestions.length === 0 && (
+              <div className="flex h-12 items-center gap-3 px-3 text-xs text-text-tertiary">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-phantom" />
+                {labels.looking}
+              </div>
+            )}
 
-          {empty && (
-            <div className="flex h-12 items-center px-3 text-xs text-text-tertiary">
-              {labels.empty}
-            </div>
-          )}
+            {empty && (
+              <div className="flex h-12 items-center px-3 text-xs text-text-tertiary">
+                {labels.empty}
+              </div>
+            )}
 
-          {suggestions.map((suggestion, index) => (
-            <button
-              type="button"
-              role="option"
-              id={`${listboxId}-option-${index}`}
-              data-suggestion={suggestion.id}
-              aria-selected={index === activeIndex}
-              key={suggestion.id}
-              onMouseDown={(event) => event.preventDefault()}
-              onPointerEnter={() => onSuggestionPrefetch?.(suggestion)}
-              onPointerDown={() => onSuggestionPrefetch?.(suggestion)}
-              onFocus={() => onSuggestionPrefetch?.(suggestion)}
-              onClick={() => choose(suggestion)}
-              className={`flex w-full items-center gap-3 rounded-2xl px-2 py-1.5 text-left transition-colors ${
-                index === activeIndex ? "bg-bg" : "hover:bg-bg"
-              }`}
-            >
-              {thumbnail !== "none" && (
-                <span
-                  className={`relative shrink-0 overflow-hidden rounded-lg bg-border ${
-                    thumbnail === "poster" ? "h-12 w-8" : "h-11 w-[76px]"
-                  }`}
-                >
-                  {suggestion.imageUrl ? (
-                    <Image
-                      src={suggestion.imageUrl}
-                      alt=""
-                      fill
-                      sizes={thumbnail === "poster" ? "32px" : "76px"}
-                      unoptimized
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <span className="flex h-full w-full items-center justify-center text-[13px] font-extrabold text-text-tertiary">
-                      {suggestion.title.slice(0, 1)}
-                    </span>
-                  )}
-                  {suggestion.badge && (
-                    <span className="absolute bottom-1 right-1 rounded bg-black/75 px-1 py-0.5 font-mono text-[8px] text-white">
-                      {suggestion.badge}
-                    </span>
-                  )}
-                </span>
-              )}
-
-              <span className="min-w-0 flex-1">
-                <span className="line-clamp-1 block text-[13px] font-bold text-text">
-                  {suggestion.title}
-                </span>
-                {suggestion.subtitle && (
-                  <span className="mt-0.5 block truncate text-[11px] text-text-tertiary">
-                    {suggestion.subtitle}
+            {suggestions.map((suggestion, index) => (
+              <button
+                type="button"
+                role="option"
+                id={`${listboxId}-option-${index}`}
+                data-suggestion={suggestion.id}
+                aria-selected={index === activeIndex}
+                key={suggestion.id}
+                onMouseDown={(event) => event.preventDefault()}
+                onPointerEnter={() => onSuggestionPrefetch?.(suggestion)}
+                onPointerDown={() => onSuggestionPrefetch?.(suggestion)}
+                onFocus={() => onSuggestionPrefetch?.(suggestion)}
+                onClick={() => choose(suggestion)}
+                className={`flex w-full items-center gap-3 rounded-2xl px-2 py-1.5 text-left transition-colors ${
+                  index === activeIndex ? "bg-bg" : "hover:bg-bg"
+                }`}
+              >
+                {thumbnail !== "none" && (
+                  <span
+                    className={`relative shrink-0 overflow-hidden rounded-lg bg-border ${
+                      thumbnail === "poster" ? "h-12 w-8" : "h-11 w-[76px]"
+                    }`}
+                  >
+                    {suggestion.imageUrl ? (
+                      <Image
+                        src={suggestion.imageUrl}
+                        alt=""
+                        fill
+                        sizes={thumbnail === "poster" ? "32px" : "76px"}
+                        unoptimized
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-[13px] font-extrabold text-text-tertiary">
+                        {suggestion.title.slice(0, 1)}
+                      </span>
+                    )}
+                    {suggestion.badge && (
+                      <span className="absolute bottom-1 right-1 rounded bg-black/75 px-1 py-0.5 font-mono text-[8px] text-white">
+                        {suggestion.badge}
+                      </span>
+                    )}
                   </span>
                 )}
-              </span>
 
-              {suggestion.meta && (
-                <span className="shrink-0 pr-1 font-mono text-[11px] text-text-tertiary">
-                  {suggestion.meta}
+                <span className="min-w-0 flex-1">
+                  <span className="line-clamp-1 block text-[13px] font-bold text-text">
+                    {suggestion.title}
+                  </span>
+                  {suggestion.subtitle && (
+                    <span className="mt-0.5 block truncate text-[11px] text-text-tertiary">
+                      {suggestion.subtitle}
+                    </span>
+                  )}
                 </span>
-              )}
-            </button>
-          ))}
+
+                {suggestion.meta && (
+                  <span className="shrink-0 pr-1 font-mono text-[11px] text-text-tertiary">
+                    {suggestion.meta}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>

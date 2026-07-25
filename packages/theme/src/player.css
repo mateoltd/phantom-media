@@ -20,6 +20,24 @@
   border-radius: 0;
 }
 
+/* The player runs the width of the page but is capped by height, so the frame
+   never fills the window on its own — there is always a hand's width of what
+   comes next below it. The gutters either side are the same ink as the stage,
+   which reads as a screen rather than as empty page. */
+.stage-frame {
+  display: flex;
+  justify-content: center;
+  background: var(--color-stage);
+}
+
+.stage-frame .stage {
+  width: auto;
+  max-width: 100%;
+  height: min(78svh, calc(100vw * 9 / 16));
+  border-radius: 0;
+  box-shadow: none;
+}
+
 /* A hairline inside the rounded corner rather than a border outside it: a
    border would sit in the page's own colour and read as a frame around the
    picture instead of an edge on it. */
@@ -73,13 +91,82 @@
   pointer-events: none;
 }
 
+/* ------------------------------------------------------------ side panel */
+
+/* The episode list, docked inside the picture so it is reachable in
+   fullscreen. It slides over the frame rather than resizing it: the video
+   should not move because a list opened next to it. */
+.stage-panel {
+  position: absolute;
+  z-index: 3;
+  inset-block: 0;
+  right: 0;
+  display: flex;
+  width: min(23rem, 88%);
+  flex-direction: column;
+  border-left: 1px solid var(--color-stage-line);
+  background: rgba(11, 10, 8, 0.94);
+  animation: stage-panel-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+  backdrop-filter: blur(18px);
+}
+
+@keyframes stage-panel-in {
+  from { opacity: 0; transform: translateX(1.5rem); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.stage-panel-seasons {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--color-stage-line);
+  scrollbar-width: none;
+}
+
+.stage-panel-seasons::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---------------------------------------------------------------- up next */
+
+.stage-upnext {
+  position: absolute;
+  z-index: 2;
+  right: 0.9rem;
+  bottom: 5rem;
+  width: 15.5rem;
+  padding: 0.85rem;
+  border: 1px solid var(--color-stage-line);
+  border-radius: 14px;
+  background: rgba(11, 10, 8, 0.88);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(0.5rem);
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+  backdrop-filter: blur(14px);
+}
+
+.stage-upnext-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.stage-idle .stage-upnext {
+  opacity: 0;
+  visibility: hidden;
+}
+
 /* --------------------------------------------------------------- skip past */
 
-/* Appears over the picture for as long as a jump is worth offering, and says
-   exactly how far it goes — there is no chapter data here, so it must not
-   pretend to know where an intro ends. */
+/* Only shown when the stream itself declares a chapter worth skipping, and
+   labelled with that chapter's own name. Nothing is guessed. */
 .stage-skip {
   position: absolute;
+  z-index: 2;
   right: 0.9rem;
   bottom: 4.5rem;
   display: flex;

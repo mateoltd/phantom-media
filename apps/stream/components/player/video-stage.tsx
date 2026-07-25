@@ -14,6 +14,7 @@ import {
   IconBadgeCc,
   IconBroadcast,
   IconChevronRight,
+  IconLayoutList,
   IconMaximize,
   IconMinimize,
   IconPictureInPicture,
@@ -29,8 +30,11 @@ import {
   IconVolumeOff,
 } from "@tabler/icons-react";
 import { formatTimecode } from "@/lib/media";
+import type { EpisodeSummary } from "@/lib/types";
 import { ScrubBar } from "./scrub-bar";
 import { StageMenu, type StageMenuOption } from "./stage-menu";
+import { UpNext } from "./up-next";
+import type { Chapter } from "./use-chapters";
 import { useVideoState, type TimeListener } from "./use-video-state";
 
 export type StageStatus = "idle" | "working" | "ready" | "error";
@@ -66,11 +70,15 @@ interface VideoStageProps {
   /** Set for a series that has somewhere to go after this episode. */
   onNextEpisode?: () => void;
   onEnded?: () => void;
-  /**
-   * A jump offered over the picture for the opening minutes. There is no
-   * chapter data behind it, so the label says the distance, not the intent.
-   */
-  skipAhead?: { seconds: number; untilSeconds: number };
+  /** The episode list, rendered inside the stage so it survives fullscreen. */
+  episodePanel?: ReactNode;
+  episodesOpen?: boolean;
+  onEpisodesOpenChange?: (open: boolean) => void;
+  /** Whatever the stream declared. Empty for the many that declare nothing. */
+  chapters?: readonly Chapter[];
+  /** Offered over the credits. The stage owns the timing; the page owns the
+   *  episode and what happens when it is taken. */
+  upNext?: { episode: EpisodeSummary; onPlay: () => void };
   children?: ReactNode;
 }
 
@@ -101,7 +109,11 @@ export function VideoStage({
   tracks,
   onNextEpisode,
   onEnded,
-  skipAhead,
+  episodePanel,
+  episodesOpen = false,
+  onEpisodesOpenChange,
+  chapters = [],
+  upNext,
   children,
 }: VideoStageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -111,6 +123,7 @@ export function VideoStage({
   const heldAwakeRef = useRef(false);
   const [caption, setCaption] = useState(CAPTIONS_OFF);
   const [flash, setFlash] = useState<{ id: number; text: string } | null>(null);
+  const [skippable, setSkippable] = useState<Chapter | null>(null);
   const canPictureInPicture = useSyncExternalStore(
     NEVER_CHANGES,
     pipSupported,
@@ -172,16 +185,30 @@ export function VideoStage({
     [scheduleIdle, setIdle]
   );
 
-  // Whether the jump is still on offer depends on the playhead, so it is
-  // decided the same way the scrub bar is: a class, not a render.
+  // Entering and leaving a chapter happens a handful of times an episode, so
+  // this one is allowed to be state — it has a label to render.
+  useEffect(
+    () =>
+      // The subscription answers immediately, so an empty chapter list clears
+      // the offer on the same tick it arrives.
+      subscribeTime(({ currentTime }) => {
+        const inside =
+          chapters.find(
+            (chapter) =>
+              chapter.skippable &&
+              currentTime >= chapter.start &&
+              currentTime < chapter.end - 1
+          ) ?? null;
+        setSkippable((current) =>
+          current?.start === inside?.start ? current : inside
+        );
+      }),
+    [chapters, subscribeTime]
+  );
+
   useEffect(() => {
-    if (!skipAhead) return;
-    return subscribeTime(({ currentTime, duration }) => {
-      const worthOffering =
-        duration > 0 && currentTime > 4 && currentTime < skipAhead.untilSeconds;
-      skipRef.current?.classList.toggle("stage-skip-visible", worthOffering);
-    });
-  }, [skipAhead, subscribeTime]);
+    skipRef.current?.classList.toggle("stage-skip-visible", Boolean(skippable));
+  }, [skippable]);
 
   const changeCaption = (value: string) => {
     setCaption(value);
@@ -234,6 +261,7 @@ export function VideoStage({
       },
       f: () => toggleFullscreen(),
       n: () => onNextEpisode?.(),
+      e: () => onEpisodesOpenChange?.(!episodesOpen),
       Home: () => seekTo(0),
       End: () => seekTo(state.duration),
     };
@@ -265,7 +293,7 @@ export function VideoStage({
   return (
     <div
       ref={containerRef}
-      className="stage w-full overflow-hidden rounded-2xl shadow-[0_18px_44px_rgba(31,25,17,0.2)] outline-none"
+      className="stage w-full overflow-hidden outline-none"
       tabIndex={0}
       role="region"
       aria-label={`${title} player`}
@@ -356,20 +384,30 @@ export function VideoStage({
         </span>
       )}
 
-      {skipAhead && (
+      {chapters.length > 0 && (
         <button
           ref={skipRef}
           type="button"
           className="stage-skip"
           onClick={() => {
-            seekBy(skipAhead.seconds);
+            if (skippable) seekTo(skippable.end);
             wake();
           }}
         >
-          Skip {skipAhead.seconds}s
+          Skip {skippable?.label ?? ""}
           <IconChevronRight size={15} stroke={2.4} />
         </button>
       )}
+
+      {upNext && (
+        <UpNext
+          episode={upNext.episode}
+          subscribe={subscribeTime}
+          onPlay={upNext.onPlay}
+        />
+      )}
+
+      {episodesOpen && episodePanel}
 
       <div className="stage-chrome">
         <ScrubBar
@@ -441,6 +479,14 @@ export function VideoStage({
                 onValueChange={changeCaption}
                 onOpenChange={holdAwake}
               />
+            )}
+            {episodePanel && (
+              <StageButton
+                label="Episodes"
+                onClick={() => onEpisodesOpenChange?.(!episodesOpen)}
+              >
+                <IconLayoutList size={19} stroke={1.9} />
+              </StageButton>
             )}
             {sources && sources.options.length > 0 && (
               <StageMenu

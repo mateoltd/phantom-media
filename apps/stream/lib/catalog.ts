@@ -12,6 +12,8 @@ import type {
  * `id-bridge.ts` is only for the case someone arrives with a TMDB id instead.
  */
 const CINEMETA = "https://v3-cinemeta.strem.io";
+/** Browse listings live on their own host; the main one only redirects to it. */
+const CINEMETA_CATALOGS = "https://cinemeta-catalogs.strem.io";
 const USER_AGENT = "PhantomStream/1.0 (keyless catalog lookup)";
 
 const CATALOG_TYPE: Record<MediaType, string> = {
@@ -61,9 +63,13 @@ export interface TitleDetail {
 
 export const IMDB_ID_PATTERN = /^tt\d{5,12}$/i;
 
-async function cinemeta<T>(path: string, revalidate: number): Promise<T | null> {
+async function cinemeta<T>(
+  path: string,
+  revalidate: number,
+  host: string = CINEMETA,
+): Promise<T | null> {
   try {
-    const response = await fetch(`${CINEMETA}${path}`, {
+    const response = await fetch(`${host}${path}`, {
       headers: { accept: "application/json", "user-agent": USER_AGENT },
       next: { revalidate },
     });
@@ -178,6 +184,69 @@ export async function searchCatalog(query: string): Promise<MediaResult[]> {
     })
     .map(({ media }) => media)
     .slice(0, 24);
+}
+
+/** The listings the browse page is built from. */
+export type BrowseCatalog = "top" | "imdbRating" | "year";
+
+export interface BrowseRow {
+  id: string;
+  title: string;
+  mediaType: MediaType;
+  items: MediaResult[];
+}
+
+export async function browseCatalog(
+  mediaType: MediaType,
+  catalog: BrowseCatalog,
+  options: { genre?: string; limit?: number } = {},
+): Promise<MediaResult[]> {
+  const suffix = options.genre
+    ? `/genre=${encodeURIComponent(options.genre)}.json`
+    : ".json";
+  const payload = await cinemeta<{ metas?: CinemetaMeta[] }>(
+    `/${catalog}/catalog/${CATALOG_TYPE[mediaType]}/${catalog}${suffix}`,
+    3_600,
+    CINEMETA_CATALOGS,
+  );
+  return (payload?.metas ?? [])
+    .map((meta) => toMedia(meta, mediaType))
+    .filter((media): media is MediaResult => Boolean(media))
+    .slice(0, options.limit ?? 24);
+}
+
+/**
+ * The home page in one round of requests. Every row is a real listing rather
+ * than a slice of the same one, so the page says something different as you
+ * go down it.
+ */
+export async function browseHome(): Promise<BrowseRow[]> {
+  const rows: Array<{
+    id: string;
+    title: string;
+    mediaType: MediaType;
+    catalog: BrowseCatalog;
+    genre?: string;
+  }> = [
+    { id: "trending-series", title: "Trending series", mediaType: "tv", catalog: "top" },
+    { id: "trending-films", title: "Trending films", mediaType: "movie", catalog: "top" },
+    { id: "acclaimed-films", title: "Highest rated films", mediaType: "movie", catalog: "imdbRating" },
+    { id: "acclaimed-series", title: "Highest rated series", mediaType: "tv", catalog: "imdbRating" },
+    { id: "comedy", title: "Comedy", mediaType: "movie", catalog: "top", genre: "Comedy" },
+    { id: "documentary", title: "Documentaries", mediaType: "movie", catalog: "top", genre: "Documentary" },
+  ];
+
+  const filled = await Promise.all(
+    rows.map(async (row) => ({
+      id: row.id,
+      title: row.title,
+      mediaType: row.mediaType,
+      items: await browseCatalog(row.mediaType, row.catalog, {
+        genre: row.genre,
+      }),
+    })),
+  );
+  return filled.filter((row) => row.items.length > 0);
 }
 
 function toEpisodes(videos: CinemetaVideo[]): EpisodeSummary[] {

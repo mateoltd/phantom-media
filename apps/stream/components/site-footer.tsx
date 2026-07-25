@@ -10,7 +10,7 @@ const CREDITS = [
 export function SiteFooter({ className = "" }: { className?: string }) {
   return (
     <footer className={className}>
-      <div className="flex flex-col items-start justify-between gap-3 border-t border-black/[0.07] py-5 text-[10px] text-text-tertiary sm:flex-row sm:items-center">
+      <div className="flex flex-col items-start justify-between gap-3 border-t border-border py-5 text-[10px] text-text-tertiary sm:flex-row sm:items-center">
         <p>Phantom Stream is an independent project. No account, no tracking.</p>
         <ul className="flex flex-wrap gap-x-4 gap-y-1">
           {CREDITS.map((credit) => (

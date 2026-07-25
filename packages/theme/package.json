@@ -11,7 +11,10 @@
     "./tokens.css": "./src/tokens.css",
     "./base.css": "./src/base.css",
     "./primitives.css": "./src/primitives.css",
-    "./player.css": "./src/player.css"
+    "./player.css": "./src/player.css",
+    "./cinema.css": "./src/cinema.css"
   },
-  "files": ["src"]
+  "files": [
+    "src"
+  ]
 }

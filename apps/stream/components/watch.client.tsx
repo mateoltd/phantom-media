@@ -2,16 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { IconArrowLeft, IconStarFilled } from "@tabler/icons-react";
 import { AppHeader } from "@/components/app-header";
-import { EpisodePicker } from "@/components/episode-picker";
+import { EpisodeBrowser } from "@/components/episode-browser";
 import { SiteFooter } from "@/components/site-footer";
 import {
   VideoStage,
   type StageMenuModel,
   type StageStatus,
 } from "@/components/player/video-stage";
+import { EpisodePanel } from "@/components/player/episode-panel";
 import type { StageMenuOption } from "@/components/player/stage-menu";
+import { useChapters } from "@/components/player/use-chapters";
 import { useResumeTracking } from "@/components/player/use-resume-tracking";
 import { asSettled } from "@/lib/concurrent";
 import { formatTimecode, kindLabel } from "@/lib/media";
@@ -197,6 +198,7 @@ export default function WatchPageClient({
   const [subtitles, setSubtitles] = useState<SubtitleTrack[]>([]);
   const [retryAt, setRetryAt] = useState(0);
   const [now, setNow] = useState(() => Date.now());
+  const [episodesOpen, setEpisodesOpen] = useState(false);
 
   const playable = media.tmdbId !== null;
   const retrySeconds = Math.max(0, Math.ceil((retryAt - now) / 1_000));
@@ -546,9 +548,19 @@ export default function WatchPageClient({
   const goToEpisode = useCallback(
     (target?: EpisodeSummary) => {
       if (!target) return;
+      setEpisodesOpen(false);
       changeEpisode(target.seasonNumber, target.episodeNumber);
     },
     [changeEpisode]
+  );
+
+  /**
+   * Chapters belong to the stream, not to the title, so they are re-read every
+   * time a different one is attached.
+   */
+  const chapters = useChapters(
+    videoRef,
+    status === "ready" ? (activeCandidate?.id ?? null) : null
   );
 
   const captionTracks = useMemo(
@@ -665,6 +677,9 @@ export default function WatchPageClient({
         ? "Try every source again"
         : "Find a source and play";
 
+  const isSeries = media.mediaType === "tv";
+  const hasListing = isSeries && episodes.length > 0;
+
   const stage = (
     <VideoStage
       videoRef={videoRef}
@@ -677,11 +692,27 @@ export default function WatchPageClient({
       requestLabel={requestLabel}
       quality={qualityMenu}
       sources={sourceMenu}
+      chapters={chapters}
       onNextEpisode={nextEpisode ? () => goToEpisode(nextEpisode) : undefined}
       onEnded={nextEpisode ? () => goToEpisode(nextEpisode) : undefined}
-      skipAhead={
-        media.mediaType === "tv"
-          ? { seconds: 90, untilSeconds: 480 }
+      episodesOpen={episodesOpen}
+      onEpisodesOpenChange={setEpisodesOpen}
+      episodePanel={
+        hasListing ? (
+          <EpisodePanel
+            seasons={seasons}
+            episodes={episodes}
+            season={season}
+            episode={episode}
+            onSeasonChange={(next) => changeEpisode(next, 1)}
+            onSelect={goToEpisode}
+            onClose={() => setEpisodesOpen(false)}
+          />
+        ) : undefined
+      }
+      upNext={
+        nextEpisode && status === "ready"
+          ? { episode: nextEpisode, onPlay: () => goToEpisode(nextEpisode) }
           : undefined
       }
       captions={captionLabels}
@@ -701,36 +732,30 @@ export default function WatchPageClient({
     <main className="workspace-canvas flex min-h-screen flex-col">
       <AppHeader />
 
-      <div className="app-shell pt-2">{stage}</div>
+      {/* The picture runs the width of the window. Everything that explains it
+          sits underneath, and everything that changes what is playing is
+          reachable from inside it. */}
+      <div className="stage-frame">{stage}</div>
 
-      <div className="app-shell flex-1 pb-14 pt-5">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 pb-4 text-[12px] font-bold text-text-tertiary transition-colors hover:text-text"
-        >
-          <IconArrowLeft size={15} stroke={2.2} />
-          Back to search
-        </Link>
-
-        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 border-b border-black/[0.07] pb-5">
-          <div className="min-w-0">
-            <p className="font-mono text-[10px] font-bold uppercase text-phantom">
+      <div className="app-shell flex-1 pb-16 pt-6" id="about">
+        <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-5">
+          <div className="min-w-0 max-w-2xl">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-phantom">
               {kindLabel(media.mediaType)}
               {media.year ? ` · ${media.year}` : ""}
             </p>
-            <h1 className="mt-1 text-[clamp(1.5rem,3vw,2.4rem)] font-extrabold leading-[1.05] tracking-[-0.025em] text-text">
+            <h1 className="mt-1.5 text-[clamp(1.5rem,3vw,2.3rem)] font-extrabold leading-[1.05] tracking-[-0.03em] text-text">
               {media.title}
             </h1>
             {currentEpisode && (
-              <p className="mt-1.5 text-[13px] font-bold text-text-secondary">
+              <p className="mt-2 text-[13px] font-bold text-text-secondary">
                 S{currentEpisode.seasonNumber}E{currentEpisode.episodeNumber} ·{" "}
                 {currentEpisode.name}
               </p>
             )}
-            <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-text-tertiary">
+            <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-text-tertiary">
               {media.rating > 0 && (
-                <span className="flex items-center gap-1 text-text-secondary">
-                  <IconStarFilled size={11} className="text-phantom" />
+                <span className="rounded-md border border-border px-1.5 py-0.5 text-text">
                   {media.rating.toFixed(1)}
                 </span>
               )}
@@ -739,36 +764,37 @@ export default function WatchPageClient({
                 <span>{media.genres.slice(0, 3).join(" · ")}</span>
               )}
             </p>
+            {(currentEpisode?.overview || media.overview) && (
+              <p className="mt-4 text-[13px] leading-6 text-text-secondary">
+                {currentEpisode?.overview || media.overview}
+              </p>
+            )}
           </div>
 
-          {media.mediaType === "tv" && (
-            <EpisodePicker
-              seasons={seasons}
-              episodes={episodes}
-              season={season}
-              episode={episode}
-              onChange={changeEpisode}
-              onPrevious={
-                previousEpisode ? () => goToEpisode(previousEpisode) : undefined
-              }
-              onNext={nextEpisode ? () => goToEpisode(nextEpisode) : undefined}
-            />
-          )}
+          <div className="w-full max-w-xs shrink-0 rounded-2xl border border-border bg-surface/60 p-4">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-text-tertiary">
+              Playback
+            </p>
+            <p className="mt-2 text-[12px] font-bold leading-5 text-text">
+              {statusText}
+            </p>
+            <p className="mt-3 font-mono text-[10px] leading-5 text-text-tertiary">
+              Space plays · J and L jump ten seconds · E lists episodes · N is
+              the next one · F is fullscreen
+            </p>
+          </div>
         </div>
 
-        <div className="grid gap-6 pt-5 lg:grid-cols-[minmax(0,1fr)_auto]">
-          {media.overview && (
-            <p className="max-w-2xl text-[13px] leading-6 text-text-secondary">
-              {media.overview}
-            </p>
-          )}
-          <p className="font-mono text-[10px] leading-5 text-text-tertiary lg:text-right">
-            {statusText}
-            <br />
-            Space plays · J and L jump ten seconds · N is the next episode · F
-            is fullscreen
-          </p>
-        </div>
+        {isSeries && (
+          <EpisodeBrowser
+            seasons={seasons}
+            episodes={episodes}
+            season={season}
+            episode={episode}
+            onSelect={goToEpisode}
+            onSeasonChange={(next) => changeEpisode(next, 1)}
+          />
+        )}
       </div>
 
       <div className="app-shell">

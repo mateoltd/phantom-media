@@ -1,10 +1,24 @@
+/* Everything the two surfaces disagree about. The paper ground is the default;
+   `cinema.css` re-points these and nothing else has to know which is on. */
+:root {
+  --surface-scheme: light;
+  --surface-glow: rgba(255, 90, 54, 0.14);
+  --surface-weave: rgba(24, 24, 21, 0.018);
+  --surface-grain: rgba(39, 32, 24, 0.12);
+  --surface-grain-opacity: 0.19;
+  --surface-grain-blend: multiply;
+  --surface-hairline: rgba(255, 255, 255, 0.9);
+  --surface-shadow: rgba(57, 43, 28, 0.07);
+  --scrollbar-thumb: #c9c1b4;
+}
+
 * {
   box-sizing: border-box;
 }
 
 html {
   background: var(--color-bg);
-  color-scheme: light;
+  color-scheme: var(--surface-scheme);
   /* Display type is set large enough that a stray glyph must never be able to
      give the whole page a horizontal scrollbar. */
   overflow-x: clip;
@@ -14,8 +28,8 @@ body {
   position: relative;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 72% 18%, rgba(255, 90, 54, 0.14), transparent 30rem),
-    linear-gradient(115deg, rgba(24, 24, 21, 0.018) 1px, transparent 1px),
+    radial-gradient(circle at 72% 18%, var(--surface-glow), transparent 30rem),
+    linear-gradient(115deg, var(--surface-weave) 1px, transparent 1px),
     var(--color-bg);
   background-size: auto, 18px 18px, auto;
   color: var(--color-text);
@@ -29,14 +43,14 @@ body::before {
   inset: 0;
   pointer-events: none;
   content: "";
-  opacity: 0.19;
+  opacity: var(--surface-grain-opacity);
   background:
     repeating-radial-gradient(
       circle at 12% 18%,
-      rgba(39, 32, 24, 0.12) 0 0.55px,
+      var(--surface-grain) 0 0.55px,
       transparent 0.7px 4px
     );
-  mix-blend-mode: multiply;
+  mix-blend-mode: var(--surface-grain-blend);
 }
 
 button,
@@ -76,8 +90,13 @@ select:not(:disabled) {
 ::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: 999px;
-  background: #c9c1b4;
+  background: var(--scrollbar-thumb);
   background-clip: padding-box;
+}
+
+* {
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+  scrollbar-width: thin;
 }
 
 @view-transition {
