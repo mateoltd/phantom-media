@@ -9,110 +9,40 @@ import { TitleMeta } from "@/components/title-meta";
 import { SiteFooter } from "@/components/site-footer";
 import {
   VideoStage,
+  type CaptionChoice,
   type StageMenuModel,
   type StageStatus,
+  type StageToast,
 } from "@/components/player/video-stage";
 import { EpisodePanel } from "@/components/player/episode-panel";
-import type { StageMenuOption } from "@/components/player/stage-menu";
 import { useChapters } from "@/components/player/use-chapters";
 import { useResumeTracking } from "@/components/player/use-resume-tracking";
-import { asSettled } from "@/lib/concurrent";
-import { formatTimecode } from "@/lib/media";
 import {
-  attachCandidate,
-  probeCandidates,
-  type PlayerController,
-  type QualityLevel,
-  type QualityState,
-} from "@/lib/player";
-import { progressKey, readResumePoint, resumableTime } from "@/lib/resume";
+  useSourceRouter,
+  type SourceEntry,
+} from "@/components/player/use-source-router";
+import { formatTimecode } from "@/lib/media";
+import { readPrefs } from "@/lib/player-prefs";
+import { progressKey } from "@/lib/resume";
+import {
+  captionDetail,
+  captionLabel,
+  captionLanguage,
+  mergeTracks,
+  proxiedCaptionUrl,
+} from "@/lib/subtitles";
 import type {
   EpisodeSummary,
   MediaResult,
-  ResolverResponse,
   SeasonSummary,
   StreamCandidate,
   SubtitleTrack,
 } from "@/lib/types";
 
-const PROBE_TIMEOUT_MS = 1_800;
-const STARTUP_TIMEOUT_MS = 6_000;
-/** How many sources are asked at once. */
-const SOURCE_CONCURRENCY = 3;
-const MAX_ATTEMPTS_PER_SOURCE = 2;
+export type { SourceEntry };
+
 const AUTO_QUALITY = "auto";
-
-export interface SourceEntry {
-  id: string;
-  label: string;
-}
-
-interface ResolverFailure {
-  error?: string;
-  retryable?: boolean;
-  retryAfterMs?: number | null;
-  server?: string | null;
-}
-
-interface SourceOffer {
-  source: string;
-  label: string;
-  ranked: StreamCandidate[];
-  attempts: StreamCandidate[];
-  subtitles: SubtitleTrack[];
-}
-
-/**
- * What is known about a source for the title on screen. Anything the router
- * has already found out gets said out loud: picking a source by hand only
- * helps if the roster shows which ones are worth picking.
- */
-export type SourceHealth =
-  | "checking"
-  | "playing"
-  | "ready"
-  | "empty"
-  | "unreachable"
-  | "limited";
-
-const HEALTH_LABEL: Record<SourceHealth, string> = {
-  checking: "checking",
-  playing: "playing",
-  ready: "has streams",
-  empty: "no streams",
-  unreachable: "unreachable",
-  limited: "rate limited",
-};
-
-/** Sources with nothing to offer go last on the next pass rather than away. */
-const HEALTH_ORDER: Record<SourceHealth, number> = {
-  playing: 0,
-  ready: 1,
-  checking: 3,
-  limited: 4,
-  empty: 5,
-  unreachable: 6,
-};
-
-/** A source nobody has asked yet sits between the ones that answered and the
- *  ones still being asked: worth trying, but not ahead of a known good one. */
-const UNTRIED_ORDER = 2;
-
-class ResolverRequestError extends Error {
-  status: number;
-  retryable: boolean;
-  retryAfterMs: number | null;
-  server: string | null;
-
-  constructor(status: number, payload: ResolverFailure) {
-    super(payload.error || `The resolver returned HTTP ${status}`);
-    this.name = "ResolverRequestError";
-    this.status = status;
-    this.retryable = Boolean(payload.retryable);
-    this.retryAfterMs = payload.retryAfterMs ?? null;
-    this.server = payload.server ?? null;
-  }
-}
+const AUTO_SOURCE = "auto";
 
 function candidateLabel(candidate: StreamCandidate, index: number): string {
   if (candidate.resolution && candidate.resolution >= 144) {
@@ -124,20 +54,6 @@ function candidateLabel(candidate: StreamCandidate, index: number): string {
   return candidate.format?.toUpperCase() || candidate.type.toUpperCase();
 }
 
-function captionLabel(track: SubtitleTrack, index: number): string {
-  return (
-    track.display ||
-    track.label ||
-    track.language ||
-    track.lang ||
-    `Track ${index + 1}`
-  );
-}
-
-function captionUrl(track: SubtitleTrack): string | null {
-  return track.url ?? track.file ?? null;
-}
-
 function firstSeason(seasons: readonly SeasonSummary[]): number {
   return (
     seasons.find((season) => season.seasonNumber > 0)?.seasonNumber ??
@@ -146,20 +62,16 @@ function firstSeason(seasons: readonly SeasonSummary[]): number {
   );
 }
 
-/** A manifest can report its duration a beat after it starts loading. */
-function seekWhenReady(video: HTMLVideoElement, seconds: number): void {
-  if (video.readyState >= 1) {
-    video.currentTime = seconds;
-    return;
-  }
-  video.addEventListener(
-    "loadedmetadata",
-    () => {
-      video.currentTime = seconds;
-    },
-    { once: true }
-  );
-}
+/** The four phases the stage draws differently. */
+const STAGE_STATUS: Record<string, StageStatus> = {
+  idle: "idle",
+  racing: "working",
+  holding: "working",
+  attaching: "working",
+  playing: "ready",
+  cooldown: "error",
+  error: "error",
+};
 
 export default function WatchPageClient({
   media,
@@ -177,379 +89,45 @@ export default function WatchPageClient({
   sources: readonly SourceEntry[];
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const controllerRef = useRef<PlayerController | null>(null);
-  const unsubscribeQualityRef = useRef<(() => void) | null>(null);
-  const fetchControllerRef = useRef<AbortController | null>(null);
-  const requestIdRef = useRef(0);
-  const routeRef = useRef<(options?: { prefer?: string }) => void>(() => {});
-  const autoRoutedRef = useRef("");
-
   const [season, setSeason] = useState(() => firstSeason(seasons));
   const [episode, setEpisode] = useState(1);
-  const [status, setStatus] = useState<StageStatus>("idle");
-  const [statusText, setStatusText] = useState("Nothing attached yet");
-  const [activeSource, setActiveSource] = useState<string | null>(null);
-  const [health, setHealth] = useState<Readonly<Record<string, SourceHealth>>>(
-    {}
-  );
-  const [candidates, setCandidates] = useState<StreamCandidate[]>([]);
-  const [activeCandidate, setActiveCandidate] = useState<StreamCandidate | null>(
-    null
-  );
-  const [levels, setLevels] = useState<readonly QualityLevel[]>([]);
-  const [quality, setQuality] = useState<QualityState>({
-    selected: -1,
-    effective: -1,
-  });
-  const [subtitles, setSubtitles] = useState<SubtitleTrack[]>([]);
-  const [retryAt, setRetryAt] = useState(0);
-  const [now, setNow] = useState(() => Date.now());
   const [episodesOpen, setEpisodesOpen] = useState(false);
+  const [catalogTracks, setCatalogTracks] = useState<SubtitleTrack[]>([]);
+  const [toastDismissed, setToastDismissed] = useState(false);
 
-  const playable = media.tmdbId !== null;
-  const retrySeconds = Math.max(0, Math.ceil((retryAt - now) / 1_000));
-  const canRoute = status !== "working" && retrySeconds === 0 && playable;
-  const resumeKey = progressKey(media, season, episode);
+  const router = useSourceRouter({ videoRef, media, season, episode, sources });
+  const { state } = router;
+  const status = STAGE_STATUS[state.phase] ?? "idle";
 
-  useResumeTracking(videoRef, status === "ready" ? resumeKey : null);
-
-  const detachController = useCallback(() => {
-    unsubscribeQualityRef.current?.();
-    unsubscribeQualityRef.current = null;
-    controllerRef.current?.destroy();
-    controllerRef.current = null;
-    setLevels([]);
-  }, []);
-
-  const reset = useCallback(() => {
-    requestIdRef.current += 1;
-    fetchControllerRef.current?.abort();
-    fetchControllerRef.current = null;
-    detachController();
-
-    const video = videoRef.current;
-    if (video) {
-      video.pause();
-      video.removeAttribute("src");
-      video.load();
-    }
-
-    setStatus("idle");
-    setStatusText("Nothing attached yet");
-    setActiveSource(null);
-    // What each source had for the last episode says nothing about this one.
-    setHealth({});
-    setCandidates([]);
-    setActiveCandidate(null);
-    setSubtitles([]);
-  }, [detachController]);
-
-  const markHealth = useCallback((source: string, state: SourceHealth) => {
-    setHealth((current) =>
-      current[source] === state ? current : { ...current, [source]: state }
-    );
-  }, []);
-
-  const adoptController = useCallback((controller: PlayerController) => {
-    controllerRef.current = controller;
-    setLevels(controller.levels);
-    unsubscribeQualityRef.current = controller.subscribeQuality(setQuality);
-  }, []);
-
-  /**
-   * Puts one stream on screen. Resuming happens here rather than on the far
-   * side of `play()` so a source swap lands back where the viewer was.
-   */
-  const attach = useCallback(
-    async (
-      candidate: StreamCandidate,
-      source: string,
-      requestId: number,
-      resumeFrom: number | null
-    ) => {
-      const video = videoRef.current;
-      if (!video) throw new Error("The player is not mounted");
-
-      setStatusText(`Connecting to ${candidate.serverLabel}`);
-      detachController();
-
-      const controller = await attachCandidate(video, candidate, {
-        timeoutMs: STARTUP_TIMEOUT_MS,
-        onFatal: () => {
-          if (requestIdRef.current !== requestId) return;
-          markHealth(source, "unreachable");
-          setStatusText("That source stopped. Finding another");
-          routeRef.current();
-        },
-      });
-
-      if (requestIdRef.current !== requestId) {
-        controller.destroy();
-        throw new Error("superseded");
-      }
-
-      adoptController(controller);
-      setActiveCandidate(candidate);
-      setActiveSource(source);
-      markHealth(source, "playing");
-      setStatus("ready");
-
-      if (resumeFrom !== null) {
-        seekWhenReady(video, resumeFrom);
-        setStatusText(
-          `Resumed at ${formatTimecode(resumeFrom)}, playing from ${candidate.serverLabel}`
-        );
-      } else {
-        setStatusText(`Playing from ${candidate.serverLabel}`);
-      }
-
-      try {
-        await video.play();
-      } catch {
-        // Autoplay is commonly refused after an async source swap; the centre
-        // control and the spacebar both still work.
-      }
-    },
-    [adoptController, detachController, markHealth]
+  // Only while something is actually on screen: writing a resume point for a
+  // stalled element would store a position nobody watched to.
+  useResumeTracking(
+    videoRef,
+    state.phase === "playing" ? progressKey(media, season, episode) : null,
   );
 
-  const route = useCallback(
-    async (options: { prefer?: string } = {}) => {
-      if (!videoRef.current || !playable) return;
-      if (retryAt > Date.now()) return;
+  /* -------------------------------------------------------------- episodes */
 
-      const requestId = ++requestIdRef.current;
-      fetchControllerRef.current?.abort();
-      const fetchController = new AbortController();
-      fetchControllerRef.current = fetchController;
-      detachController();
-
-      setStatus("working");
-      setStatusText("Looking for a source");
-      setCandidates([]);
-      setActiveCandidate(null);
-      setSubtitles([]);
-
-      // Sources that came up empty go last rather than being dropped: they
-      // recover, and removing them would shrink the roster over a sitting.
-      const ranked = sources
-        .map((source) => source.id)
-        .sort(
-          (left, right) =>
-            (health[left] ? HEALTH_ORDER[health[left]] : UNTRIED_ORDER) -
-            (health[right] ? HEALTH_ORDER[health[right]] : UNTRIED_ORDER)
-        );
-      const order = options.prefer
-        ? [options.prefer, ...ranked.filter((id) => id !== options.prefer)]
-        : ranked;
-
-      const askSource = async (source: string): Promise<SourceOffer> => {
-        const label =
-          sources.find((entry) => entry.id === source)?.label ?? source;
-        markHealth(source, "checking");
-        const params = new URLSearchParams({
-          type: media.mediaType,
-          tmdbId: String(media.tmdbId),
-          server: source,
-          title: media.title,
-          year: media.year.slice(0, 4),
-        });
-        if (media.imdbId) params.set("imdbId", media.imdbId);
-        if (media.mediaType === "tv") {
-          params.set("season", String(season));
-          params.set("episode", String(episode));
-        }
-
-        const response = await fetch(`/api/sources/resolve?${params}`, {
-          signal: fetchController.signal,
-        });
-        const payload = (await response.json()) as ResolverResponse &
-          ResolverFailure;
-        if (!response.ok) throw new ResolverRequestError(response.status, payload);
-        if (!payload.candidates?.length) {
-          markHealth(source, "empty");
-          throw new Error(`${label} offered no streams`);
-        }
-
-        const probe = await probeCandidates(payload.candidates, {
-          timeoutMs: PROBE_TIMEOUT_MS,
-          signal: fetchController.signal,
-        });
-        // A manifest that answered is worth more than one that merely exists,
-        // so verified candidates go first and unprobed ones only back them up.
-        const attempts = (
-          probe.verified.length > 0
-            ? probe.verified
-            : probe.ranked.filter((candidate) => candidate.type !== "hls")
-        ).slice(0, MAX_ATTEMPTS_PER_SOURCE);
-        if (attempts.length === 0) {
-          markHealth(source, "empty");
-          throw new Error(`${label} had nothing playable`);
-        }
-
-        markHealth(source, "ready");
-        return {
-          source,
-          label,
-          ranked: probe.ranked,
-          attempts,
-          subtitles: payload.subtitles ?? [],
-        };
-      };
-
-      setStatusText(
-        `Asking ${Math.min(SOURCE_CONCURRENCY, order.length)} sources at once`
-      );
-
-      const resumeFrom = resumableTime(readResumePoint(resumeKey));
-      let cooldownHintMs = 0;
-      let rateLimited: ResolverRequestError | null = null;
-
-      for await (const settled of asSettled(order, SOURCE_CONCURRENCY, askSource)) {
-        if (requestIdRef.current !== requestId) return;
-
-        if (settled.error) {
-          const error = settled.error;
-          if (error instanceof DOMException && error.name === "AbortError") return;
-          if (error instanceof ResolverRequestError) {
-            if (error.status === 429 || (!error.server && error.retryable)) {
-              markHealth(settled.item, "limited");
-              rateLimited = error;
-              break;
-            }
-            if (error.retryable) {
-              cooldownHintMs = Math.max(cooldownHintMs, error.retryAfterMs ?? 0);
-            }
-            markHealth(
-              settled.item,
-              error.status === 429 ? "limited" : "unreachable"
-            );
-          } else if (health[settled.item] === "checking") {
-            // `askSource` names the ones it can explain; anything left over
-            // never answered at all.
-            markHealth(settled.item, "unreachable");
-          }
-          continue;
-        }
-
-        const offer = settled.value;
-        if (!offer) continue;
-        setCandidates(offer.ranked);
-        setSubtitles(offer.subtitles);
-
-        let attached = false;
-        for (const candidate of offer.attempts) {
-          try {
-            await attach(candidate, offer.source, requestId, resumeFrom);
-            attached = true;
-            break;
-          } catch (error) {
-            if ((error as Error).message === "superseded") return;
-          }
-        }
-
-        if (attached) {
-          setRetryAt(0);
-          // Nothing left to ask: the sources still in flight would only warm a
-          // cache nobody is going to read.
-          fetchController.abort();
-          fetchControllerRef.current = null;
-          return;
-        }
-        markHealth(offer.source, "unreachable");
-      }
-
-      if (requestIdRef.current !== requestId) return;
-
-      const cooldownMs = rateLimited
-        ? Math.max(rateLimited.retryAfterMs ?? 0, 30_000)
-        : Math.min(30_000, Math.max(10_000, cooldownHintMs));
-      setNow(Date.now());
-      setRetryAt(Date.now() + cooldownMs);
-      setStatus("error");
-      setStatusText(
-        rateLimited
-          ? `Upstream is rate limiting. Retry in ${Math.ceil(cooldownMs / 1_000)}s`
-          : `No source could play this. Retry in ${Math.ceil(cooldownMs / 1_000)}s`
-      );
-      setActiveSource(null);
-      if (fetchControllerRef.current === fetchController) {
-        fetchControllerRef.current = null;
-      }
-    },
-    [
-      attach,
-      detachController,
-      health,
-      markHealth,
-      episode,
-      media,
-      playable,
-      resumeKey,
-      retryAt,
-      season,
-      sources,
-    ]
-  );
-
-  useEffect(() => {
-    routeRef.current = (options) => void route(options);
-  }, [route]);
-
-  // Arriving on the page is the request to play; making that a second click
-  // was the slowest part of getting to a picture.
-  useEffect(() => {
-    const key = `${media.id}:${season}:${episode}`;
-    if (autoRoutedRef.current === key || !playable) return;
-    autoRoutedRef.current = key;
-    routeRef.current();
-  }, [episode, media.id, playable, season]);
-
-  useEffect(() => {
-    if (retryAt <= 0) return;
-    const timer = window.setInterval(() => {
-      const tick = Date.now();
-      setNow(tick);
-      if (tick >= retryAt) {
-        window.clearInterval(timer);
-        setRetryAt(0);
-        setStatusText("Cooldown finished. Ready to try again");
-      }
-    }, 1_000);
-    return () => window.clearInterval(timer);
-  }, [retryAt]);
-
-  useEffect(
-    () => () => {
-      requestIdRef.current += 1;
-      fetchControllerRef.current?.abort();
-      unsubscribeQualityRef.current?.();
-      controllerRef.current?.destroy();
-    },
-    []
-  );
-
-  const changeEpisode = useCallback(
-    (nextSeason: number, nextEpisode: number) => {
-      reset();
-      setSeason(nextSeason);
-      setEpisode(nextEpisode);
-    },
-    [reset]
-  );
-
-  // The listing is already in running order, so "next" is simply the row after
-  // this one — which is what makes a season boundary a non-event.
   const position = useMemo(
     () =>
       episodes.findIndex(
-        (item) => item.seasonNumber === season && item.episodeNumber === episode
+        (item) => item.seasonNumber === season && item.episodeNumber === episode,
       ),
-    [episode, episodes, season]
+    [episode, episodes, season],
   );
   const currentEpisode = position >= 0 ? episodes[position] : undefined;
-  const previousEpisode = position > 0 ? episodes[position - 1] : undefined;
   const nextEpisode = position >= 0 ? episodes[position + 1] : undefined;
+
+  const changeEpisode = useCallback(
+    (nextSeason: number, next: number) => {
+      router.cancel();
+      setCatalogTracks([]);
+      setToastDismissed(false);
+      setSeason(nextSeason);
+      setEpisode(next);
+    },
+    [router],
+  );
 
   const goToEpisode = useCallback(
     (target?: EpisodeSummary) => {
@@ -557,54 +135,82 @@ export default function WatchPageClient({
       setEpisodesOpen(false);
       changeEpisode(target.seasonNumber, target.episodeNumber);
     },
-    [changeEpisode]
+    [changeEpisode],
   );
 
-  /**
-   * Chapters belong to the stream, not to the title, so they are re-read every
-   * time a different one is attached.
-   */
+  /* ------------------------------------------------------------- subtitles */
+
+  // Asked for alongside the race rather than after it: subtitles are an
+  // addition to a picture, never a reason to wait for one.
+  useEffect(() => {
+    if (!media.imdbId) return;
+    const controller = new AbortController();
+    const params = new URLSearchParams({
+      imdbId: media.imdbId,
+      type: media.mediaType,
+    });
+    if (media.mediaType === "tv") {
+      params.set("season", String(season));
+      params.set("episode", String(episode));
+    }
+
+    fetch(`/api/subtitles/search?${params}`, { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : { tracks: [] }))
+      .then((body: { tracks?: SubtitleTrack[] }) => {
+        setCatalogTracks(body.tracks ?? []);
+      })
+      .catch(() => {
+        // A catalogue that is down means no extra subtitles, not an error.
+      });
+
+    return () => controller.abort();
+  }, [episode, media.imdbId, media.mediaType, season]);
+
+  const captionTracks = useMemo(() => {
+    const preferred = typeof window === "undefined" ? [] : preferredLanguages();
+    return mergeTracks(state.subtitles, catalogTracks, preferred);
+  }, [catalogTracks, state.subtitles]);
+
+  const captionChoices = useMemo<CaptionChoice[]>(
+    () =>
+      captionTracks.map((track, index) => ({
+        value: String(index),
+        label: captionLabel(track),
+        detail: captionDetail(track),
+        language: captionLanguage(track),
+      })),
+    [captionTracks],
+  );
+
+  // Changes whenever the element's track list is replaced, which is what tells
+  // the caption renderer to read it again.
+  const trackKey = useMemo(
+    () => `${state.activeCandidate?.id ?? "none"}:${captionTracks.length}`,
+    [captionTracks.length, state.activeCandidate?.id],
+  );
+
+  /* --------------------------------------------------------------- chapters */
+
   const chapters = useChapters(
     videoRef,
-    status === "ready" ? (activeCandidate?.id ?? null) : null
+    state.phase === "playing" ? (state.activeCandidate?.id ?? null) : null,
   );
 
-  const captionTracks = useMemo(
-    () => subtitles.filter((track) => captionUrl(track)),
-    [subtitles]
-  );
-
-  const captionLabels = useMemo(
-    () => captionTracks.map(captionLabel),
-    [captionTracks]
-  );
+  /* ----------------------------------------------------------------- menus */
 
   const changeQuality = useCallback(
     (value: string) => {
-      const controller = controllerRef.current;
       if (value === AUTO_QUALITY) {
-        controller?.setLevel(-1);
+        router.setQualityLevel(-1);
         return;
       }
       if (value.startsWith("level:")) {
-        controller?.setLevel(Number(value.slice(6)));
+        router.setQualityLevel(Number(value.slice(6)));
         return;
       }
-
-      const candidate = candidates.find((item) => item.id === value);
-      if (!candidate || !activeSource) return;
-      // A different stream of the same title should not restart it.
-      const resumeFrom = videoRef.current?.currentTime ?? 0;
-      const requestId = ++requestIdRef.current;
-      attach(candidate, activeSource, requestId, resumeFrom || null).catch(
-        (error: Error) => {
-          if (error.message === "superseded") return;
-          setStatus("error");
-          setStatusText(error.message);
-        }
-      );
+      router.selectCandidate(value);
     },
-    [activeSource, attach, candidates]
+    [router],
   );
 
   /**
@@ -612,27 +218,27 @@ export default function WatchPageClient({
    * streams is the fallback for sources that only ever offer fixed files.
    */
   const qualityMenu = useMemo<StageMenuModel | undefined>(() => {
+    const { levels, quality, candidates, activeCandidate } = state;
     if (levels.length > 1) {
       const effective = levels.find((level) => level.index === quality.effective);
-      const options: StageMenuOption[] = [
-        {
-          value: AUTO_QUALITY,
-          label: "Auto",
-          detail: effective ? `now ${effective.label}` : undefined,
-        },
-        ...[...levels]
-          .sort((left, right) => right.height - left.height)
-          .map((level) => ({
-            value: `level:${level.index}`,
-            label: level.label,
-            detail:
-              level.bitrate > 0
-                ? `${Math.round(level.bitrate / 1_000)} kbps`
-                : undefined,
-          })),
-      ];
       return {
-        options,
+        options: [
+          {
+            value: AUTO_QUALITY,
+            label: "Auto",
+            detail: effective ? `now ${effective.label}` : undefined,
+          },
+          ...[...levels]
+            .sort((left, right) => right.height - left.height)
+            .map((level) => ({
+              value: `level:${level.index}`,
+              label: level.label,
+              detail:
+                level.bitrate > 0
+                  ? `${Math.round(level.bitrate / 1_000)} kbps`
+                  : undefined,
+            })),
+        ],
         value:
           quality.selected === -1 ? AUTO_QUALITY : `level:${quality.selected}`,
         onChange: changeQuality,
@@ -657,82 +263,79 @@ export default function WatchPageClient({
     }
 
     return undefined;
-  }, [activeCandidate, candidates, changeQuality, levels, quality]);
+  }, [changeQuality, state]);
 
-  const sourceMenu = useMemo<StageMenuModel>(
-    () => ({
-      options: sources.map((source) => {
-        const state = health[source.id];
-        return {
-          value: source.id,
-          label: source.label,
-          detail: state ? HEALTH_LABEL[state] : undefined,
-        };
-      }),
-      value: activeSource,
-      onChange: (id) => routeRef.current({ prefer: id }),
-    }),
-    [activeSource, health, sources]
-  );
+  /**
+   * Automatic sits at the top because it is what most sittings want, and
+   * because it is the way back out of a pinned source. Picking a named source
+   * pins it: the router will not quietly play a different one, which is the
+   * whole point of picking.
+   */
+  const sourceMenu = useMemo<StageMenuModel>(() => {
+    const byId = new Map(state.progress.map((entry) => [entry.id, entry]));
+    const playingLabel = state.activeSource
+      ? (sources.find((entry) => entry.id === state.activeSource)?.label ?? null)
+      : null;
 
-  const requestLabel = !playable
-    ? "This title has no playable identifier"
-    : retrySeconds > 0
-      ? `Cooling down, ${retrySeconds}s left`
-      : status === "error"
-        ? "Try every source again"
-        : "Find a source and play";
+    return {
+      options: [
+        {
+          value: AUTO_SOURCE,
+          label: "Automatic",
+          detail: playingLabel ? `now ${playingLabel}` : "best available",
+        },
+        ...sources.map((source) => {
+          const progress = byId.get(source.id);
+          return {
+            value: source.id,
+            label: source.label,
+            detail: liveDetail(progress?.status) ?? progress?.reputation,
+          };
+        }),
+      ],
+      value: state.pinned ?? AUTO_SOURCE,
+      onChange: (value) =>
+        value === AUTO_SOURCE ? router.unpin() : router.pin(value),
+    };
+  }, [router, sources, state.activeSource, state.pinned, state.progress]);
+
+  /* ----------------------------------------------------------------- toast */
+
+  const toast = useMemo<StageToast | null>(() => {
+    if (toastDismissed || state.resumedFrom === null) return null;
+    return {
+      text: `Resumed from ${formatTimecode(state.resumedFrom)}`,
+      action: {
+        label: "Start over",
+        onClick: () => {
+          const video = videoRef.current;
+          if (video) video.currentTime = 0;
+          setToastDismissed(true);
+        },
+      },
+    };
+  }, [state.resumedFrom, toastDismissed]);
+
+  // Said once. A card that stays up forever is a card nobody reads.
+  useEffect(() => {
+    if (state.resumedFrom === null || toastDismissed) return;
+    const timer = window.setTimeout(() => setToastDismissed(true), 9_000);
+    return () => window.clearTimeout(timer);
+  }, [state.resumedFrom, toastDismissed]);
+
+  /* ---------------------------------------------------------------- render */
+
+  const requestLabel =
+    media.tmdbId === null
+      ? "This title has no playable identifier"
+      : router.retrySeconds > 0
+        ? `Cooling down, ${router.retrySeconds}s left`
+        : state.phase === "error" || state.phase === "cooldown"
+          ? "Try every source again"
+          : "Find a source and play";
 
   const isSeries = media.mediaType === "tv";
   const hasListing = isSeries && episodes.length > 0;
-
-  const stage = (
-    <VideoStage
-      videoRef={videoRef}
-      title={media.title}
-      poster={media.backdropUrl}
-      status={status}
-      statusText={statusText}
-      onRequestPlayback={() => routeRef.current()}
-      canRequestPlayback={canRoute}
-      requestLabel={requestLabel}
-      quality={qualityMenu}
-      sources={sourceMenu}
-      chapters={chapters}
-      onNextEpisode={nextEpisode ? () => goToEpisode(nextEpisode) : undefined}
-      onEnded={nextEpisode ? () => goToEpisode(nextEpisode) : undefined}
-      episodesOpen={episodesOpen}
-      onEpisodesOpenChange={setEpisodesOpen}
-      episodePanel={
-        hasListing ? (
-          <EpisodePanel
-            seasons={seasons}
-            episodes={episodes}
-            season={season}
-            episode={episode}
-            onSeasonChange={(next) => changeEpisode(next, 1)}
-            onSelect={goToEpisode}
-            onClose={() => setEpisodesOpen(false)}
-          />
-        ) : undefined
-      }
-      upNext={
-        nextEpisode && status === "ready"
-          ? { episode: nextEpisode, onPlay: () => goToEpisode(nextEpisode) }
-          : undefined
-      }
-      captions={captionLabels}
-      tracks={captionTracks.map((track, index) => (
-        <track
-          key={captionUrl(track) ?? index}
-          kind="subtitles"
-          src={captionUrl(track) ?? undefined}
-          label={captionLabel(track, index)}
-          srcLang={track.lang ?? track.language ?? "und"}
-        />
-      ))}
-    />
-  );
 
   return (
     <main className="workspace-canvas flex min-h-screen flex-col">
@@ -741,7 +344,66 @@ export default function WatchPageClient({
       {/* The picture runs the width of the window. Everything that explains it
           sits underneath, and everything that changes what is playing is
           reachable from inside it. */}
-      <div className="stage-frame">{stage}</div>
+      <div className="stage-frame">
+        <VideoStage
+          videoRef={videoRef}
+          title={media.title}
+          subtitle={
+            currentEpisode
+              ? `S${currentEpisode.seasonNumber} E${currentEpisode.episodeNumber} · ${currentEpisode.name}`
+              : media.year
+          }
+          poster={media.backdropUrl}
+          status={status}
+          statusText={state.statusText}
+          onRequestPlayback={router.start}
+          canRequestPlayback={router.canStart}
+          requestLabel={requestLabel}
+          progress={{
+            sources: state.progress,
+            answered: state.answered,
+            total: state.total,
+            elapsedMs: state.raceElapsedMs,
+          }}
+          quality={qualityMenu}
+          sources={sourceMenu}
+          captions={captionChoices}
+          trackKey={trackKey}
+          toast={toast}
+          onDismissToast={() => setToastDismissed(true)}
+          chapters={chapters}
+          onNextEpisode={nextEpisode ? () => goToEpisode(nextEpisode) : undefined}
+          episodesOpen={episodesOpen}
+          onEpisodesOpenChange={setEpisodesOpen}
+          episodePanel={
+            hasListing ? (
+              <EpisodePanel
+                seasons={seasons}
+                episodes={episodes}
+                season={season}
+                episode={episode}
+                onSeasonChange={(next) => changeEpisode(next, 1)}
+                onSelect={goToEpisode}
+                onClose={() => setEpisodesOpen(false)}
+              />
+            ) : undefined
+          }
+          upNext={
+            nextEpisode && state.phase === "playing"
+              ? { episode: nextEpisode, onPlay: () => goToEpisode(nextEpisode) }
+              : undefined
+          }
+          tracks={captionTracks.map((track, index) => (
+            <track
+              key={`${trackKey}:${index}`}
+              kind="subtitles"
+              src={proxiedCaptionUrl(track) ?? undefined}
+              label={captionLabel(track)}
+              srcLang={captionLanguage(track)}
+            />
+          ))}
+        />
+      </div>
 
       <div className="app-shell flex-1 pb-16 pt-7" id="about">
         <div className="max-w-3xl">
@@ -805,4 +467,34 @@ export default function WatchPageClient({
       </div>
     </main>
   );
+}
+
+/** What the roster shows for a source that is doing something right now. */
+function liveDetail(status?: string): string | undefined {
+  switch (status) {
+    case "asking":
+      return "asking now";
+    case "offered":
+      return "has streams";
+    case "holding":
+      return "best so far";
+    case "playing":
+      return "playing";
+    case "empty":
+      return "nothing for this";
+    case "unreachable":
+      return "did not answer";
+    case "limited":
+      return "rate limited";
+    default:
+      return undefined;
+  }
+}
+
+/** The saved subtitle language first, then whatever the browser asks for. */
+function preferredLanguages(): string[] {
+  const saved = readPrefs().captionLanguage;
+  const fromBrowser = navigator.languages ?? [navigator.language];
+  const languages = fromBrowser.map((tag) => tag.split("-")[0]!).filter(Boolean);
+  return saved ? [saved, ...languages] : languages;
 }

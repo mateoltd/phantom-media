@@ -71,6 +71,29 @@
     transform 0.22s ease;
 }
 
+/* The counterpart band at the top. It carries what is playing, which in
+   fullscreen is otherwise nowhere on screen at all — and having the picture
+   framed top and bottom reads as deliberate, where one heavy strip pasted
+   along the bottom edge does not. */
+.stage-top {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 0.9rem 2.75rem;
+  background: linear-gradient(
+    to bottom,
+    rgba(9, 9, 7, 0.85) 0%,
+    rgba(9, 9, 7, 0.55) 45%,
+    transparent 100%
+  );
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+
 /* Idleness is a single class on the stage rather than a piece of React state,
    so a pointer crossing the picture never re-renders the player. */
 .stage-idle {
@@ -81,6 +104,245 @@
   opacity: 0;
   transform: translateY(0.75rem);
   pointer-events: none;
+}
+
+.stage-idle .stage-top {
+  opacity: 0;
+  transform: translateY(-0.75rem);
+  pointer-events: none;
+}
+
+/* ----------------------------------------------------------------- captions */
+
+/* Subtitles are painted here rather than by the browser, which is the only way
+   they can be sized, given a backdrop, and — the reason this exists — lifted
+   clear of the controls when the chrome is up. */
+.stage-cues {
+  position: absolute;
+  z-index: 2;
+  inset-inline: 0;
+  bottom: 3.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding-inline: 8%;
+  pointer-events: none;
+  text-align: center;
+  text-wrap: balance;
+  transition: bottom 0.22s ease;
+}
+
+/* Out of the way of the controls while they are visible, and back down over
+   the picture the moment they go. */
+.stage-idle .stage-cues {
+  bottom: 1.5rem;
+}
+
+.stage-cue {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0.1em 0.42em;
+  border-radius: 4px;
+  color: #fff;
+  font-size: var(--cue-size, 1.6rem);
+  font-weight: 600;
+  line-height: 1.3;
+  /* A shadow keeps cues readable over snow and headlights even with the
+     backdrop turned off. */
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.85),
+    0 0 2px rgba(0, 0, 0, 0.95);
+}
+
+.stage-cues-backdrop .stage-cue {
+  background: rgba(9, 9, 7, 0.72);
+  text-shadow: none;
+}
+
+.stage-cues-sm { --cue-size: 1.25rem; }
+.stage-cues-md { --cue-size: 1.6rem; }
+.stage-cues-lg { --cue-size: 2.1rem; }
+
+@media (max-width: 640px) {
+  .stage-cues-sm { --cue-size: 0.95rem; }
+  .stage-cues-md { --cue-size: 1.1rem; }
+  .stage-cues-lg { --cue-size: 1.4rem; }
+}
+
+/* ------------------------------------------------------------ race progress */
+
+/* One mark per source, in the order they are being asked. A spinner says only
+   that something is happening; this says how much of the roster has answered,
+   which is the difference between waiting and wondering. */
+.stage-progress {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.3rem;
+  max-width: 24rem;
+}
+
+.stage-dot {
+  width: 1.4rem;
+  height: 0.25rem;
+  border-radius: 999px;
+  background: rgba(246, 241, 230, 0.16);
+  transition:
+    background 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.stage-dot-asking {
+  background: rgba(246, 241, 230, 0.42);
+  animation: stage-dot-pulse 1.1s ease-in-out infinite;
+}
+
+.stage-dot-offered,
+.stage-dot-holding { background: var(--color-phantom-light); }
+.stage-dot-playing { background: var(--color-success); }
+.stage-dot-empty { background: rgba(246, 241, 230, 0.26); }
+.stage-dot-unreachable,
+.stage-dot-limited { background: var(--color-error); opacity: 0.55; }
+
+@keyframes stage-dot-pulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+
+/* ------------------------------------------------------------------- toast */
+
+/* Says what just happened without asking anything. Resuming silently is
+   disorienting; a modal asking permission to resume is worse. */
+.stage-toast {
+  position: absolute;
+  z-index: 2;
+  left: 0.9rem;
+  bottom: 5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: min(22rem, calc(100% - 1.8rem));
+  padding: 0.55rem 0.6rem 0.55rem 0.85rem;
+  border: 1px solid var(--color-stage-line);
+  border-radius: 12px;
+  background: rgba(11, 10, 8, 0.9);
+  color: var(--color-stage-text);
+  font-size: 12px;
+  animation: stage-toast-in 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+  backdrop-filter: blur(14px);
+}
+
+@keyframes stage-toast-in {
+  from { opacity: 0; transform: translateY(0.5rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stage-idle .stage-toast {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------- settings sheet */
+
+/* Quality, speed, subtitles and source used to be four separate popovers side
+   by side, which made the right-hand end of the bar a wall of identical
+   glyphs. One sheet with named sections is fewer things to aim at and says
+   what each of them is. */
+.stage-sheet {
+  position: absolute;
+  z-index: 4;
+  right: 0;
+  bottom: calc(100% + 0.5rem);
+  display: flex;
+  width: min(20rem, calc(100vw - 2rem));
+  max-height: min(24rem, 60svh);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-stage-line);
+  border-radius: 14px;
+  background: rgba(20, 19, 15, 0.98);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  animation: stage-sheet-in 0.16s ease both;
+  backdrop-filter: blur(18px);
+}
+
+@keyframes stage-sheet-in {
+  from { opacity: 0; transform: translateY(0.4rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stage-sheet-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--color-stage-line);
+}
+
+.stage-sheet-tab {
+  flex: 1;
+  padding: 0.4rem 0.3rem;
+  border-radius: 8px;
+  color: var(--color-stage-muted);
+  font-size: 11px;
+  font-weight: 700;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+.stage-sheet-tab:hover { background: rgba(255, 255, 255, 0.08); }
+
+.stage-sheet-tab[aria-selected="true"] {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--color-stage-text);
+}
+
+.stage-sheet-body {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.4rem;
+  scrollbar-gutter: stable;
+}
+
+.stage-sheet-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 8px;
+  text-align: left;
+  transition: background 0.14s ease;
+}
+
+.stage-sheet-row:hover { background: rgba(255, 255, 255, 0.08); }
+
+.stage-sheet-heading {
+  padding: 0.5rem 0.5rem 0.25rem;
+  color: var(--color-stage-muted);
+}
+
+/* -------------------------------------------------------------- shortcuts */
+
+.stage-shortcuts {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(9, 9, 7, 0.82);
+  animation: stage-fade-in 0.16s ease both;
+  backdrop-filter: blur(6px);
+}
+
+@keyframes stage-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* ------------------------------------------------------------ side panel */
@@ -155,12 +417,16 @@
 /* --------------------------------------------------------------- skip past */
 
 /* Only shown when the stream itself declares a chapter worth skipping, and
-   labelled with that chapter's own name. Nothing is guessed. */
+   labelled with that chapter's own name. Nothing is guessed.
+
+   Above the up-next card rather than beside it: the two are usually far apart
+   in a runtime, but a stream that marks a recap at the top of a short episode
+   can have both up at once, and they were sharing the same corner. */
 .stage-skip {
   position: absolute;
   z-index: 2;
   right: 0.9rem;
-  bottom: 4.5rem;
+  bottom: 12.5rem;
   display: flex;
   align-items: center;
   gap: 0.35rem;

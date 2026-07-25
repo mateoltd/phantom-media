@@ -62,10 +62,6 @@ const TIME_EVENTS = [
   "loadedmetadata",
 ] as const;
 
-function setTrackMode(track: TextTrack, showing: boolean): void {
-  track.mode = showing ? "showing" : "disabled";
-}
-
 function bufferedAhead(video: HTMLVideoElement): number {
   const { buffered, currentTime } = video;
   for (let index = 0; index < buffered.length; index += 1) {
@@ -248,21 +244,6 @@ export function useVideoState(
     else void container.requestFullscreen().catch(() => {});
   }, [containerRef]);
 
-  /** `null` turns every track off. Text tracks are element state, not React state. */
-  const showTextTrack = useCallback(
-    (index: number | null) => {
-      const list = videoRef.current?.textTracks;
-      if (!list) return;
-      // Copied out of the live TextTrackList first: mutating through the media
-      // element's own collection is exactly the aliasing the lint rules forbid,
-      // and a snapshot is what we want to iterate anyway.
-      Array.from(list).forEach((track, position) => {
-        setTrackMode(track, position === index);
-      });
-    },
-    [videoRef]
-  );
-
   const togglePictureInPicture = useCallback(() => {
     const video = videoRef.current;
     if (!video || !document.pictureInPictureEnabled) return;
@@ -284,6 +265,5 @@ export function useVideoState(
     toggleMute,
     toggleFullscreen,
     togglePictureInPicture,
-    showTextTrack,
   };
 }

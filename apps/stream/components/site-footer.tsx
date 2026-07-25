@@ -25,7 +25,9 @@ export function SiteFooter({ className = "" }: { className?: string }) {
         </p>
         <p>
           Metadata from <Credit href="https://www.stremio.com">Cinemeta</Credit>{" "}
-          and <Credit href="https://www.wikidata.org">Wikidata</Credit>
+          and <Credit href="https://www.wikidata.org">Wikidata</Credit>.
+          Subtitles from{" "}
+          <Credit href="https://www.opensubtitles.org">OpenSubtitles</Credit>
         </p>
       </div>
     </footer>

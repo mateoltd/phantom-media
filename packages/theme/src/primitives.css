@@ -5,6 +5,20 @@
   margin-inline: auto;
 }
 
+/* ------------------------------------------------------------- typography */
+
+/* The small tracked label above a heading. Set in the body face rather than
+   the mono one: a monospaced eyebrow reads as a status code, which is the
+   wrong register for what is only ever a category. Colour is left to the
+   caller, since the same label is used on paper and over artwork. */
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
 /* --------------------------------------------------------------- surfaces */
 
 .surface-card {
