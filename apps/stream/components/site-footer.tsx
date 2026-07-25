@@ -1,33 +1,39 @@
-const CREDITS = [
-  { label: "Catalog", name: "Cinemeta", href: "https://www.stremio.com" },
-  { label: "Identifiers", name: "Wikidata", href: "https://www.wikidata.org" },
-] as const;
+import type { ReactNode } from "react";
 
 /**
  * Metadata sources are credited by name because attribution is owed. Playback
  * sources are not named anywhere in this app.
+ *
+ * The credit is a sentence rather than a table of field names: two words set
+ * in tracked capitals next to two proper nouns, all at ten pixels, gave four
+ * competing weights to read and no way to tell which were the links.
  */
 export function SiteFooter({ className = "" }: { className?: string }) {
   return (
     <footer className={className}>
-      <div className="flex flex-col items-start justify-between gap-3 border-t border-border py-5 text-[10px] text-text-tertiary sm:flex-row sm:items-center">
-        <p>Phantom Stream is an independent project. No account, no tracking.</p>
-        <ul className="flex flex-wrap gap-x-4 gap-y-1">
-          {CREDITS.map((credit) => (
-            <li key={credit.name}>
-              <span className="font-semibold uppercase tracking-[0.1em]">{credit.label}</span>{" "}
-              <a
-                href={credit.href}
-                target="_blank"
-                rel="noreferrer"
-                className="font-semibold text-text-secondary underline decoration-border underline-offset-4 transition-colors hover:text-text"
-              >
-                {credit.name}
-              </a>
-            </li>
-          ))}
-        </ul>
+      <div className="flex flex-col gap-2 border-t border-border/60 py-6 text-[11.5px] leading-5 text-text-tertiary sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
+        <p>
+          An independent project. No account, no tracking, and nothing hosted
+          here.
+        </p>
+        <p>
+          Metadata from <Credit href="https://www.stremio.com">Cinemeta</Credit>{" "}
+          and <Credit href="https://www.wikidata.org">Wikidata</Credit>
+        </p>
       </div>
     </footer>
+  );
+}
+
+function Credit({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="font-medium text-text-secondary underline decoration-text-tertiary/35 decoration-1 underline-offset-[3px] transition-colors hover:text-text hover:decoration-text/60"
+    >
+      {children}
+    </a>
   );
 }
