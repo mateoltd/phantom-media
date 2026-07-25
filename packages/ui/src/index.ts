@@ -5,7 +5,7 @@ export { Button, IconButton } from "./button";
 export type { ButtonProps, IconButtonProps } from "./button";
 
 export { Logo, Wordmark } from "./brand";
-export type { LogoProps, WordmarkProps } from "./brand";
+export type { LogoProps, MarkTone, WordmarkProps } from "./brand";
 
 export { Modal } from "./modal";
 export type { ModalProps } from "./modal";

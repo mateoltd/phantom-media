@@ -5,11 +5,26 @@ import Image from "next/image";
 /** Intrinsic proportions of the Phantom mark. */
 const MARK_RATIO = 723 / 398;
 
+/**
+ * The mark is drawn in ink with a vermilion wedge and a knocked-out play
+ * triangle, which means it disappears on a dark ground. `chalk` is the same
+ * artwork with the body lifted to the light text colour; the wedge and the
+ * knockout are untouched, so the mark reads the same on either surface.
+ */
+const MARK_SRC = {
+  ink: "/phantom-mark-v2.png",
+  chalk: "/phantom-mark-chalk.png",
+} as const;
+
+export type MarkTone = keyof typeof MARK_SRC;
+
 export interface LogoProps {
   size?: number;
   className?: string;
   decorative?: boolean;
   priority?: boolean;
+  tone?: MarkTone;
+  /** Overrides the tone entirely. */
   src?: string;
 }
 
@@ -18,7 +33,8 @@ export function Logo({
   className = "",
   decorative = false,
   priority = false,
-  src = "/phantom-mark-v2.png",
+  tone = "ink",
+  src = MARK_SRC[tone],
 }: LogoProps) {
   return (
     <Image
@@ -39,6 +55,7 @@ export interface WordmarkProps {
   service?: string;
   className?: string;
   priority?: boolean;
+  tone?: MarkTone;
 }
 
 /**
@@ -49,10 +66,17 @@ export function Wordmark({
   service,
   className = "",
   priority = false,
+  tone = "ink",
 }: WordmarkProps) {
   return (
     <span className={`flex shrink-0 items-center gap-2.5 ${className}`}>
-      <Logo size={34} decorative priority={priority} className="h-6 w-auto" />
+      <Logo
+        size={34}
+        decorative
+        priority={priority}
+        tone={tone}
+        className="h-6 w-auto"
+      />
       <span className="flex items-baseline gap-1.5">
         <span className="text-xl font-extrabold leading-none text-text">
           Phantom

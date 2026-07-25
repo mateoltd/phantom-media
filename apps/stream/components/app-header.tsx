@@ -53,7 +53,7 @@ export function AppHeader({ floating = false, initialQuery }: AppHeaderProps) {
           aria-label="Phantom Stream home"
           className="shrink-0 justify-self-start"
         >
-          <Wordmark service="Stream" />
+          <Wordmark service="Stream" tone="chalk" />
         </Link>
 
         <div className="order-last w-full min-w-0 lg:order-none lg:w-[min(46vw,560px)]">
