@@ -1,6 +1,7 @@
 "use client";
 
 import Hls, { type ErrorData, type Events } from "hls.js";
+import { asSettled } from "./concurrent";
 import type { StreamCandidate } from "./types";
 
 export interface QualityLevel {
@@ -27,13 +28,41 @@ export interface PlayerController {
   subscribeQuality(listener: (state: QualityState) => void): () => void;
 }
 
+export interface CandidateProbe {
+  candidate: StreamCandidate;
+  /** True when a manifest answered, false when it did not, null when unprobed. */
+  ok: boolean | null;
+  latencyMs: number;
+  tier: number;
+}
+
 export interface CandidateProbeResult {
   ranked: StreamCandidate[];
   verified: StreamCandidate[];
   failed: StreamCandidate[];
+  outcomes: CandidateProbe[];
+  /** Best tier among candidates that actually answered, 0 when none did. */
+  verifiedTier: number;
+  /** How long the candidate that ranked first took, or null if none verified. */
+  probeMs: number | null;
 }
 
 const NO_LEVELS: PlayerController["levels"] = [];
+
+/**
+ * How many manifests are fetched at once, and how many are worth fetching.
+ *
+ * Probing every variant of every source in parallel was itself part of what
+ * made finding a stream slow: five sources returning twenty variants each is
+ * a hundred simultaneous cross-origin requests against a browser that will
+ * only open six per host. The top few by resolution contain the answer in
+ * every case that matters.
+ */
+const PROBE_CONCURRENCY = 4;
+const MAX_PROBE_CANDIDATES = 6;
+
+/** Enough to see whether a playlist starts the way a playlist must. */
+const MANIFEST_HEAD_BYTES = 256;
 
 /**
  * How much a stream is worth before latency is considered. The difference
@@ -44,7 +73,7 @@ const NO_LEVELS: PlayerController["levels"] = [];
  * case: it carries every rendition the source has, which is the best outcome
  * available, so it ranks just under a known 1080p.
  */
-function qualityTier(candidate: StreamCandidate): number {
+export function qualityTier(candidate: StreamCandidate): number {
   const resolution = candidate.resolution ?? 0;
   if (resolution >= 1080) return 4;
   if (resolution === 0 && candidate.type === "hls") return 3;
@@ -63,6 +92,76 @@ function staticQuality(destroy: () => void): PlayerController {
   };
 }
 
+/**
+ * Reads just enough of a response to tell a playlist from anything else.
+ *
+ * A `Range` header would look like the cheaper way to do this, and it is a
+ * trap: it is not a safelisted request header, so asking for one turns every
+ * probe into a preflighted request — an extra round trip per candidate, and an
+ * outright failure against any host that does not answer OPTIONS. A HEAD is
+ * worse still, since these hosts commonly answer it with 405 and the body is
+ * the only thing that can be checked anyway. Capping the read is the version
+ * of the idea that costs nothing.
+ */
+async function readManifestHead(response: Response): Promise<string> {
+  if (!response.body) {
+    return (await response.text()).slice(0, MANIFEST_HEAD_BYTES);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let head = "";
+  try {
+    while (head.length < MANIFEST_HEAD_BYTES) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      head += decoder.decode(value, { stream: true });
+    }
+  } finally {
+    // The rest of the playlist is hls.js's business, not ours.
+    await reader.cancel().catch(() => {});
+  }
+  return head;
+}
+
+async function probeOne(
+  candidate: StreamCandidate,
+  timeoutMs: number,
+  signal: AbortSignal | undefined,
+): Promise<CandidateProbe> {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  signal?.addEventListener("abort", abort, { once: true });
+  const timeout = window.setTimeout(abort, timeoutMs);
+  const startedAt = performance.now();
+
+  try {
+    const response = await fetch(candidate.url, {
+      cache: "default",
+      credentials: "omit",
+      mode: "cors",
+      signal: controller.signal,
+    });
+    const head = response.ok ? await readManifestHead(response) : "";
+    return {
+      candidate,
+      ok: response.ok && head.trimStart().startsWith("#EXTM3U"),
+      latencyMs: performance.now() - startedAt,
+      tier: qualityTier(candidate),
+    };
+  } catch {
+    return {
+      candidate,
+      ok: false,
+      latencyMs: performance.now() - startedAt,
+      tier: qualityTier(candidate),
+    };
+  } finally {
+    window.clearTimeout(timeout);
+    signal?.removeEventListener("abort", abort);
+  }
+}
+
 export async function probeCandidates(
   candidates: StreamCandidate[],
   options: {
@@ -71,66 +170,53 @@ export async function probeCandidates(
   } = {},
 ): Promise<CandidateProbeResult> {
   const timeoutMs = options.timeoutMs ?? 2_500;
-  const outcomes = await Promise.all(
-    candidates.map(async (candidate, index) => {
-      if (candidate.type !== "hls") {
-        return { candidate, index, latencyMs: Number.POSITIVE_INFINITY, ok: null };
-      }
+  const order = new Map(candidates.map((candidate, index) => [candidate.id, index]));
+  const position = (candidate: StreamCandidate) => order.get(candidate.id) ?? 0;
+  const byTier = (left: StreamCandidate, right: StreamCandidate) =>
+    qualityTier(right) - qualityTier(left) || position(left) - position(right);
 
-      const controller = new AbortController();
-      const abort = () => controller.abort();
-      options.signal?.addEventListener("abort", abort, { once: true });
-      const timeout = window.setTimeout(abort, timeoutMs);
-      const startedAt = performance.now();
+  // Only manifests can be checked without committing the video element to
+  // them, and only the best few are worth checking.
+  const probeable = candidates
+    .filter((candidate) => candidate.type === "hls")
+    .sort(byTier)
+    .slice(0, MAX_PROBE_CANDIDATES);
+  const probeableIds = new Set(probeable.map((candidate) => candidate.id));
 
-      try {
-        const response = await fetch(candidate.url, {
-          cache: "default",
-          credentials: "omit",
-          mode: "cors",
-          signal: controller.signal,
-        });
-        const manifest = response.ok ? await response.text() : "";
-        return {
-          candidate,
-          index,
-          latencyMs: performance.now() - startedAt,
-          ok: response.ok && manifest.trimStart().startsWith("#EXTM3U"),
-        };
-      } catch {
-        return {
-          candidate,
-          index,
-          latencyMs: performance.now() - startedAt,
-          ok: false,
-        };
-      } finally {
-        window.clearTimeout(timeout);
-        options.signal?.removeEventListener("abort", abort);
-      }
-    }),
-  );
+  const probed: CandidateProbe[] = [];
+  for await (const settled of asSettled(probeable, PROBE_CONCURRENCY, (candidate) =>
+    probeOne(candidate, timeoutMs, options.signal),
+  )) {
+    if (settled.value) probed.push(settled.value);
+  }
 
   if (options.signal?.aborted) {
     throw new DOMException("Source probing was aborted", "AbortError");
   }
 
-  const verifiedOutcomes = outcomes
+  const unprobed: CandidateProbe[] = candidates
+    .filter((candidate) => !probeableIds.has(candidate.id))
+    .map((candidate) => ({
+      candidate,
+      ok: null,
+      latencyMs: Number.POSITIVE_INFINITY,
+      tier: qualityTier(candidate),
+    }));
+
+  const verifiedOutcomes = probed
     .filter((outcome) => outcome.ok === true)
     .sort(
       (left, right) =>
-        qualityTier(right.candidate) - qualityTier(left.candidate) ||
+        right.tier - left.tier ||
         left.latencyMs - right.latencyMs ||
-        left.index - right.index,
+        position(left.candidate) - position(right.candidate),
     );
-  const untested = outcomes
-    .filter((outcome) => outcome.ok === null)
-    .sort(
-      (left, right) =>
-        qualityTier(right.candidate) - qualityTier(left.candidate) ||
-        left.index - right.index,
-    );
-  const failedOutcomes = outcomes.filter((outcome) => outcome.ok === false);
+  const untested = unprobed.sort(
+    (left, right) =>
+      right.tier - left.tier ||
+      position(left.candidate) - position(right.candidate),
+  );
+  const failedOutcomes = probed.filter((outcome) => outcome.ok === false);
 
   return {
     ranked: [...verifiedOutcomes, ...untested, ...failedOutcomes].map(
@@ -138,6 +224,9 @@ export async function probeCandidates(
     ),
     verified: verifiedOutcomes.map((outcome) => outcome.candidate),
     failed: failedOutcomes.map((outcome) => outcome.candidate),
+    outcomes: [...verifiedOutcomes, ...untested, ...failedOutcomes],
+    verifiedTier: verifiedOutcomes[0]?.tier ?? 0,
+    probeMs: verifiedOutcomes.length > 0 ? verifiedOutcomes[0]!.latencyMs : null,
   };
 }
 

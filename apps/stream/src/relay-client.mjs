@@ -6,6 +6,7 @@ import {
 } from "node:crypto";
 import { ServerPool } from "./server-pool.mjs";
 import { SOURCE_ALIASES, SOURCE_IDS } from "./source-ids.mjs";
+import { normalizeVariants, numericResolution } from "./providers/normalize.mjs";
 
 export { SOURCE_ALIASES, SOURCE_IDS };
 
@@ -116,32 +117,15 @@ function retryAfterMs(response, body) {
   return candidates.length > 0 ? Math.max(...candidates) : null;
 }
 
-function sourceType(source) {
-  const declared = String(source?.type ?? "").toLowerCase();
-  const url = String(source?.url ?? "").toLowerCase();
-  if (declared === "hls" || url.includes(".m3u8") || url.includes("hlsproxy")) {
-    return "hls";
-  }
-  if (declared === "dash" || url.includes(".mpd")) return "dash";
-  if (declared === "mp4" || url.includes(".mp4")) return "mp4";
-  return "unknown";
-}
-
-function numericResolution(value) {
-  const match = String(value ?? "").match(/(\d{3,4})/);
-  return match ? Number(match[1]) : null;
-}
-
-function normalizeSources(body, scraper) {
-  const candidates = [];
-  const seen = new Set();
-
-  const alias = SOURCE_ALIASES[scraper] ?? scraper;
-
-  // Upstream keys each entry by the host that serves it. Those host names are
-  // dropped here: nothing past this function knows or reports them.
+/**
+ * Upstream keys each entry by the host that serves it, and hangs a map of
+ * per-resolution variants off it. Flattening is all this does; naming,
+ * de-duplication and scoring belong to `normalizeVariants`, which is the only
+ * thing allowed to mint a candidate.
+ */
+function flattenRelaySources(body) {
+  const variants = [];
   for (const source of Object.values(body?.sources ?? {})) {
-    const variants = [];
     if (source?.url) {
       variants.push({
         url: source.url,
@@ -158,37 +142,8 @@ function normalizeSources(body, scraper) {
         });
       }
     }
-
-    for (const variant of variants) {
-      if (typeof variant.url !== "string" || seen.has(variant.url)) continue;
-      let parsed;
-      try {
-        parsed = new URL(variant.url);
-      } catch {
-        continue;
-      }
-      if (!["http:", "https:"].includes(parsed.protocol)) continue;
-      seen.add(parsed.href);
-      const type = sourceType(variant);
-      const typeScore = type === "hls" ? 300 : type === "mp4" ? 200 : 100;
-      candidates.push({
-        id: `src:${scraper}:${candidates.length}`,
-        server: scraper,
-        serverLabel: alias,
-        provider: scraper,
-        providerLabel: alias,
-        url: parsed.href,
-        type,
-        declaredType: variant.type ?? null,
-        resolution: variant.resolution,
-        format: null,
-        size: null,
-        score: typeScore + (variant.resolution ?? 0) / 10,
-      });
-    }
   }
-
-  return candidates.sort((left, right) => right.score - left.score);
+  return variants;
 }
 
 export class RelayClient {
@@ -276,6 +231,10 @@ export class RelayClient {
             "AppleWebKit/537.36 (KHTML, like Gecko) " +
             "Chrome/138.0.0.0 Safari/537.36",
         },
+        // The caller gives up long before upstream does. Without this the
+        // subrequest keeps running after nobody is waiting for it, which on a
+        // worker is billed time spent on an answer that will be thrown away.
+        signal: options.signal,
       });
       const text = await response.text();
       let body;
@@ -298,7 +257,10 @@ export class RelayClient {
       }
 
       const decrypted = body?.encrypted ? decryptRelayData(body) : body;
-      const candidates = normalizeSources(decrypted, scraper);
+      const candidates = normalizeVariants(
+        flattenRelaySources(decrypted),
+        scraper,
+      );
       if (candidates.length === 0) {
         throw new RelayError(
           `${SOURCE_ALIASES[scraper]} returned no playable sources`,
@@ -340,40 +302,6 @@ export class RelayClient {
       this.pool.recordFailure(scraper, wrapped);
       throw wrapped;
     }
-  }
-
-  async resolveAuto(media, options = {}) {
-    const preferred = options.scrapers ?? SOURCE_IDS;
-    const available = this.pool.available(preferred);
-    const scrapers =
-      available.length > 0 ? available : this.pool.rank(preferred).slice(0, 1);
-    const attempted = [];
-    const failures = [];
-
-    for (const scraper of scrapers) {
-      try {
-        const result = await this.resolveScraper(media, scraper, options);
-        return { ...result, attemptedServers: [...attempted, scraper] };
-      } catch (error) {
-        attempted.push(scraper);
-        failures.push({
-          server: scraper,
-          message: error.message,
-          status: error.status ?? null,
-        });
-        if (error instanceof RelayError && error.status === 429) throw error;
-      }
-    }
-
-    throw new RelayError("No source returned playable sources", {
-      retryable: true,
-      retryAfterMs: 10_000,
-      details: {
-        attemptedServers: attempted,
-        failures,
-        serverHealth: this.pool.snapshot(),
-      },
-    });
   }
 
   serverHealth() {

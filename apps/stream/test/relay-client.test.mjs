@@ -98,30 +98,81 @@ test("normalizes upstream source objects into player candidates", async () => {
   assert.equal(result.subtitles.length, 1);
 });
 
-test("auto mode advances to the next source", async () => {
-  const attempted = [];
+test("hands the caller's abort signal to the upstream request", async () => {
+  let seen;
   const client = new RelayClient({
-    scrapers: ["q4", "k9"],
-    fetchImpl: async (url) => {
-      const scraper = new URL(url).searchParams.get("scraper");
-      attempted.push(scraper);
-      if (scraper === "q4") return jsonResponse({ sources: {} });
+    fetchImpl: async (_url, init) => {
+      seen = init?.signal;
       return jsonResponse({
         sources: {
-          Frost: {
-            server: "Frost",
-            url: "https://play.example/frost.m3u8",
-            type: "hls",
-          },
+          Frost: { url: "https://play.example/frost.m3u8", type: "hls" },
         },
       });
     },
   });
 
-  const result = await client.resolveAuto(tvMedia, {
-    scrapers: ["q4", "k9"],
+  const controller = new AbortController();
+  await client.resolveScraper(tvMedia, "q4", { signal: controller.signal });
+  // Without this the subrequest outlives the router that gave up on it.
+  assert.equal(seen, controller.signal);
+});
+
+test("a rate limit cools down every source, not just the one that hit it", async () => {
+  const client = new RelayClient({
+    fetchImpl: async () => jsonResponse({ error: "slow down" }, 429),
   });
-  assert.deepEqual(attempted, ["q4", "k9"]);
-  assert.equal(result.server, "k9");
-  assert.deepEqual(result.attemptedServers, ["q4", "k9"]);
+
+  await assert.rejects(client.resolveScraper(tvMedia, "q4"), { status: 429 });
+
+  // A limiter armed upstream is armed for all of them, so asking a different
+  // source next would only deepen it.
+  await assert.rejects(
+    client.resolveScraper(tvMedia, "k9"),
+    (error) => {
+      assert.equal(error.status, 429);
+      assert.equal(error.retryable, true);
+      assert.ok(error.retryAfterMs > 0);
+      assert.equal(error.details.localCooldown, true);
+      return true;
+    },
+  );
+});
+
+test("a source that just failed is not asked again immediately", async () => {
+  let calls = 0;
+  const client = new RelayClient({
+    fetchImpl: async () => {
+      calls += 1;
+      return jsonResponse({ error: "upstream broke" }, 502);
+    },
+  });
+
+  await assert.rejects(client.resolveScraper(tvMedia, "q4"), { status: 502 });
+  await assert.rejects(client.resolveScraper(tvMedia, "q4"), (error) => {
+    assert.equal(error.status, 503);
+    assert.equal(error.details.localCooldown, true);
+    return true;
+  });
+  assert.equal(calls, 1, "the cooling source should not have been asked twice");
+});
+
+test("a second request for the same episode is served from cache", async () => {
+  let calls = 0;
+  const client = new RelayClient({
+    fetchImpl: async () => {
+      calls += 1;
+      return jsonResponse({
+        sources: {
+          Frost: { url: "https://play.example/frost.m3u8", type: "hls" },
+        },
+      });
+    },
+  });
+
+  await client.resolveScraper(tvMedia, "q4");
+  await client.resolveScraper(tvMedia, "q4");
+  assert.equal(calls, 1);
+
+  await client.resolveScraper(tvMedia, "q4", { fresh: true });
+  assert.equal(calls, 2);
 });

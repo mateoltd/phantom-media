@@ -51,6 +51,12 @@ export interface StreamCandidate {
   score: number;
 }
 
+/**
+ * Every field is optional because the shape varies by where the track came
+ * from: a playback source describes them one way, a subtitle catalogue
+ * another. `captionUrl` and `captionLabel` in `lib/subtitles.ts` are what turn
+ * this into something the player can use.
+ */
 export interface SubtitleTrack {
   id?: string;
   display?: string;
@@ -59,15 +65,17 @@ export interface SubtitleTrack {
   url?: string;
   lang?: string;
   language?: string;
+  /** Where the track was found. Catalogues are named; playback sources are not. */
+  origin?: "source" | "opensubtitles";
+  /** Upstream's word for the encoding, so the proxy can decode it correctly. */
+  encoding?: string;
+  hearingImpaired?: boolean;
 }
 
 export interface ResolverResponse {
   server: string;
   serverLabel: string;
   latencyMs: number;
-  attemptedServers?: string[];
   candidates: StreamCandidate[];
   subtitles: SubtitleTrack[];
-  dubs: Array<Record<string, unknown>>;
-  fallback: unknown;
 }

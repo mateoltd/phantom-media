@@ -1,91 +1,119 @@
 import { NextResponse } from "next/server";
-import {
-  SOURCE_IDS,
-  RelayClient,
-  RelayError,
-} from "../../../../src/relay-client.mjs";
+import { getProvider } from "../../../../src/providers/registry.mjs";
+import { RelayError } from "../../../../src/relay-client.mjs";
 
+// The relay decrypts upstream payloads with node:crypto.
 export const runtime = "nodejs";
 
-const CLIENT_VERSION = 1;
-const globalClientState = globalThis.__phantomRelayClientState;
-const client =
-  globalClientState?.version === CLIENT_VERSION
-    ? globalClientState.client
-    : new RelayClient();
-if (process.env.NODE_ENV !== "production") {
-  globalThis.__phantomRelayClientState = {
-    version: CLIENT_VERSION,
-    client,
-  };
+/**
+ * Longer than the router's own patience, so the isolate always outlives the
+ * client giving up rather than racing it. Without a ceiling here, an upstream
+ * that never answers holds a subrequest open for as long as it likes.
+ */
+const DEADLINE_MS = 8_500;
+
+/**
+ * Combines the browser hanging up with our own ceiling. The first matters as
+ * much as the second: the router aborts every sibling request the moment one
+ * source wins, and that abort should reach upstream rather than stopping at
+ * this worker.
+ */
+function deadlineSignal(request) {
+  const timeout = AbortSignal.timeout(DEADLINE_MS);
+  return request.signal ? AbortSignal.any([request.signal, timeout]) : timeout;
 }
 
-function publicResult(result) {
-  return {
-    server: result.server,
-    serverLabel: result.serverLabel,
-    latencyMs: result.latencyMs,
-    attemptedServers: result.attemptedServers,
-    candidates: result.candidates,
-    subtitles: result.subtitles,
-    dubs: result.dubs,
-    fallback: result.fallback,
+function readMedia(params) {
+  const type = params.get("type");
+  const media = {
+    type,
+    tmdbId: Number(params.get("tmdbId")),
+    title: (params.get("title") ?? "").slice(0, 300),
+    year: (params.get("year") ?? "").slice(0, 10),
   };
+  const imdbId = params.get("imdbId") ?? "";
+  if (/^tt\d{5,12}$/i.test(imdbId)) media.imdbId = imdbId.toLowerCase();
+  if (type === "tv") {
+    media.season = Number(params.get("season"));
+    media.episode = Number(params.get("episode"));
+  }
+  return media;
+}
+
+function failure(status, body, retryAfterMs) {
+  return NextResponse.json(body, {
+    status,
+    headers:
+      retryAfterMs && retryAfterMs > 0
+        ? { "retry-after": String(Math.ceil(retryAfterMs / 1_000)) }
+        : undefined,
+  });
 }
 
 export async function GET(request) {
-  const url = new URL(request.url);
-  const type = url.searchParams.get("type");
-  const tmdbId = Number(url.searchParams.get("tmdbId"));
-  const media = {
-    type,
-    tmdbId,
-    title: (url.searchParams.get("title") ?? "").slice(0, 300),
-    year: (url.searchParams.get("year") ?? "").slice(0, 10),
-  };
-  const imdbId = url.searchParams.get("imdbId") ?? "";
-  if (/^tt\d{5,12}$/i.test(imdbId)) media.imdbId = imdbId.toLowerCase();
-  if (type === "tv") {
-    media.season = Number(url.searchParams.get("season"));
-    media.episode = Number(url.searchParams.get("episode"));
+  const params = new URL(request.url).searchParams;
+  const requested = params.get("server") ?? "";
+
+  // Routing is the client's job now: it is the only side that knows what it
+  // has already tried, how fast each source answered, and what it settled on
+  // last time. Picking one here would be guessing over the top of that.
+  const provider = requested ? getProvider(requested) : null;
+  if (!provider) {
+    return failure(400, {
+      error: requested
+        ? `Unknown source "${requested}"`
+        : "A source must be named",
+      retryable: false,
+      retryAfterMs: null,
+      server: null,
+      details: null,
+    });
   }
 
   try {
-    const requested = url.searchParams.get("server") ?? "auto";
-    const preferred =
-      url.searchParams
-        .get("prefer")
-        ?.split(",")
-        .filter((value) => SOURCE_IDS.includes(value)) ??
-      SOURCE_IDS;
-    const result =
-      requested === "auto"
-        ? await client.resolveAuto(media, { scrapers: preferred })
-        : await client.resolveScraper(media, requested);
-
-    return NextResponse.json(publicResult(result), {
-      headers: { "cache-control": "no-store" },
+    const result = await provider.resolve(readMedia(params), {
+      signal: deadlineSignal(request),
     });
-  } catch (error) {
-    const known = error instanceof RelayError;
-    const status =
-      known && error.status && error.status >= 400 ? error.status : 502;
-    const retryAfterMs = known ? error.retryAfterMs : null;
     return NextResponse.json(
       {
+        server: provider.id,
+        serverLabel: provider.label,
+        latencyMs: result.latencyMs,
+        candidates: result.candidates,
+        subtitles: result.subtitles,
+      },
+      { headers: { "cache-control": "no-store" } },
+    );
+  } catch (error) {
+    // A malformed request is the caller's mistake, not upstream's, and
+    // retrying it would fail exactly the same way.
+    if (error instanceof TypeError) {
+      return failure(400, {
         error: error.message,
-        retryable: known ? error.retryable : false,
+        retryable: false,
+        retryAfterMs: null,
+        server: provider.id,
+        details: null,
+      });
+    }
+
+    const known = error instanceof RelayError;
+    const aborted = error?.name === "AbortError" || error?.name === "TimeoutError";
+    const status = known && error.status >= 400 ? error.status : aborted ? 504 : 502;
+    const retryAfterMs = known ? error.retryAfterMs : null;
+
+    return failure(
+      status,
+      {
+        error: aborted
+          ? `${provider.label} did not answer in time`
+          : error.message,
+        retryable: known ? error.retryable : aborted,
         retryAfterMs,
-        server: known ? error.server : null,
+        server: provider.id,
         details: known ? error.details : null,
       },
-      {
-        status,
-        headers:
-          retryAfterMs && retryAfterMs > 0
-            ? { "retry-after": String(Math.ceil(retryAfterMs / 1_000)) }
-            : undefined,
-      },
+      retryAfterMs,
     );
   }
 }
