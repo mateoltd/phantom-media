@@ -341,10 +341,18 @@ export default function WatchPageClient({
     <main className="workspace-canvas flex min-h-screen flex-col">
       <AppHeader />
 
-      {/* The picture runs the width of the window. Everything that explains it
-          sits underneath, and everything that changes what is playing is
-          reachable from inside it. */}
-      <div className="stage-frame">
+      {/* The picture runs the width of the window, and everything that changes
+          what is playing is reachable from inside it.
+
+          What it is *called* comes first on a narrow screen and second on a
+          wide one. The stage is a fixed ratio of the width, so on a desktop the
+          whole of it clears the fold and leading with it is the right thing —
+          it is what the page is for. On a phone the same stage is a 240px
+          strip, and a strip of chrome directly under the bar identifies the
+          page as nothing at all; the title, the rating and the synopsis do that
+          in the space the picture cannot. Order only, not markup: one tree,
+          one component, no duplicated block to keep in step. */}
+      <div className="order-2 stage-frame lg:order-1">
         <VideoStage
           videoRef={videoRef}
           title={media.title}
@@ -406,7 +414,10 @@ export default function WatchPageClient({
         />
       </div>
 
-      <div className="app-shell flex-1 pb-12 pt-5 sm:pb-16 sm:pt-7" id="about">
+      <div
+        className="order-1 app-shell pb-5 pt-5 lg:order-2 lg:pb-0 lg:pt-7"
+        id="about"
+      >
         <div className="max-w-3xl">
           <TitleLogo
             media={media}
@@ -431,11 +442,15 @@ export default function WatchPageClient({
           </div>
 
           {(currentEpisode?.overview || media.overview) && (
-            <Synopsis text={currentEpisode?.overview || media.overview} />
+            <p className="mt-5 text-[13.5px] leading-6 text-text-secondary">
+              {currentEpisode?.overview || media.overview}
+            </p>
           )}
         </div>
+      </div>
 
-        {isSeries && (
+      {isSeries && (
+        <div className="order-3 app-shell pb-12 sm:pb-16">
           <EpisodeBrowser
             media={media}
             seasons={seasons}
@@ -445,11 +460,11 @@ export default function WatchPageClient({
             onSelect={goToEpisode}
             onSeasonChange={(next) => changeEpisode(next, 1)}
           />
-        )}
-      </div>
+        </div>
+      )}
 
       {related.length > 0 && (
-        <div className="pb-10">
+        <div className="order-4 pb-10">
           <BrowseRail
             row={{
               id: "related",
@@ -461,7 +476,10 @@ export default function WatchPageClient({
         </div>
       )}
 
-      <div className="app-shell">
+      {/* `mt-auto` rather than a `flex-1` on a content block: with the blocks
+          reordered, whichever one carried the growth would open a gap in a
+          different place at each breakpoint. */}
+      <div className="order-5 app-shell mt-auto">
         <SiteFooter />
       </div>
     </main>
@@ -488,42 +506,6 @@ function liveDetail(status?: string): string | undefined {
     default:
       return undefined;
   }
-}
-
-/**
- * The synopsis, three lines deep until asked for the rest.
- *
- * At full length it is the tallest thing between the picture and the episode
- * list — eight lines on a handset — so changing episode meant scrolling past a
- * paragraph already read to reach the list. Clamped, both ends of the page are
- * a short scroll apart, and nothing is hidden: the rest is one tap away and
- * stays open once opened.
- *
- * Above the small breakpoint there is room for the whole thing and no clamp.
- */
-function Synopsis({ text }: { text: string }) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div className="mt-5">
-      <p
-        className={`text-[13.5px] leading-6 text-text-secondary ${
-          expanded ? "" : "line-clamp-3 sm:line-clamp-none"
-        }`}
-      >
-        {text}
-      </p>
-      {!expanded && (
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          className="mt-1.5 text-[12px] font-bold text-text-secondary transition-colors hover:text-text sm:hidden"
-        >
-          More
-        </button>
-      )}
-    </div>
-  );
 }
 
 /** The saved subtitle language first, then whatever the browser asks for. */

@@ -48,28 +48,24 @@ export default function SearchPageClient() {
     return () => controller.abort();
   }, [query]);
 
-  const loading = results === null && !error;
+  // With no query nothing is ever fetched, so treating "no results yet" as
+  // loading left the spinner turning on a page that had not asked anything.
+  const loading = Boolean(query) && results === null && !error;
 
   return (
     <main className="workspace-canvas flex min-h-screen flex-col">
       <AppHeader initialQuery={query} />
 
-      <div className="app-shell flex-1 pb-14 pt-2">
-        <div className="flex items-baseline justify-between gap-4 border-b border-border pb-4">
-          <div className="min-w-0">
-            <p className="eyebrow text-phantom">
-              Results
-            </p>
-            <h1 className="mt-1 truncate text-2xl font-extrabold tracking-[-0.02em] text-text">
-              {query || "Nothing searched yet"}
-            </h1>
-          </div>
-          {results && results.length > 0 && (
-            <p className="shrink-0 text-[12px] text-text-tertiary">
-              {results.length} {results.length === 1 ? "title" : "titles"}
-            </p>
-          )}
-        </div>
+      <div className="app-shell flex-1 pb-14">
+        {/* The query is in the field two centimetres above this, so setting it
+            again in 24px type under an eyebrow said nothing twice and put a
+            rule under it for emphasis. What is not already on screen is how
+            many came back, so that is what is left — one quiet line, in the
+            gutter the grid uses, with the wording kept for anything reading
+            the page aloud. */}
+        <h1 className="sr-only">
+          {query ? `Search results for ${query}` : "Search"}
+        </h1>
 
         {loading && (
           <div className="flex min-h-60 flex-col items-center justify-center">
@@ -80,9 +76,16 @@ export default function SearchPageClient() {
           </div>
         )}
 
+        {!query && (
+          <EmptyState
+            title="Nothing searched yet"
+            body="Type a title in the field above, or paste an IMDb link."
+          />
+        )}
+
         {error && <EmptyState title="The search failed" body={error} />}
 
-        {!error && results?.length === 0 && (
+        {!error && query && results?.length === 0 && (
           <EmptyState
             title="No playable titles matched"
             body={
@@ -94,15 +97,21 @@ export default function SearchPageClient() {
         )}
 
         {results && results.length > 0 && (
-          <div className="grid grid-cols-3 gap-3 pt-6 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8">
-            {results.map((media, index) => (
-              <PosterTile
-                key={`${media.mediaType}-${media.id}`}
-                media={media}
-                priority={index < 6}
-              />
-            ))}
-          </div>
+          <>
+            <p className="pb-4 pt-6 text-[12px] font-semibold text-text-tertiary">
+              {results.length} {results.length === 1 ? "title" : "titles"}
+            </p>
+
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8">
+              {results.map((media, index) => (
+                <PosterTile
+                  key={`${media.mediaType}-${media.id}`}
+                  media={media}
+                  priority={index < 6}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
 
