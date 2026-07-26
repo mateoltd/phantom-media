@@ -38,7 +38,7 @@ export function PosterTile({
               <IconPlayerPlayFilled size={13} />
             </span>
             <span className="min-w-0">
-              <span className="line-clamp-2 block text-[12px] font-extrabold leading-tight text-white">
+              <span className="line-clamp-2 text-[12px] font-extrabold leading-tight text-white">
                 {media.title}
               </span>
               {media.year && (

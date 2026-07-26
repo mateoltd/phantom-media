@@ -29,7 +29,7 @@ export function RaceProgress({ model }: { model: RaceProgressModel }) {
   const seconds = (model.elapsedMs / 1_000).toFixed(1);
 
   return (
-    <div className="flex flex-col items-center gap-2.5">
+    <div className="flex w-full flex-col items-center gap-2 sm:gap-2.5">
       <div className="stage-progress" aria-hidden="true">
         {asked.map((source) => (
           <span
@@ -39,7 +39,7 @@ export function RaceProgress({ model }: { model: RaceProgressModel }) {
           />
         ))}
       </div>
-      <p className="font-mono text-[11px] tabular-nums text-stage-muted">
+      <p className="font-mono text-[10px] tabular-nums text-stage-muted sm:text-[11px]">
         {model.answered} of {asked.length} answered
         {model.asking > 0 && ` · ${model.asking} waiting`} · {seconds}s
       </p>

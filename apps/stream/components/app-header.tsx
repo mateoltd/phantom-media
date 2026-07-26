@@ -54,7 +54,7 @@ export function AppHeader({ floating = false, initialQuery }: AppHeaderProps) {
           field puts it at 61 including the rule — between YouTube's 56 and
           Netflix's 68, which is the range this can live in without reading as
           a toolbar. */}
-      <div className="app-shell flex flex-wrap items-center gap-x-6 gap-y-2.5 py-2 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+      <div className="app-shell flex flex-wrap items-center gap-x-4 gap-y-2 py-1.5 sm:gap-x-6 sm:gap-y-2.5 sm:py-2 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
         <Link
           href="/"
           aria-label="Phantom Stream home"

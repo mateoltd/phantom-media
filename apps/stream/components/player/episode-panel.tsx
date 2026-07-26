@@ -121,7 +121,7 @@ export function EpisodePanel({
                   </span>
                 </span>
                 {item.overview && (
-                  <span className="mt-1 line-clamp-2 block text-[11px] leading-4 text-stage-muted">
+                  <span className="mt-1 line-clamp-2 text-[11px] leading-4 text-stage-muted">
                     {item.overview}
                   </span>
                 )}

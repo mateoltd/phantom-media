@@ -719,7 +719,7 @@ export function VideoStage({
       {/* The centre affordance is whatever the stage needs next: start, retry,
           or nothing at all once a source is attached. */}
       {(status === "idle" || status === "error") && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
+        <div className="stage-center">
           <button
             type="button"
             disabled={!canRequestPlayback}
@@ -744,9 +744,9 @@ export function VideoStage({
       )}
 
       {status === "working" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
-          <span className="stage-spinner h-9 w-9" />
-          <p className="max-w-sm text-[13px] font-bold text-stage-text">
+        <div className="stage-center">
+          <span className="stage-spinner h-8 w-8 sm:h-9 sm:w-9" />
+          <p className="max-w-sm text-[12px] font-bold text-stage-text sm:text-[13px]">
             {statusText}
           </p>
           {progress && <RaceProgress model={progress} />}
@@ -842,7 +842,7 @@ export function VideoStage({
           onScrubbingChange={holdAwake}
         />
 
-        <div className="mt-1 flex items-center gap-1">
+        <div className="mt-1 flex items-center gap-0.5 sm:gap-1">
           <StageButton
             label={state.playing ? "Pause" : "Play"}
             onClick={togglePlay}
@@ -987,7 +987,11 @@ function Timecode({
   );
 
   return (
-    <p className="ml-1 font-mono text-[11px] tabular-nums text-stage-muted">
+    // `shrink-0` and no wrapping: this is the one item in the row with no fixed
+    // width, so it is the one that folds in half when the row runs out of
+    // space — which put the elapsed time above the buttons and the runtime
+    // below them.
+    <p className="ml-1 shrink-0 whitespace-nowrap font-mono text-[11px] tabular-nums text-stage-muted">
       <span ref={currentRef} className="text-stage-text">
         0:00
       </span>
@@ -1014,7 +1018,7 @@ function StageButton({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`h-9 w-9 shrink-0 items-center justify-center rounded-lg text-stage-text/85 transition-colors hover:bg-white/12 hover:text-stage-text ${
+      className={`h-8 w-8 shrink-0 items-center justify-center rounded-lg text-stage-text/85 transition-colors hover:bg-white/12 hover:text-stage-text sm:h-9 sm:w-9 ${
         className || "flex"
       }`}
     >

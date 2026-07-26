@@ -97,14 +97,14 @@ export function EpisodeBrowser({
           )}
         </h2>
 
-        <div className="flex flex-wrap gap-1.5">
+        <div className="season-rail w-full sm:w-auto sm:max-w-[70%]">
           {seasons.map((item) => (
             <button
               key={item.seasonNumber}
               type="button"
               onClick={() => onSeasonChange(item.seasonNumber)}
               aria-current={item.seasonNumber === season}
-              className={`h-9 rounded-full px-3.5 text-[12px] font-bold transition-colors ${
+              className={`h-9 whitespace-nowrap rounded-full px-3.5 text-[12px] font-bold transition-colors ${
                 item.seasonNumber === season
                   ? "bg-phantom text-white"
                   : "border border-border text-text-secondary hover:border-text/30 hover:text-text"
@@ -133,14 +133,17 @@ export function EpisodeBrowser({
                 type="button"
                 onClick={() => onSelect(item)}
                 aria-current={playing}
-                className="group flex w-full items-start gap-4 border-b border-border/60 py-3.5 text-left transition-colors hover:bg-surface/50"
+                className="group flex w-full items-start gap-3 border-b border-border/60 py-3.5 text-left transition-colors hover:bg-surface/50 sm:gap-4"
               >
-                <span className="w-6 shrink-0 pt-1 text-right font-mono text-[12px] text-text-tertiary">
+                <span className="w-4 shrink-0 pt-1 text-right font-mono text-[12px] text-text-tertiary sm:w-6">
                   {item.episodeNumber}
                 </span>
 
-                <span className="relative aspect-video w-[132px] shrink-0 overflow-hidden rounded-xl bg-surface sm:w-[168px]">
-                  <Artwork src={item.stillUrl} sizes="168px" />
+                {/* The still is the first thing to give ground on a narrow
+                    screen. At 132px it left the synopsis a column about three
+                    words wide, which is longer to read than no synopsis. */}
+                <span className="relative aspect-video w-[104px] shrink-0 overflow-hidden rounded-xl bg-surface sm:w-[168px]">
+                  <Artwork src={item.stillUrl} sizes="(min-width: 640px) 168px, 104px" />
                   <span
                     className={`absolute inset-0 flex items-center justify-center bg-black/45 transition-opacity ${
                       playing
@@ -177,8 +180,13 @@ export function EpisodeBrowser({
                       </span>
                     )}
                   </span>
+                  {/* No `block` beside the clamp: clamping works by setting
+                      `display: -webkit-box`, so any display utility next to it
+                      turns it off. On a phone that is the difference between
+                      two lines and a whole synopsis in a column three words
+                      wide. */}
                   {item.overview && (
-                    <span className="mt-1.5 line-clamp-2 block max-w-2xl text-[12px] leading-5 text-text-secondary">
+                    <span className="mt-1.5 line-clamp-2 max-w-2xl text-[12px] leading-5 text-text-secondary">
                       {item.overview}
                     </span>
                   )}

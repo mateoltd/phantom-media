@@ -372,7 +372,7 @@ export function SearchField({
                 )}
 
                 <span className="min-w-0 flex-1">
-                  <span className="line-clamp-1 block text-[13px] font-bold text-text">
+                  <span className="line-clamp-1 text-[13px] font-bold text-text">
                     {suggestion.title}
                   </span>
                   {suggestion.subtitle && (

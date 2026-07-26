@@ -79,6 +79,26 @@
   background: var(--color-stage);
 }
 
+/* What the stage is doing, said in the middle of the picture: the spinner and
+   its caption, the play affordance, the error.
+
+   Centred in the whole stage where there is room for that, and stopped above
+   the controls where there is not. The stage is a fixed ratio of the width, so
+   a handset gets one about a fifth as tall as a laptop's — and at that height
+   "centred in the picture" and "where the buttons are" are the same pixels.
+   The race caption was being drawn underneath the transport row. */
+.stage-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding-inline: 1.5rem;
+  text-align: center;
+}
+
 /* Controls sit on a gradient rather than a solid bar so the bottom of the
    picture stays visible while they are up. */
 .stage-chrome {
@@ -117,6 +137,51 @@
   transition:
     opacity 0.22s ease,
     transform 0.22s ease;
+}
+
+/* A phone gets a stage about a fifth the height of a laptop's, and the chrome
+   does not shrink with it: the gradient's 3.5rem head start is most of a
+   handset stage on its own. Everything here buys that height back. */
+@media (max-width: 640px) {
+  .stage-chrome {
+    padding: 2rem 0.5rem 0.5rem;
+  }
+
+  .stage-center {
+    inset-block-end: 3.75rem;
+    gap: 0.75rem;
+    padding-inline: 1rem;
+  }
+
+  .stage-progress {
+    max-width: 100%;
+    gap: 0.25rem;
+  }
+
+  .stage-dot {
+    width: 1rem;
+  }
+
+  /* All three of these are positioned off the bottom edge in rem, which
+     assumes a stage tall enough to have a bottom edge worth measuring from.
+     At 12.5rem the skip button cleared the top of a handset stage entirely. */
+  .stage-toast {
+    left: 0.6rem;
+    bottom: 4rem;
+    font-size: 11px;
+  }
+
+  .stage-upnext {
+    right: 0.6rem;
+    bottom: 4rem;
+    width: 12.5rem;
+    padding: 0.7rem;
+  }
+
+  .stage-skip {
+    right: 0.6rem;
+    bottom: 9.25rem;
+  }
 }
 
 /* Idleness is a single class on the stage rather than a piece of React state,
@@ -670,6 +735,13 @@
 @media (max-width: 640px) {
   .stage-volume {
     display: none;
+  }
+
+  /* The gap was there to separate the slider from the timecode. With no
+     slider it is just the mute button sitting further from its neighbours
+     than any other button in the row. */
+  .stage-volume-group {
+    padding-right: 0;
   }
 }
 

@@ -92,7 +92,7 @@ export function UpNext({
           <span className="block text-[10px] font-semibold text-stage-muted">
             S{episode.seasonNumber}E{episode.episodeNumber}
           </span>
-          <span className="line-clamp-2 block text-[12px] font-bold leading-tight text-stage-text">
+          <span className="line-clamp-2 text-[12px] font-bold leading-tight text-stage-text">
             {episode.name}
           </span>
         </span>

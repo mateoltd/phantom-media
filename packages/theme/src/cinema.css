@@ -103,6 +103,27 @@
   --tile-width: 17rem;
 }
 
+/* Seasons scroll sideways for the same reason the rails do. Wrapped, a series
+   with twenty of them puts a nine-row block of pills between the heading and
+   the first episode — on a phone that is the whole screen, and the list you
+   came for starts below it. Same treatment as the season strip inside the
+   player, which had it right already. */
+.season-rail {
+  display: flex;
+  gap: 0.375rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.season-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.season-rail > * {
+  flex: none;
+}
+
 /* The row runs to the edge of the window, so it needs to look cut rather than
    ended. */
 .rail-edges {
