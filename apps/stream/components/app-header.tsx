@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
-import { Wordmark } from "@phantom/ui";
+import { Logo, Wordmark } from "@phantom/ui";
 import { MediaSearch } from "@/components/media-search";
 
 interface AppHeaderProps {
@@ -54,16 +54,22 @@ export function AppHeader({ floating = false, initialQuery }: AppHeaderProps) {
           field puts it at 61 including the rule — between YouTube's 56 and
           Netflix's 68, which is the range this can live in without reading as
           a toolbar. */}
-      <div className="app-shell flex flex-wrap items-center gap-x-4 gap-y-2 py-1.5 sm:gap-x-6 sm:gap-y-2.5 sm:py-2 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+      <div className="app-shell flex items-center gap-x-3 py-1.5 sm:gap-x-6 sm:py-2 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
         <Link
           href="/"
           aria-label="Phantom Stream home"
           className="shrink-0 justify-self-start"
         >
-          <Wordmark service="Stream" tone="chalk" />
+          {/* The name goes, the mark stays. Together they are about 185px
+              wide, which on a handset is most of the row the search field
+              needs — so the field was taking a second row, and the whole bar
+              cost ninety-odd pixels of every page. The mark alone is 44 and
+              they fit on one line. */}
+          <Logo size={34} tone="chalk" className="h-6 w-auto sm:hidden" />
+          <Wordmark service="Stream" tone="chalk" className="hidden sm:flex" />
         </Link>
 
-        <div className="order-last w-full min-w-0 lg:order-none lg:w-[min(46vw,560px)]">
+        <div className="min-w-0 flex-1 lg:w-[min(46vw,560px)] lg:flex-none">
           <MediaSearch initialQuery={initialQuery} size="compact" />
         </div>
 

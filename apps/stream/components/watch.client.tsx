@@ -406,11 +406,11 @@ export default function WatchPageClient({
         />
       </div>
 
-      <div className="app-shell flex-1 pb-16 pt-7" id="about">
+      <div className="app-shell flex-1 pb-12 pt-5 sm:pb-16 sm:pt-7" id="about">
         <div className="max-w-3xl">
           <TitleLogo
             media={media}
-            maxHeight="6rem"
+            maxHeight="clamp(2.75rem, 11vw, 6rem)"
             maxWidth="20rem"
             headingClassName="text-[clamp(1.5rem,3vw,2.3rem)] font-extrabold leading-[1.05] tracking-[-0.03em] text-text"
           />

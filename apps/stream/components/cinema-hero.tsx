@@ -22,12 +22,16 @@ export function CinemaHero({ media }: { media: MediaResult }) {
       />
       <div className="cinema-hero-scrim" aria-hidden="true" />
 
-      <div className="app-shell relative z-10 pb-14 pt-36 sm:pb-20">
+      {/* The top padding clears the floating bar and then some, so the title
+          sits in the lower half of the art rather than against its top edge.
+          On a phone the art is a third the height and the same 9rem of it is
+          most of what there is, so it scales too. */}
+      <div className="app-shell relative z-10 pb-12 pt-24 sm:pb-20 sm:pt-36">
         <div className="max-w-xl">
           <TitleLogo
             media={media}
             priority
-            maxHeight="8.5rem"
+            maxHeight="clamp(4rem, 16vw, 8.5rem)"
             maxWidth="25rem"
             headingClassName="text-[clamp(2rem,5vw,3.6rem)] font-extrabold leading-[0.95] tracking-[-0.03em] text-text"
           />
