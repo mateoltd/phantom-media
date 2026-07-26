@@ -1,7 +1,3 @@
-/*
- * The whole Phantom look in one import. Apps pull `@import "tailwindcss"`
- * first, then this, then anything that is genuinely theirs alone.
- */
 @import "./tokens.css";
 @import "./base.css";
 @import "./primitives.css";

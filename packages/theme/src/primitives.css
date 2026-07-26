@@ -1,16 +1,9 @@
-/* ---------------------------------------------------------------- layout */
 
 .app-shell {
   width: min(100% - 2rem, 1440px);
   margin-inline: auto;
 }
 
-/* ------------------------------------------------------------- typography */
-
-/* The small tracked label above a heading. Set in the body face rather than
-   the mono one: a monospaced eyebrow reads as a status code, which is the
-   wrong register for what is only ever a category. Colour is left to the
-   caller, since the same label is used on paper and over artwork. */
 .eyebrow {
   font-size: 0.6875rem;
   font-weight: 700;
@@ -18,8 +11,6 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
-
-/* --------------------------------------------------------------- surfaces */
 
 .surface-card {
   border: 1px solid var(--color-border);
@@ -40,8 +31,6 @@
   background: rgba(255, 255, 255, 0.48);
 }
 
-/* ----------------------------------------------------------------- inputs */
-
 .soft-input {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
@@ -52,9 +41,6 @@
   color: var(--color-text-tertiary);
 }
 
-/* The search field. A pill rather than a rounded rectangle, and a round icon
-   button rather than a labelled one — the field is the loudest thing on the
-   landing page and it does not need to shout twice. */
 .search-pill {
   border: 1px solid var(--color-border);
   border-radius: 999px;
@@ -108,8 +94,6 @@ select:focus-visible {
   scrollbar-width: thin;
 }
 
-/* ---------------------------------------------------------------- canvases */
-
 .landing-canvas {
   background:
     linear-gradient(103deg, rgba(255, 255, 255, 0.42), transparent 45%),
@@ -124,8 +108,6 @@ select:focus-visible {
     var(--color-bg);
   background-size: 18px 18px, auto;
 }
-
-/* ------------------------------------------------------------- editorial */
 
 .editorial-hero {
   position: relative;
@@ -200,8 +182,6 @@ select:focus-visible {
   transform: rotate(-6deg) scaleX(1.2);
 }
 
-/* The headline is measured against its own column instead of the viewport, so
-   longer translations keep the same two lines rather than breaking into three. */
 .hero-column {
   container-type: inline-size;
 }
@@ -219,8 +199,6 @@ select:focus-visible {
   transform: rotate(-1.5deg) skewX(-18deg);
 }
 
-/* --------------------------------------------------------------- progress */
-
 .job-row {
   position: relative;
   padding: 1rem 0;
@@ -230,7 +208,6 @@ select:focus-visible {
   border-top: 1px solid rgba(24, 24, 21, 0.1);
 }
 
-/* One colour, one motion: the bar reads as a level rising, not as a texture. */
 .job-rail {
   position: relative;
   display: block;
@@ -309,8 +286,6 @@ select:focus-visible {
   animation: stagger-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* -------------------------------------------------------------- responsive */
-
 @media (max-width: 1023px) {
   .editorial-stage {
     min-height: 0;
@@ -322,8 +297,6 @@ select:focus-visible {
     width: min(100% - 1.5rem, 1280px);
   }
 
-  /* The diagonal sheen is angled for a wide canvas; on a handset it crosses
-     the copy instead of the margin, so the ground here is weave and paper. */
   .landing-canvas {
     background:
       linear-gradient(115deg, rgba(24, 24, 21, 0.018) 1px, transparent 1px),

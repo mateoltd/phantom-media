@@ -1,5 +1,3 @@
-/* Everything the two surfaces disagree about. The paper ground is the default;
-   `cinema.css` re-points these and nothing else has to know which is on. */
 :root {
   --surface-scheme: light;
   --surface-weave: rgba(24, 24, 21, 0.018);
@@ -9,6 +7,19 @@
   --surface-hairline: rgba(255, 255, 255, 0.9);
   --surface-shadow: rgba(57, 43, 28, 0.07);
   --scrollbar-thumb: #c9c1b4;
+
+  /* The height of the app chrome, as a number the page below it can subtract.
+     `AppHeader` sets its own height from this rather than letting its padding
+     decide, so the two cannot drift apart: a 44px field inside 6px of padding,
+     over a hairline. */
+  --app-header-h: 3.5625rem;
+}
+
+@media (min-width: 640px) {
+  :root {
+    /* The same field inside 8px of padding once the wordmark appears. */
+    --app-header-h: 3.8125rem;
+  }
 }
 
 * {
@@ -18,8 +29,6 @@
 html {
   background: var(--color-bg);
   color-scheme: var(--surface-scheme);
-  /* Display type is set large enough that a stray glyph must never be able to
-     give the whole page a horizontal scrollbar. */
   overflow-x: clip;
 }
 
@@ -33,8 +42,6 @@ body {
   color: var(--color-text);
 }
 
-/* A print-grain overlay: the paper ground would read as flat screen colour
-   without it, and it is the cheapest way to keep the surface feeling physical. */
 body::before {
   position: fixed;
   z-index: 100;

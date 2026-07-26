@@ -1,12 +1,3 @@
-/*
- * The cinema surface. Imported by apps whose content is moving pictures, where
- * a paper ground would sit in front of the thing you came for. Everything is
- * the same system — same accent, same type, same radii — repainted onto ink.
- *
- * Only the theme's own variables are re-pointed here, so every component in
- * `@phantom/ui` and every primitive follows without knowing which surface it
- * is on.
- */
 :root {
   --color-bg: #0c0b0a;
   --color-surface: #171512;
@@ -36,8 +27,6 @@
   color: var(--color-text);
 }
 
-/* ------------------------------------------------------- repainted surfaces */
-
 .surface-card {
   border: 1px solid var(--color-border);
   background: color-mix(in oklab, var(--color-surface) 88%, transparent);
@@ -65,10 +54,6 @@
   background-size: 18px 18px, auto;
 }
 
-/* ------------------------------------------------------------------- rails */
-
-/* A row of titles scrolls sideways and snaps, and its scrollbar is not part of
-   the design — the cards are. */
 .rail {
   display: grid;
   grid-auto-flow: column;
@@ -80,8 +65,6 @@
   scroll-padding-inline: 1rem;
   scrollbar-width: none;
   padding-block: 0.35rem 1.1rem;
-  /* Matches `.app-shell`'s gutter so the first card lines up with the heading,
-     while the row itself still runs to the edge of the window. */
   padding-inline: max(1rem, calc((100% - 1440px) / 2));
 }
 
@@ -97,11 +80,6 @@
   --tile-width: 17rem;
 }
 
-/* Seasons scroll sideways for the same reason the rails do. Wrapped, a series
-   with twenty of them puts a nine-row block of pills between the heading and
-   the first episode — on a phone that is the whole screen, and the list you
-   came for starts below it. Same treatment as the season strip inside the
-   player, which had it right already. */
 .season-rail {
   display: flex;
   gap: 0.375rem;
@@ -118,8 +96,6 @@
   flex: none;
 }
 
-/* The row runs to the edge of the window, so it needs to look cut rather than
-   ended. */
 .rail-edges {
   position: relative;
 }
@@ -133,8 +109,6 @@
   pointer-events: none;
   background: linear-gradient(to left, var(--color-bg), transparent);
 }
-
-/* ------------------------------------------------------------------ tiles */
 
 .tile {
   position: relative;
@@ -163,12 +137,6 @@
   outline-offset: 2px;
 }
 
-/* ----------------------------------------------------------------- header */
-
-/* Over artwork, the bar is a gradient rather than a panel: a filled strip
-   across the top of a photograph cuts it in half, and the cut is the first
-   thing the eye lands on. Once the page has scrolled there is nothing behind
-   it worth showing through, so it fills in. */
 .header-scrim {
   background: linear-gradient(
     to bottom,
@@ -178,11 +146,6 @@
   );
 }
 
-/* ------------------------------------------------------------------- meta */
-
-/* Year, runtime and rating sit in a row with air between them instead of
-   punctuation. Genres are shapes rather than words in a list, which removes
-   the need to separate them at all. */
 .meta-row {
   display: flex;
   flex-wrap: wrap;
@@ -217,8 +180,6 @@
   color: var(--color-text-secondary);
 }
 
-/* ------------------------------------------------------------------- hero */
-
 .cinema-hero {
   position: relative;
   min-height: min(76svh, 44rem);
@@ -227,8 +188,6 @@
   overflow: hidden;
 }
 
-/* Two scrims rather than one: the vertical lift carries the copy at the
-   bottom, the horizontal keeps the left column legible over a busy frame. */
 .cinema-hero-scrim {
   position: absolute;
   inset: 0;
@@ -246,11 +205,6 @@
   object-position: center 22%;
 }
 
-/* ------------------------------------------------------------------ inset */
-
-/* A scrolling list inside a rounded panel: the browser draws the scrollbar on
-   the padding edge, where the corner radius clips it into a sliver. Giving the
-   scroll its own box inside the radius is the only reliable fix. */
 .inset-scroll {
   overflow-y: auto;
   overscroll-behavior: contain;

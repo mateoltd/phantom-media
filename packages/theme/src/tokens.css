@@ -1,7 +1,3 @@
-/*
- * Phantom's palette is a warm paper ground with one vermilion accent. Nothing
- * else in the system is allowed to compete with that accent for attention.
- */
 @theme {
   --color-phantom: #ff5a36;
   --color-phantom-light: #ff7658;
@@ -22,8 +18,6 @@
   --color-error: #b93825;
   --color-success: #197a52;
 
-  /* Media surfaces are the one place the palette goes dark: video wants an
-     ink ground so the picture, not the page, carries the colour. */
   --color-stage: #14130f;
   --color-stage-raised: #211f1a;
   --color-stage-line: #3b372f;
@@ -43,8 +37,6 @@
   to { opacity: 1; }
 }
 
-/* Drops from just under its trigger. Short on purpose: the search panel opens
-   on a keystroke, and anything slower reads as the field lagging. */
 @keyframes panel-in {
   from { opacity: 0; transform: translateY(-5px) scale(0.99); }
   to { opacity: 1; transform: translateY(0) scale(1); }

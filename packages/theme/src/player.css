@@ -1,13 +1,4 @@
-/*
- * Video chrome. Imported by apps that mount <VideoStage>; kept out of the
- * default theme bundle so pages without a player ship none of it.
- */
 
-/* The stage takes the shape of whatever is playing, not a shape of its own.
-   A fixed 16:9 box is what puts bands down the sides of a 2.39:1 film and
-   along the top of anything squarer, and a band is the frame admitting it
-   guessed wrong. `--stage-ratio` is set from the video's intrinsic size as
-   soon as the metadata arrives; until then 16:9 is the safest guess. */
 .stage {
   position: relative;
   aspect-ratio: var(--stage-ratio, 16 / 9);
@@ -16,8 +7,6 @@
   color: var(--color-stage-text);
 }
 
-/* The stage is its own fullscreen element, so it has to drop the ratio it
-   keeps in the page and fill whatever it is given. */
 .stage:fullscreen {
   aspect-ratio: auto;
   width: 100%;
@@ -25,16 +14,6 @@
   border-radius: 0;
 }
 
-/* The picture gets the full width of the page and nothing crops it.
-   Nothing narrows it either, and nothing caps its height: both are ways of
-   spending width to buy height, and the width they spend comes back as a band
-   down each side.
-
-   A height cap looks like the exception and is not. With a width already set,
-   clamping the height does not shrink the box back to the ratio — it leaves it
-   wider than the picture, and the picture centres inside it. Same band, harder
-   to find. So the stage is exactly as tall as the film is, and the film's own
-   proportions are what decide whether that clears the fold. */
 .stage-frame {
   background: var(--color-stage);
 }
@@ -45,9 +24,62 @@
   box-shadow: none;
 }
 
-/* A hairline inside the rounded corner rather than a border outside it: a
-   border would sit in the page's own colour and read as a frame around the
-   picture instead of an edge on it. */
+/* The stage is a fixed ratio of the window's width, so a wide, short window
+   asks for a taller picture than there is room under the header and the
+   transport row lands below the fold — you have to scroll the page to pause.
+   The picture keeps its width and gives ground at the top instead: the excess
+   runs up behind the header, where it is clipped, and the controls come to
+   rest exactly on the fold.
+
+   The floor stops that from running away on a very wide window. However much
+   the ratio asks for, what stays visible is never narrower than a scope frame
+   — up to that point the crop is eating the black bar a 2.35:1 title already
+   carries, past it it would start taking heads off. */
+@media (min-width: 1024px) {
+  .stage-frame {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    /* `clip` and not `hidden`: `hidden` makes a scroll container, and focusing
+       anything in the hidden strip would scroll the picture back down and push
+       the controls off the bottom again. */
+    overflow: clip;
+    max-height: max(calc(100svh - var(--app-header-h)), 42.55vw);
+  }
+
+  /* Otherwise the cap squeezes the stage to fit rather than overflowing it,
+     and the aspect ratio goes with it. */
+  .stage-frame > .stage {
+    flex: none;
+  }
+
+  /* How much of the picture went up behind the header — the same expression as
+     the cap, subtracted from what the ratio asked for. Everything the stage
+     draws from its top edge has to start below that instead: the play button
+     and the race read as centred, and the episode drawer runs the height of
+     the picture, so measured from the box they would sit half above the screen. */
+  .stage-frame {
+    --stage-clip: max(
+      0px,
+      calc(56.25vw - max(calc(100svh - var(--app-header-h)), 42.55vw))
+    );
+  }
+
+  .stage-frame .stage-center,
+  .stage-frame .stage-panel,
+  .stage-frame .stage-shortcuts {
+    inset-block-start: var(--stage-clip);
+  }
+
+  /* Fullscreen leaves the frame's layout behind but not its custom properties:
+     the stage is still a descendant, so the offset would follow it in. */
+  .stage-frame .stage:fullscreen .stage-center,
+  .stage-frame .stage:fullscreen .stage-panel,
+  .stage-frame .stage:fullscreen .stage-shortcuts {
+    inset-block-start: 0;
+  }
+}
+
 .stage::after {
   content: "";
   position: absolute;
@@ -61,12 +93,6 @@
   display: none;
 }
 
-/* The hairline was an edge on a picture that ran the full width of the page.
-   Once the stage is inset — because the height available under the header
-   decides its width — the same line closes into a rectangle and reads as a
-   frame drawn around the film. The surround and the stage are the same colour,
-   so with the line gone the letterbox is one continuous dark field rather than
-   a bordered box floating in one. */
 .stage-frame .stage::after {
   display: none;
 }
@@ -79,14 +105,6 @@
   background: var(--color-stage);
 }
 
-/* What the stage is doing, said in the middle of the picture: the spinner and
-   its caption, the play affordance, the error.
-
-   Centred in the whole stage where there is room for that, and stopped above
-   the controls where there is not. The stage is a fixed ratio of the width, so
-   a handset gets one about a fifth as tall as a laptop's — and at that height
-   "centred in the picture" and "where the buttons are" are the same pixels.
-   The race caption was being drawn underneath the transport row. */
 .stage-center {
   position: absolute;
   inset: 0;
@@ -97,13 +115,9 @@
   gap: 1rem;
   padding-inline: 1.5rem;
   text-align: center;
-  /* Now that there is artwork behind it rather than a flat dark ground, the
-     caption has to hold against whatever frame the title happens to use. */
   text-shadow: 0 1px 3px rgba(9, 9, 7, 0.85);
 }
 
-/* Controls sit on a gradient rather than a solid bar so the bottom of the
-   picture stays visible while they are up. */
 .stage-chrome {
   position: absolute;
   inset: auto 0 0 0;
@@ -119,10 +133,6 @@
     transform 0.22s ease;
 }
 
-/* The counterpart band at the top. It carries what is playing, which in
-   fullscreen is otherwise nowhere on screen at all — and having the picture
-   framed top and bottom reads as deliberate, where one heavy strip pasted
-   along the bottom edge does not. */
 .stage-top {
   position: absolute;
   inset: 0 0 auto 0;
@@ -142,17 +152,11 @@
     transform 0.22s ease;
 }
 
-/* A phone gets a stage about a fifth the height of a laptop's, and the chrome
-   does not shrink with it: the gradient's 3.5rem head start is most of a
-   handset stage on its own. Everything here buys that height back. */
 @media (max-width: 640px) {
   .stage-chrome {
     padding: 1.5rem 0.5rem 0.5rem;
   }
 
-  /* Exactly the height of the chrome's own content — 20px of scrub, a 32px
-     row and 8px under it. Guessing high leaves a dead band above the scrub
-     bar; guessing low puts the caption back under the buttons. */
   .stage-center {
     inset-block-end: 4rem;
     gap: 0.75rem;
@@ -163,9 +167,6 @@
     gap: 0.25rem;
   }
 
-  /* All three of these are positioned off the bottom edge in rem, which
-     assumes a stage tall enough to have a bottom edge worth measuring from.
-     At 12.5rem the skip button cleared the top of a handset stage entirely. */
   .stage-toast {
     left: 0.6rem;
     bottom: 4rem;
@@ -185,8 +186,6 @@
   }
 }
 
-/* Idleness is a single class on the stage rather than a piece of React state,
-   so a pointer crossing the picture never re-renders the player. */
 .stage-idle {
   cursor: none;
 }
@@ -203,11 +202,6 @@
   pointer-events: none;
 }
 
-/* ----------------------------------------------------------------- captions */
-
-/* Subtitles are painted here rather than by the browser, which is the only way
-   they can be sized, given a backdrop, and — the reason this exists — lifted
-   clear of the controls when the chrome is up. */
 .stage-cues {
   position: absolute;
   z-index: 2;
@@ -224,8 +218,6 @@
   transition: bottom 0.22s ease;
 }
 
-/* Out of the way of the controls while they are visible, and back down over
-   the picture the moment they go. */
 .stage-idle .stage-cues {
   bottom: 1.5rem;
 }
@@ -239,8 +231,6 @@
   font-size: var(--cue-size, 1.6rem);
   font-weight: 600;
   line-height: 1.3;
-  /* A shadow keeps cues readable over snow and headlights even with the
-     backdrop turned off. */
   text-shadow:
     0 2px 4px rgba(0, 0, 0, 0.85),
     0 0 2px rgba(0, 0, 0, 0.95);
@@ -261,15 +251,6 @@
   .stage-cues-lg { --cue-size: 1.4rem; }
 }
 
-/* ------------------------------------------------------------ race progress */
-
-/* One mark per source, in the order they are being asked. A spinner says only
-   that something is happening; this says how much of the roster has answered,
-   which is the difference between waiting and wondering. */
-/* One row, always. Wrapped, a roster that does not divide by the row length
-   leaves two marks stranded on a line of their own, which reads as a second
-   thing happening rather than as the end of the first. The marks share out
-   whatever width there is instead, up to the size they want. */
 .stage-progress {
   display: flex;
   flex-wrap: nowrap;
@@ -308,10 +289,6 @@
   50% { opacity: 1; }
 }
 
-/* ------------------------------------------------------------------- toast */
-
-/* Says what just happened without asking anything. Resuming silently is
-   disorienting; a modal asking permission to resume is worse. */
 .stage-toast {
   position: absolute;
   z-index: 2;
@@ -341,12 +318,6 @@
   pointer-events: none;
 }
 
-/* ---------------------------------------------------------- settings sheet */
-
-/* Quality, speed, subtitles and source used to be four separate popovers side
-   by side, which made the right-hand end of the bar a wall of identical
-   glyphs. One sheet with named sections is fewer things to aim at and says
-   what each of them is. */
 .stage-sheet {
   position: absolute;
   z-index: 4;
@@ -418,17 +389,12 @@
 
 .stage-sheet-row:hover { background: rgba(255, 255, 255, 0.08); }
 
-/* Sentence case, not an eyebrow. An eyebrow is a category — one or two words
-   naming what follows — and setting a whole sentence in tracked capitals makes
-   a line that shouts and is harder to read than the options underneath it. */
 .stage-sheet-note {
   padding: 0.45rem 0.5rem 0.3rem;
   color: var(--color-stage-muted);
   font-size: 11px;
   line-height: 1.45;
 }
-
-/* -------------------------------------------------------------- shortcuts */
 
 .stage-shortcuts {
   position: absolute;
@@ -448,11 +414,6 @@
   to { opacity: 1; }
 }
 
-/* ------------------------------------------------------------ side panel */
-
-/* The episode list, docked inside the picture so it is reachable in
-   fullscreen. It slides over the frame rather than resizing it: the video
-   should not move because a list opened next to it. */
 .stage-panel {
   position: absolute;
   z-index: 3;
@@ -485,8 +446,6 @@
   display: none;
 }
 
-/* ---------------------------------------------------------------- up next */
-
 .stage-upnext {
   position: absolute;
   z-index: 2;
@@ -517,14 +476,6 @@
   visibility: hidden;
 }
 
-/* --------------------------------------------------------------- skip past */
-
-/* Only shown when the stream itself declares a chapter worth skipping, and
-   labelled with that chapter's own name. Nothing is guessed.
-
-   Above the up-next card rather than beside it: the two are usually far apart
-   in a runtime, but a stream that marks a recap at the top of a short episode
-   can have both up at once, and they were sharing the same corner. */
 .stage-skip {
   position: absolute;
   z-index: 2;
@@ -565,12 +516,6 @@
   visibility: hidden;
 }
 
-/* ------------------------------------------------------------------ scrub */
-
-/* The playhead, the buffer and the hover preview are all custom properties
-   written straight onto `.scrub` by the component. Nothing below is rendered
-   by React, which is what keeps a scrub at sixty frames from costing sixty
-   renders of the player. */
 .scrub {
   --played: 0%;
   --buffered: 0%;
@@ -673,11 +618,6 @@
   opacity: 1;
 }
 
-/* ----------------------------------------------------------------- volume */
-
-/* The slider used to unfold on hover, which meant aiming at a control that
-   was not there yet and lost it again on the way. It is simply present now,
-   and steps out of the way entirely where there is no room for it. */
 .stage-volume-group {
   display: flex;
   align-items: center;
@@ -745,18 +685,11 @@
     display: none;
   }
 
-  /* The gap was there to separate the slider from the timecode. With no
-     slider it is just the mute button sitting further from its neighbours
-     than any other button in the row. */
   .stage-volume-group {
     padding-right: 0;
   }
 }
 
-/* ------------------------------------------------------------- indicators */
-
-/* A one-shot badge for keyboard seeks and volume nudges: it says what just
-   happened without adding a permanent readout to the chrome. */
 .stage-flash {
   animation: stage-flash 0.62s ease-out both;
 }
