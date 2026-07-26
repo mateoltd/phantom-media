@@ -2,7 +2,6 @@
    `cinema.css` re-points these and nothing else has to know which is on. */
 :root {
   --surface-scheme: light;
-  --surface-glow: rgba(255, 90, 54, 0.14);
   --surface-weave: rgba(24, 24, 21, 0.018);
   --surface-grain: rgba(39, 32, 24, 0.12);
   --surface-grain-opacity: 0.19;
@@ -28,10 +27,9 @@ body {
   position: relative;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 72% 18%, var(--surface-glow), transparent 30rem),
     linear-gradient(115deg, var(--surface-weave) 1px, transparent 1px),
     var(--color-bg);
-  background-size: auto, 18px 18px, auto;
+  background-size: 18px 18px, auto;
   color: var(--color-text);
 }
 

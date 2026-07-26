@@ -112,27 +112,17 @@ select:focus-visible {
 
 .landing-canvas {
   background:
-    radial-gradient(
-      ellipse 48rem 34rem at calc(100% - 7rem) 22rem,
-      rgba(255, 90, 54, 0.26),
-      transparent 72%
-    ),
     linear-gradient(103deg, rgba(255, 255, 255, 0.42), transparent 45%),
     linear-gradient(115deg, rgba(24, 24, 21, 0.018) 1px, transparent 1px),
     var(--color-bg);
-  background-size: auto, auto, 18px 18px, auto;
+  background-size: auto, 18px 18px, auto;
 }
 
 .workspace-canvas {
   background:
-    radial-gradient(
-      ellipse 40rem 26rem at calc(100% - 4rem) -6rem,
-      rgba(255, 90, 54, 0.16),
-      transparent 70%
-    ),
     linear-gradient(115deg, rgba(24, 24, 21, 0.018) 1px, transparent 1px),
     var(--color-bg);
-  background-size: auto, 18px 18px, auto;
+  background-size: 18px 18px, auto;
 }
 
 /* ------------------------------------------------------------- editorial */
@@ -332,17 +322,13 @@ select:focus-visible {
     width: min(100% - 1.5rem, 1280px);
   }
 
-  /* The tinted bloom is a highlight, not a wash: it must not tint the copy. */
+  /* The diagonal sheen is angled for a wide canvas; on a handset it crosses
+     the copy instead of the margin, so the ground here is weave and paper. */
   .landing-canvas {
     background:
-      radial-gradient(
-        ellipse 26rem 20rem at 108% 2rem,
-        rgba(255, 90, 54, 0.2),
-        transparent 70%
-      ),
       linear-gradient(115deg, rgba(24, 24, 21, 0.018) 1px, transparent 1px),
       var(--color-bg);
-    background-size: auto, 18px 18px, auto;
+    background-size: 18px 18px, auto;
   }
 
   .poster-dots {

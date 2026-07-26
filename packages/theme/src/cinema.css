@@ -23,7 +23,6 @@
   --color-success: #56cf95;
 
   --surface-scheme: dark;
-  --surface-glow: rgba(255, 90, 54, 0.1);
   --surface-weave: rgba(255, 255, 255, 0.02);
   --surface-grain: rgba(255, 255, 255, 0.055);
   --surface-grain-opacity: 0.1;
@@ -61,14 +60,9 @@
 .workspace-canvas,
 .landing-canvas {
   background:
-    radial-gradient(
-      ellipse 44rem 30rem at calc(100% - 6rem) -4rem,
-      rgba(255, 90, 54, 0.12),
-      transparent 70%
-    ),
     linear-gradient(115deg, var(--surface-weave) 1px, transparent 1px),
     var(--color-bg);
-  background-size: auto, 18px 18px, auto;
+  background-size: 18px 18px, auto;
 }
 
 /* ------------------------------------------------------------------- rails */
