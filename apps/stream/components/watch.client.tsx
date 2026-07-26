@@ -431,9 +431,7 @@ export default function WatchPageClient({
           </div>
 
           {(currentEpisode?.overview || media.overview) && (
-            <p className="mt-5 text-[13.5px] leading-6 text-text-secondary">
-              {currentEpisode?.overview || media.overview}
-            </p>
+            <Synopsis text={currentEpisode?.overview || media.overview} />
           )}
         </div>
 
@@ -490,6 +488,42 @@ function liveDetail(status?: string): string | undefined {
     default:
       return undefined;
   }
+}
+
+/**
+ * The synopsis, three lines deep until asked for the rest.
+ *
+ * At full length it is the tallest thing between the picture and the episode
+ * list — eight lines on a handset — so changing episode meant scrolling past a
+ * paragraph already read to reach the list. Clamped, both ends of the page are
+ * a short scroll apart, and nothing is hidden: the rest is one tap away and
+ * stays open once opened.
+ *
+ * Above the small breakpoint there is room for the whole thing and no clamp.
+ */
+function Synopsis({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="mt-5">
+      <p
+        className={`text-[13.5px] leading-6 text-text-secondary ${
+          expanded ? "" : "line-clamp-3 sm:line-clamp-none"
+        }`}
+      >
+        {text}
+      </p>
+      {!expanded && (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="mt-1.5 text-[12px] font-bold text-text-secondary transition-colors hover:text-text sm:hidden"
+        >
+          More
+        </button>
+      )}
+    </div>
+  );
 }
 
 /** The saved subtitle language first, then whatever the browser asks for. */

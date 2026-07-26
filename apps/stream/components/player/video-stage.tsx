@@ -648,17 +648,23 @@ export function VideoStage({
       onPointerMove={wake}
       onPointerLeave={() => playingRef.current && setIdle(true)}
     >
+      {/* Bright enough to be a picture. At 45% under a scrim that was 45% at
+          its thinnest, the artwork came through at about a quarter strength —
+          which on a handset stage is a black box with a spinner in it, and
+          reads as something broken rather than as something loading. The
+          gradient still goes solid at the bottom, because the controls sit
+          there and need the contrast. */}
       {showPoster && (
         <Artwork
           src={poster}
           sizes="(min-width: 1024px) 80vw, 100vw"
           priority
-          className="opacity-45"
+          className="opacity-80"
         />
       )}
       {status !== "ready" && (
         <div
-          className="absolute inset-0 bg-gradient-to-t from-stage via-stage/45 to-stage/70"
+          className="absolute inset-0 bg-gradient-to-t from-stage via-stage/35 to-stage/60"
           aria-hidden="true"
         />
       )}

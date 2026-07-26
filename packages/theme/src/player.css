@@ -97,6 +97,9 @@
   gap: 1rem;
   padding-inline: 1.5rem;
   text-align: center;
+  /* Now that there is artwork behind it rather than a flat dark ground, the
+     caption has to hold against whatever frame the title happens to use. */
+  text-shadow: 0 1px 3px rgba(9, 9, 7, 0.85);
 }
 
 /* Controls sit on a gradient rather than a solid bar so the bottom of the

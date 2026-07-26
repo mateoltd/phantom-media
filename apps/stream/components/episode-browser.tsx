@@ -86,7 +86,7 @@ export function EpisodeBrowser({
   }
 
   return (
-    <section className="mt-12">
+    <section className="mt-8 sm:mt-12">
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-border pb-4">
         <h2 className="text-[17px] font-extrabold tracking-[-0.01em] text-text">
           Episodes
