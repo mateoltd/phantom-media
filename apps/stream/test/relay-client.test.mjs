@@ -80,9 +80,9 @@ test("normalizes upstream source objects into player candidates", async () => {
     },
   });
 
-  const result = await client.resolveScraper(tvMedia, "q4");
+  const result = await client.resolveScraper(tvMedia, "va");
   assert.equal(requestUrl.pathname, "/api/providerv4/scrape");
-  assert.equal(requestUrl.searchParams.get("scraper"), "q4");
+  assert.equal(requestUrl.searchParams.get("scraper"), "va");
   assert.equal(requestUrl.searchParams.get("seasonId"), "1");
   assert.equal(requestUrl.searchParams.get("episodeId"), "1");
   assert.equal(
@@ -91,9 +91,9 @@ test("normalizes upstream source objects into player candidates", async () => {
   );
   // The upstream host name ("Emerald") must not survive normalisation: every
   // candidate is labelled with this source's in-house alias instead.
-  assert.equal(result.serverLabel, "Source 01");
-  assert.equal(result.candidates[0].serverLabel, "Source 01");
-  assert.equal(result.candidates[0].server, "q4");
+  assert.equal(result.serverLabel, "Source 03");
+  assert.equal(result.candidates[0].serverLabel, "Source 03");
+  assert.equal(result.candidates[0].server, "va");
   assert.equal(result.candidates[0].type, "hls");
   assert.equal(result.subtitles.length, 1);
 });
@@ -112,7 +112,7 @@ test("hands the caller's abort signal to the upstream request", async () => {
   });
 
   const controller = new AbortController();
-  await client.resolveScraper(tvMedia, "q4", { signal: controller.signal });
+  await client.resolveScraper(tvMedia, "va", { signal: controller.signal });
   // Without this the subrequest outlives the router that gave up on it.
   assert.equal(seen, controller.signal);
 });
@@ -122,7 +122,7 @@ test("a rate limit cools down every source, not just the one that hit it", async
     fetchImpl: async () => jsonResponse({ error: "slow down" }, 429),
   });
 
-  await assert.rejects(client.resolveScraper(tvMedia, "q4"), { status: 429 });
+  await assert.rejects(client.resolveScraper(tvMedia, "va"), { status: 429 });
 
   // A limiter armed upstream is armed for all of them, so asking a different
   // source next would only deepen it.
@@ -147,8 +147,8 @@ test("a source that just failed is not asked again immediately", async () => {
     },
   });
 
-  await assert.rejects(client.resolveScraper(tvMedia, "q4"), { status: 502 });
-  await assert.rejects(client.resolveScraper(tvMedia, "q4"), (error) => {
+  await assert.rejects(client.resolveScraper(tvMedia, "va"), { status: 502 });
+  await assert.rejects(client.resolveScraper(tvMedia, "va"), (error) => {
     assert.equal(error.status, 503);
     assert.equal(error.details.localCooldown, true);
     return true;
@@ -169,11 +169,11 @@ test("a second request for the same episode is served from cache", async () => {
     },
   });
 
-  await client.resolveScraper(tvMedia, "q4");
-  await client.resolveScraper(tvMedia, "q4");
+  await client.resolveScraper(tvMedia, "va");
+  await client.resolveScraper(tvMedia, "va");
   assert.equal(calls, 1);
 
-  await client.resolveScraper(tvMedia, "q4", { fresh: true });
+  await client.resolveScraper(tvMedia, "va", { fresh: true });
   assert.equal(calls, 2);
 });
 
@@ -194,7 +194,7 @@ test("a request the caller hung up on is not held against the source", async () 
   });
 
   await assert.rejects(
-    client.resolveScraper(tvMedia, "q4", {
+    client.resolveScraper(tvMedia, "va", {
       signal: controller.signal,
       abandoned: controller.signal,
     }),
@@ -205,11 +205,11 @@ test("a request the caller hung up on is not held against the source", async () 
   );
 
   assert.equal(
-    client.serverHealth().q4.cooldownUntil,
+    client.serverHealth().va.cooldownUntil,
     0,
     "an abandoned request must leave no cooldown behind",
   );
-  assert.equal(client.serverHealth().q4.consecutiveFailures, 0);
+  assert.equal(client.serverHealth().va.consecutiveFailures, 0);
 });
 
 test("a source that really did fail is still cooled", async () => {

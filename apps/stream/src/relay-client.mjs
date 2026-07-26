@@ -5,7 +5,11 @@ import {
   pbkdf2Sync,
 } from "node:crypto";
 import { ServerPool } from "./server-pool.mjs";
-import { SOURCE_ALIASES, SOURCE_IDS } from "./source-ids.mjs";
+import {
+  ACTIVE_SOURCE_IDS,
+  SOURCE_ALIASES,
+  SOURCE_IDS,
+} from "./source-ids.mjs";
 import { normalizeVariants, numericResolution } from "./providers/normalize.mjs";
 import { debugEvent } from "./debug.mjs";
 
@@ -178,7 +182,7 @@ export class RelayClient {
     this.cacheTtlMs = options.cacheTtlMs ?? CACHE_TTL_MS;
     this.pool =
       options.pool ??
-      new ServerPool(options.scrapers ?? SOURCE_IDS);
+      new ServerPool(options.scrapers ?? ACTIVE_SOURCE_IDS);
     if (typeof this.fetch !== "function") {
       throw new TypeError("A fetch implementation is required");
     }
@@ -186,7 +190,10 @@ export class RelayClient {
 
   async resolveScraper(media, scraper, options = {}) {
     assertMediaInput(media);
-    if (!SOURCE_IDS.includes(scraper)) {
+    // Retired codes fail here rather than reaching upstream: the alias list is
+    // append-only, so a retired id stays a *known* code forever and would
+    // otherwise still resolve.
+    if (!ACTIVE_SOURCE_IDS.includes(scraper)) {
       throw new TypeError(`Unknown source "${scraper}"`);
     }
 

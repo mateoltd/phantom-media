@@ -58,6 +58,16 @@ screen or a log line. The aliases are positional and the order never changes,
 which keeps `Source 07` meaning the same thing between sessions. That last part
 is why the id list is append-only: inserting one renumbers every alias after it.
 
+### Retiring one
+
+Add its code to `RETIRED_SOURCE_IDS` with the reason beside it. Nothing is
+deleted from `SOURCE_IDS` — the alias *is* the index, so removing an entry
+would slide every source after it up a number and quietly change what a
+persisted score, a debug log or a support conversation from last week refers
+to. The retired code stays known forever and stops resolving: no descriptor, no
+registry entry, no roster row, and a 400 from the route if something asks for
+it by name.
+
 `normalizeVariants` in `src/providers/normalize.mjs` is the only function that
 can mint a candidate, and it stamps identity from the catalog while discarding
 whatever the provider supplied for those fields. `test/providers.test.mjs`

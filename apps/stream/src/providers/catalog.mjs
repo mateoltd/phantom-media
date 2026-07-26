@@ -12,15 +12,19 @@
  * Deliberately free of node builtins: the browser bundle imports this too.
  */
 
-import { SOURCE_IDS, sourceAlias } from "../source-ids.mjs";
+import { ACTIVE_SOURCE_IDS, sourceAlias } from "../source-ids.mjs";
 
 /**
- * The relay speaks to all fourteen of these the same way, so they share a
- * kind. A source reached some other way declares its own, and a resolver for
- * that kind has to exist in the registry or nothing starts.
+ * The relay speaks to all of these the same way, so they share a kind. A
+ * source reached some other way declares its own, and a resolver for that kind
+ * has to exist in the registry or nothing starts.
+ *
+ * Built from the active list, so a retired source has no descriptor, no
+ * registry entry and no route: asking for one by name is a 400 rather than a
+ * request nobody meant to make.
  */
 const DECLARED = Object.freeze([
-  ...SOURCE_IDS.map((id) => Object.freeze({ id, kind: "relay" })),
+  ...ACTIVE_SOURCE_IDS.map((id) => Object.freeze({ id, kind: "relay" })),
 ]);
 
 export const PROVIDER_CATALOG = Object.freeze(

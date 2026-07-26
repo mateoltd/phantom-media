@@ -7,7 +7,13 @@ import {
 } from "../src/providers/catalog.mjs";
 import { normalizeVariants } from "../src/providers/normalize.mjs";
 import { getProvider, listProviders } from "../src/providers/registry.mjs";
-import { SOURCE_IDS } from "../src/source-ids.mjs";
+import {
+  ACTIVE_SOURCE_IDS,
+  RETIRED_SOURCE_IDS,
+  SOURCE_IDS,
+  SOURCE_ROSTER,
+  sourceAlias,
+} from "../src/source-ids.mjs";
 
 test("every catalogued source has something that can answer for it", () => {
   // The registry throws at import if this is not true, so reaching here is
@@ -30,16 +36,36 @@ test("an unknown source is refused rather than guessed at", () => {
 test("source aliases are positional and stable", () => {
   // "Source 07" has to mean the same thing between sessions, so ids may only
   // ever be appended. Inserting one renumbers everything after it.
-  assert.equal(PROVIDER_CATALOG[0].label, "Source 01");
-  assert.equal(PROVIDER_CATALOG[6].label, "Source 07");
-  assert.equal(PROVIDER_CATALOG.length, SOURCE_IDS.length);
-  PROVIDER_CATALOG.forEach((descriptor, index) => {
-    assert.equal(descriptor.id, SOURCE_IDS[index]);
+  //
+  // Retiring must not renumber either, which is why the number comes from the
+  // full roster rather than from the catalog: a source's alias is where its
+  // code sits in `SOURCE_IDS`, not where it sits in what is left.
+  assert.equal(sourceAlias(SOURCE_IDS[0]), "Source 01");
+  assert.equal(sourceAlias(SOURCE_IDS[6]), "Source 07");
+  for (const descriptor of PROVIDER_CATALOG) {
+    const position = SOURCE_IDS.indexOf(descriptor.id);
+    assert.ok(position >= 0, `${descriptor.id} is not on the roster`);
     assert.equal(
       descriptor.label,
-      `Source ${String(index + 1).padStart(2, "0")}`,
+      `Source ${String(position + 1).padStart(2, "0")}`,
     );
-  });
+  }
+});
+
+test("a retired source is off the roster everywhere at once", () => {
+  assert.equal(
+    PROVIDER_CATALOG.length,
+    SOURCE_IDS.length - RETIRED_SOURCE_IDS.size,
+  );
+  for (const id of RETIRED_SOURCE_IDS) {
+    // Still a known code — that is what keeps the numbering still — but it
+    // has no descriptor, so nothing can resolve through it.
+    assert.ok(SOURCE_IDS.includes(id), `${id} left the roster`);
+    assert.equal(providerDescriptor(id), null);
+    assert.equal(getProvider(id), null);
+    assert.ok(!SOURCE_ROSTER.some((entry) => entry.id === id));
+    assert.ok(!ACTIVE_SOURCE_IDS.includes(id));
+  }
 });
 
 test("catalogued ids are unique", () => {
@@ -55,7 +81,7 @@ test("no third party's name survives normalisation", () => {
       { url: "https://helios.example/a.m3u8", type: "Helios", quality: "1080p" },
       { url: "https://cdn.example/b.mp4", type: "mp4", quality: "720" },
     ],
-    "q4",
+    "va",
   );
 
   assert.equal(candidates.length, 2);
@@ -101,7 +127,7 @@ test("resolution is read from whatever the variant calls its quality", () => {
       { url: "https://play.example/b.m3u8", type: "hls", quality: 720 },
       { url: "https://play.example/c.m3u8", type: "hls", quality: "auto" },
     ],
-    "q4",
+    "va",
   );
   const byUrl = Object.fromEntries(candidates.map((c) => [c.url, c]));
   assert.equal(byUrl["https://play.example/a.m3u8"].resolution, 1080);
@@ -117,7 +143,7 @@ test("the container is inferred from the address when upstream will not say", ()
       { url: "https://play.example/c.mp4" },
       { url: "https://play.example/d" },
     ],
-    "q4",
+    "va",
   );
   const types = Object.fromEntries(candidates.map((c) => [c.url, c.type]));
   assert.equal(types["https://play.example/a.m3u8"], "hls");
@@ -135,7 +161,7 @@ test("anything that is not a web address is dropped", () => {
       { url: null },
       { url: "https://play.example/ok.m3u8" },
     ],
-    "q4",
+    "va",
   );
   assert.equal(candidates.length, 1);
   assert.equal(candidates[0].url, "https://play.example/ok.m3u8");
@@ -147,7 +173,7 @@ test("the same address is only offered once", () => {
       { url: "https://play.example/a.m3u8", quality: "1080p" },
       { url: "https://play.example/a.m3u8", quality: "720p" },
     ],
-    "q4",
+    "va",
   );
   assert.equal(candidates.length, 1);
 });
@@ -159,12 +185,12 @@ test("candidate ids are unique within one answer", () => {
       { url: "https://play.example/b.m3u8" },
       { url: "https://play.example/c.mp4" },
     ],
-    "q4",
+    "va",
   );
   assert.equal(new Set(candidates.map((c) => c.id)).size, candidates.length);
 });
 
 test("nothing in, nothing out", () => {
-  assert.deepEqual(normalizeVariants([], "q4"), []);
-  assert.deepEqual(normalizeVariants(undefined, "q4"), []);
+  assert.deepEqual(normalizeVariants([], "va"), []);
+  assert.deepEqual(normalizeVariants(undefined, "va"), []);
 });
