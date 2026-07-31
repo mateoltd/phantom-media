@@ -29,3 +29,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+
+# Phantom protocol laboratory restricted/local state
+packages/instagram-protocol/research/subjects.local.json
+packages/instagram-protocol/research/targets.local.json
+packages/instagram-protocol/research/runs/*
+packages/instagram-protocol/research/reports/*
+!packages/instagram-protocol/research/runs/.gitkeep
+!packages/instagram-protocol/research/reports/.gitkeep
