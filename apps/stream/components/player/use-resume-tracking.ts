@@ -5,11 +5,6 @@ import { saveResumePoint } from "@/lib/resume";
 
 const SAVE_INTERVAL_MS = 5_000;
 
-/**
- * Keeps the stored playback position current for as long as this key is the
- * one playing. Writing on `pagehide` as well as on a timer is what makes a
- * closed tab remember where it was, since no unmount runs in that case.
- */
 export function useResumeTracking(
   videoRef: RefObject<HTMLVideoElement | null>,
   key: string | null,

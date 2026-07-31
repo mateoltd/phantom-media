@@ -1,16 +1,5 @@
-/**
- * The roster of playback sources, and the only place their names are decided.
- *
- * Upstream identifies each one by a two-character code and labels it with a
- * third party's brand. Phantom keeps the codes (they are what the API needs)
- * and replaces the labels with fixed in-house aliases, so no third-party name
- * reaches a response body, a screen or a log line. The aliases are positional
- * and the order never changes, which keeps "Source 07" meaning the same thing
- * from one session to the next.
- *
- * Deliberately free of node builtins: the browser bundle imports this too.
- */
 
+// Append only because each public alias and persisted score depends on its index.
 export const SOURCE_IDS = Object.freeze([
   "q4",
   "k9",
@@ -26,23 +15,107 @@ export const SOURCE_IDS = Object.freeze([
   "vc",
   "h0",
   "v2",
+  "t0",
+  "t1",
+  "t2",
+  "n1",
+  "r6",
+  "m8",
+  "d4",
+  "w3",
+  "g6",
+  "x1",
+  "j7",
+  "c2",
+  "l5",
+  "u9",
 ]);
 
-/**
- * Sources that are no longer asked, by code and with the reason kept next to
- * it. Retiring is exclusion rather than deletion because the alias is the
- * index: dropping an entry from `SOURCE_IDS` would slide every source after it
- * up a number, so a persisted score, a support conversation and a debug log
- * from last week would all quietly start meaning a different host.
- *
- * The codes stay in the roster above forever. This set is what shrinks.
- */
 export const RETIRED_SOURCE_IDS = Object.freeze(
   new Set([
-    // Serves an Indian catalogue — its origins behind the relay's proxy are
-    // multimovies hosts, which carry Hindi dubs of non-Indian titles.
-    "q4",
+    // Duplicate of Source 03. Retained to preserve positional aliases.
+    "p6",
+    // Embed-only research targets. Retained so Source aliases never shift.
+    "r6",
+    "m8",
+    "d4",
+    "w3",
+    "g6",
+    "x1",
+    "j7",
+    "c2",
+    "l5",
   ]),
+);
+
+export const RESERVED_SOURCE_IDS = Object.freeze(new Set());
+
+export const STREMIO_SOURCE_IDS = Object.freeze(["t0", "t1", "t2"]);
+export const VIDEASY_SOURCE_ID = "b5";
+export const VIDFAST_SOURCE_ID = "u9";
+export const NON_RELAY_SOURCE_IDS = Object.freeze([
+  ...STREMIO_SOURCE_IDS,
+  "n1",
+  VIDEASY_SOURCE_ID,
+  VIDFAST_SOURCE_ID,
+]);
+
+const STREMIO_ENV_KEYS = Object.freeze([
+  "STREMIO_ADDON_URL_1",
+  "STREMIO_ADDON_URL_2",
+  "STREMIO_ADDON_URL_3",
+]);
+
+export function parseStremioManifestUrl(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new TypeError("Stremio addon URLs must be valid HTTPS URLs");
+  }
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    !url.pathname.endsWith("/manifest.json")
+  ) {
+    throw new TypeError(
+      "Stremio addon URLs must be public HTTPS manifest.json URLs without credentials, query strings, or fragments",
+    );
+  }
+
+  const hostname = url.hostname.toLowerCase();
+  if (
+    hostname === "localhost" ||
+    hostname.endsWith(".localhost") ||
+    hostname.endsWith(".local") ||
+    !hostname.includes(".") ||
+    /^\d+(?:\.\d+){3}$/.test(hostname) ||
+    hostname.includes(":")
+  ) {
+    throw new TypeError("Stremio addon URLs must use a public DNS hostname");
+  }
+  return url.href;
+}
+
+export const STREMIO_ADDON_URLS = Object.freeze(
+  Object.fromEntries(
+    STREMIO_SOURCE_IDS.flatMap((id, index) => {
+      const manifestUrl = parseStremioManifestUrl(
+        process.env[STREMIO_ENV_KEYS[index]],
+      );
+      return manifestUrl ? [[id, manifestUrl]] : [];
+    }).filter(
+      ([, manifestUrl], index, entries) =>
+        entries.findIndex(([, candidate]) => candidate === manifestUrl) ===
+        index,
+    ),
+  ),
 );
 
 export const SOURCE_ALIASES = Object.freeze(
@@ -54,20 +127,40 @@ export const SOURCE_ALIASES = Object.freeze(
   ),
 );
 
-/**
- * The sources actually asked. Everything downstream — the roster the watch
- * page renders, the provider catalog, what the API route accepts — is built
- * from this, so retiring one is the single edit above.
- */
-export const ACTIVE_SOURCE_IDS = Object.freeze(
-  SOURCE_IDS.filter((id) => !RETIRED_SOURCE_IDS.has(id)),
+// Temporary two-provider roster while the native Vidfast and Videasy
+// integrations are validated. Append-only aliases stay intact for rollback.
+export const ACTIVE_SOURCE_IDS = Object.freeze([
+  VIDFAST_SOURCE_ID,
+  VIDEASY_SOURCE_ID,
+]);
+
+export const AUTOMATIC_SOURCE_IDS = Object.freeze(
+  ACTIVE_SOURCE_IDS,
 );
 
-/** Falls back to the raw code so an unknown id can never render as blank. */
+export const RELAY_CAPABLE_SOURCE_IDS = Object.freeze(
+  SOURCE_IDS.filter(
+    (id) =>
+      !NON_RELAY_SOURCE_IDS.includes(id) &&
+      !RETIRED_SOURCE_IDS.has(id) &&
+      !RESERVED_SOURCE_IDS.has(id),
+  ),
+);
+
+export const RELAY_SOURCE_IDS = Object.freeze(
+  ACTIVE_SOURCE_IDS.filter((id) => !NON_RELAY_SOURCE_IDS.includes(id)),
+);
+
 export function sourceAlias(id) {
   return SOURCE_ALIASES[id] ?? id;
 }
 
 export const SOURCE_ROSTER = Object.freeze(
-  ACTIVE_SOURCE_IDS.map((id) => Object.freeze({ id, label: sourceAlias(id) })),
+  ACTIVE_SOURCE_IDS.map((id) =>
+    Object.freeze({
+      id,
+      label: sourceAlias(id),
+      automatic: true,
+    }),
+  ),
 );

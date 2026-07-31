@@ -86,7 +86,6 @@ export function BatchDownloadDialog({
     });
   };
 
-  // Nothing is running any more, so the selection is reachable again.
   const settled =
     jobIds !== null &&
     !preparing &&
@@ -140,8 +139,8 @@ export function BatchDownloadDialog({
           </h2>
           <p className="mt-1 font-mono text-[10px] text-text-tertiary">
             {started
-              ? `${savedCount} / ${jobs.length || selectedVideos.length} ${t.queue.saved.toLowerCase()}`
-              : `${selectedVideos.length} / ${videos.length} ${t.batch.selected}`}
+              ? `${savedCount} of ${jobs.length || selectedVideos.length} ${t.queue.saved.toLowerCase()}`
+              : `${selectedVideos.length} of ${videos.length} ${t.batch.selected}`}
           </p>
         </div>
         <IconButton

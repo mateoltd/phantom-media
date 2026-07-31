@@ -24,7 +24,6 @@ test("a SubRip file becomes something a track element will accept", () => {
   assert.ok(vtt.startsWith("WEBVTT\n\n"));
   assert.ok(vtt.includes("00:00:01.000 --> 00:00:04.500"));
   assert.ok(vtt.includes("00:01:02.250 --> 00:01:05.000"));
-  // Commas in timestamps are the one thing a browser refuses outright.
   assert.ok(!/\d,\d/.test(vtt));
 });
 
@@ -44,7 +43,6 @@ test("a file that is already WebVTT is left alone", () => {
 test("a WebVTT file with SubRip timestamps is repaired rather than rejected", () => {
   const broken = "WEBVTT\n\n00:00:01,000 --> 00:00:02,000\nHello.\n";
   assert.ok(toWebVtt(broken).includes("00:00:01.000 --> 00:00:02.000"));
-  // It must not gain a second header on the way through.
   assert.equal(toWebVtt(broken).match(/WEBVTT/g).length, 1);
 });
 
@@ -59,7 +57,6 @@ test("styling a browser cannot render is stripped instead of shown", () => {
   assert.ok(!vtt.includes("{\\an8}"));
   assert.ok(!vtt.includes("<font"));
   assert.ok(!vtt.includes("</font>"));
-  // The tags WebVTT does understand stay.
   assert.ok(vtt.includes("<i>meant</i>"));
   assert.ok(vtt.includes("Shouted"));
 });
@@ -74,8 +71,6 @@ test("an empty file still produces a valid document", () => {
 });
 
 test("bibliographic language codes are understood", () => {
-  // These are the ones no display-name table knows, and the ones older
-  // subtitle catalogues use most.
   assert.equal(normalizeLanguage("ger"), "de");
   assert.equal(normalizeLanguage("fre"), "fr");
   assert.equal(normalizeLanguage("dut"), "nl");

@@ -6,7 +6,7 @@ import {
 } from "node:crypto";
 import { ServerPool } from "./server-pool.mjs";
 import {
-  ACTIVE_SOURCE_IDS,
+  RELAY_CAPABLE_SOURCE_IDS,
   SOURCE_ALIASES,
   SOURCE_IDS,
 } from "./source-ids.mjs";
@@ -18,7 +18,6 @@ export { SOURCE_ALIASES, SOURCE_IDS };
 export const RELAY_BASE_URL =
   process.env.RELAY_BASE_URL ?? "https://cinemaos.tech";
 
-// These values are shipped in the upstream browser bundles.
 const HASH_PRIMARY =
   "a7f3b9c2e8d4f1a6b5c9e2d7f4a8b3c6e1d9f7a4b2c8e5d3f9a6b4c1e7d2f8a5";
 const HASH_SECONDARY =
@@ -37,7 +36,6 @@ export class RelayError extends Error {
     this.retryable = options.retryable ?? false;
     this.retryAfterMs = options.retryAfterMs ?? null;
     this.details = options.details ?? null;
-    /** Set when the caller hung up, so nothing downstream treats it as a fault. */
     this.abandoned = options.abandoned ?? false;
   }
 }
@@ -124,12 +122,6 @@ function retryAfterMs(response, body) {
   return candidates.length > 0 ? Math.max(...candidates) : null;
 }
 
-/**
- * Upstream keys each entry by the host that serves it, and hangs a map of
- * per-resolution variants off it. Flattening is all this does; naming,
- * de-duplication and scoring belong to `normalizeVariants`, which is the only
- * thing allowed to mint a candidate.
- */
 function flattenRelaySources(body) {
   const variants = [];
   for (const source of Object.values(body?.sources ?? {})) {
@@ -138,6 +130,10 @@ function flattenRelaySources(body) {
         url: source.url,
         type: source.type,
         resolution: numericResolution(source.quality),
+        audioTracks: source.audioTracks ?? source.audio ?? [],
+        audioLanguages: source.audioLanguages ?? source.languages ?? [],
+        language: source.language,
+        lang: source.lang,
       });
     }
     for (const [quality, variant] of Object.entries(source?.qualities ?? {})) {
@@ -146,6 +142,20 @@ function flattenRelaySources(body) {
           url: variant.url,
           type: variant.type ?? source.type,
           resolution: numericResolution(quality),
+          audioTracks:
+            variant.audioTracks ??
+            variant.audio ??
+            source.audioTracks ??
+            source.audio ??
+            [],
+          audioLanguages:
+            variant.audioLanguages ??
+            variant.languages ??
+            source.audioLanguages ??
+            source.languages ??
+            [],
+          language: variant.language ?? source.language,
+          lang: variant.lang ?? source.lang,
         });
       }
     }
@@ -153,23 +163,8 @@ function flattenRelaySources(body) {
   return variants;
 }
 
-/**
- * Whether this request was walked away from rather than failed.
- *
- * This distinction is the whole of a bug that made the player slow for minutes
- * at a time. The router aborts every sibling request the moment one source
- * wins, which is correct — but each of those aborts arrived here as an error,
- * and every error put its source into a cooldown that grew with each one. So
- * every *successful* race punished the four sources it had abandoned, up to two
- * minutes each, in a pool that outlives the page. Reload, and the sources known
- * to be good were all cooling: the race was left to be run by whichever hosts
- * had been slow enough never to be abandoned.
- *
- * A request nobody was waiting for says nothing about the source serving it.
- */
-function wasAbandoned(error, options) {
-  if (!options.abandoned?.aborted) return false;
-  return error?.name === "AbortError" || error?.name === "TimeoutError";
+function wasAbandoned(_error, options) {
+  return Boolean(options.abandoned?.aborted);
 }
 
 export class RelayClient {
@@ -180,9 +175,12 @@ export class RelayClient {
     this.baseUrl = new URL(options.baseUrl ?? RELAY_BASE_URL);
     this.fetch = options.fetchImpl ?? globalThis.fetch;
     this.cacheTtlMs = options.cacheTtlMs ?? CACHE_TTL_MS;
+    this.scrapers = Object.freeze([
+      ...(options.scrapers ?? RELAY_CAPABLE_SOURCE_IDS),
+    ]);
     this.pool =
       options.pool ??
-      new ServerPool(options.scrapers ?? ACTIVE_SOURCE_IDS);
+      new ServerPool(this.scrapers);
     if (typeof this.fetch !== "function") {
       throw new TypeError("A fetch implementation is required");
     }
@@ -190,10 +188,7 @@ export class RelayClient {
 
   async resolveScraper(media, scraper, options = {}) {
     assertMediaInput(media);
-    // Retired codes fail here rather than reaching upstream: the alias list is
-    // append-only, so a retired id stays a *known* code forever and would
-    // otherwise still resolve.
-    if (!ACTIVE_SOURCE_IDS.includes(scraper)) {
+    if (!this.scrapers.includes(scraper)) {
       throw new TypeError(`Unknown source "${scraper}"`);
     }
 
@@ -275,9 +270,6 @@ export class RelayClient {
             "AppleWebKit/537.36 (KHTML, like Gecko) " +
             "Chrome/138.0.0.0 Safari/537.36",
         },
-        // The caller gives up long before upstream does. Without this the
-        // subrequest keeps running after nobody is waiting for it, which on a
-        // worker is billed time spent on an answer that will be thrown away.
         signal: options.signal,
       });
       debugEvent("relay", "upstream", {
@@ -310,12 +302,6 @@ export class RelayClient {
         flattenRelaySources(decrypted),
         scraper,
       );
-      if (candidates.length === 0) {
-        throw new RelayError(
-          `${SOURCE_ALIASES[scraper]} returned no playable sources`,
-          { server: scraper, details: decrypted },
-        );
-      }
 
       const latencyMs = Math.round(performance.now() - startedAt);
       const result = {
@@ -340,6 +326,7 @@ export class RelayClient {
         latencyMs,
         candidates: candidates.length,
         subtitles: result.subtitles.length,
+        empty: candidates.length === 0,
       });
       return result;
     } catch (error) {
@@ -348,9 +335,8 @@ export class RelayClient {
           ? error
           : new RelayError(error.message, { cause: error, server: scraper });
 
-      // Abandoned is not failed. Charging a cooldown for a request the caller
-      // hung up on is what left the good sources sitting out the next race.
       if (wasAbandoned(error, options)) {
+        // An aborted sibling says nothing about source health and must not arm a cooldown.
         wrapped.abandoned = true;
         debugEvent("relay", "abandoned", { source: SOURCE_ALIASES[scraper] });
         throw wrapped;

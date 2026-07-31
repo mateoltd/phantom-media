@@ -9,7 +9,6 @@ const IMDB_PATTERN = /(?:imdb\.com\/title\/)?(tt\d{5,12})/i;
 const TMDB_URL_PATTERN = /themoviedb\.org\/(movie|tv)\/(\d+)/i;
 const TYPED_ID_PATTERN = /^(movie|tv)\s*[:/#-]\s*(\d+)$/i;
 
-/** An IMDb id does not say whether it is a film or a series, so ask both. */
 async function byImdb(imdbId: string): Promise<MediaResult[]> {
   const found = await Promise.all(
     (["movie", "tv"] as const).map((mediaType) => getTitle(mediaType, imdbId)),

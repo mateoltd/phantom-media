@@ -2,15 +2,8 @@
 
 import Image from "next/image";
 
-/** Intrinsic proportions of the Phantom mark. */
 const MARK_RATIO = 723 / 398;
 
-/**
- * The mark is drawn in ink with a vermilion wedge and a knocked-out play
- * triangle, which means it disappears on a dark ground. `chalk` is the same
- * artwork with the body lifted to the light text colour; the wedge and the
- * knockout are untouched, so the mark reads the same on either surface.
- */
 const MARK_SRC = {
   ink: "/phantom-mark-v2.png",
   chalk: "/phantom-mark-chalk.png",
@@ -24,7 +17,6 @@ export interface LogoProps {
   decorative?: boolean;
   priority?: boolean;
   tone?: MarkTone;
-  /** Overrides the tone entirely. */
   src?: string;
 }
 
@@ -51,17 +43,12 @@ export function Logo({
 }
 
 export interface WordmarkProps {
-  /** The service name printed after "Phantom", e.g. "Stream". */
   service?: string;
   className?: string;
   priority?: boolean;
   tone?: MarkTone;
 }
 
-/**
- * Mark plus name. Every Phantom app wears the same wordmark and distinguishes
- * itself only by the service word set in mono beside it.
- */
 export function Wordmark({
   service,
   className = "",

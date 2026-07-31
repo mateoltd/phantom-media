@@ -21,7 +21,6 @@ import {
 
 const NOW = 1_700_000_000_000;
 
-/** A stand-in for the score store, so ordering can be driven from a table. */
 function snapshotOf(table = {}) {
   const at = (id) => table[id] ?? {};
   return {
@@ -47,10 +46,6 @@ function offerOf(overrides = {}) {
     ...overrides,
   };
 }
-
-/* -------------------------------------------------------------------------- */
-/* Ordering                                                                   */
-/* -------------------------------------------------------------------------- */
 
 test("a proven source is asked before an unproven one", () => {
   const snapshot = snapshotOf({
@@ -101,7 +96,7 @@ test("a source proven useless goes last but is never dropped", () => {
   assert.deepEqual(order, ["fine", "spent"]);
 });
 
-test("a source cooling off is asked last, not skipped entirely", () => {
+test("a source cooling off is skipped by the automatic race", () => {
   const snapshot = snapshotOf({
     down: { score: 0.9, weight: 6 },
     fine: { score: 0.6, weight: 6 },
@@ -110,21 +105,32 @@ test("a source cooling off is asked last, not skipped entirely", () => {
     now: NOW,
     cooling: { down: NOW + 30_000 },
   });
-  assert.deepEqual(order, ["fine", "down"]);
+  assert.deepEqual(order, ["fine"]);
 });
 
-test("a cooling source is still offered when it is the only one left", () => {
+test("an automatic race waits when its only source is cooling", () => {
   const order = orderSources(["only"], snapshotOf(), {
     now: NOW,
     cooling: { only: NOW + 30_000 },
   });
-  assert.deepEqual(order, ["only"]);
+  assert.deepEqual(order, []);
 });
 
 test("pinning asks that source and nothing else", () => {
   const snapshot = snapshotOf({ best: { score: 0.99, weight: 20 } });
   assert.deepEqual(
     orderSources(["best", "chosen"], snapshot, { pinned: "chosen", now: NOW }),
+    ["chosen"],
+  );
+});
+
+test("pinning explicitly overrides an active source cooldown", () => {
+  assert.deepEqual(
+    orderSources(["chosen"], snapshotOf(), {
+      pinned: "chosen",
+      cooling: { chosen: NOW + 30_000 },
+      now: NOW,
+    }),
     ["chosen"],
   );
 });
@@ -136,14 +142,24 @@ test("pinning a source that is not on the roster asks nothing", () => {
   );
 });
 
-test("ordering is stable for sources that score the same", () => {
+test("equal evidence preserves the configured roster priority", () => {
   const snapshot = snapshotOf({
     a: { score: 0.5, weight: 9 },
     b: { score: 0.5, weight: 9 },
   });
+  assert.deepEqual(orderSources(["b", "a"], snapshot, { now: NOW }), [
+    "b",
+    "a",
+  ]);
+});
+
+test("equal evidence uses global language and playback hints before roster order", () => {
   assert.deepEqual(
-    orderSources(["b", "a"], snapshot, { now: NOW }),
-    orderSources(["a", "b"], snapshot, { now: NOW }),
+    orderSources(["s7", "z2", "va", "n1"], snapshotOf(), {
+      now: NOW,
+      preferredAudioLanguage: "en",
+    }),
+    ["n1", "va", "s7", "z2"],
   );
 });
 
@@ -155,16 +171,40 @@ test("a rate limit narrows the next wave, and it climbs back one at a time", () 
   assert.equal(nextWaveSize(5, false), MAX_WAVE);
 });
 
-/* -------------------------------------------------------------------------- */
-/* Judging an offer                                                           */
-/* -------------------------------------------------------------------------- */
-
 test("a verified adaptive master is worth attaching on sight", () => {
   assert.equal(isExcellent(offerOf({ verifiedTier: 3 })), true);
 });
 
 test("an unverified 1080p claim is not, however high it rates itself", () => {
   assert.equal(isExcellent(offerOf({ verified: false, verifiedTier: 4 })), false);
+});
+
+test("unknown audio is held as fallback even when its video quality is excellent", () => {
+  assert.equal(
+    isExcellent(
+      offerOf({
+        verified: true,
+        verifiedTier: 4,
+        audioVerified: false,
+        audioFallback: true,
+      }),
+    ),
+    false,
+  );
+});
+
+test("explicitly selected unverified audio can start immediately", () => {
+  assert.equal(
+    isExcellent(
+      offerOf({
+        verified: true,
+        verifiedTier: 4,
+        audioVerified: false,
+        audioFallback: false,
+      }),
+    ),
+    true,
+  );
 });
 
 test("verified 720p is not excellent on its own", () => {
@@ -202,6 +242,69 @@ test("between equal streams, the source with the better record wins", () => {
   );
 });
 
+test("verified requested-language audio always outranks unverified fallback audio", () => {
+  const snapshot = snapshotOf();
+  const verified = offerOf({
+    sourceId: "verified",
+    verifiedTier: 1,
+    audioVerified: true,
+    totalMs: 5_000,
+  });
+  const fallback = offerOf({
+    sourceId: "fallback",
+    verifiedTier: 4,
+    audioVerified: false,
+    audioFallback: true,
+    fallbackPreference: 1,
+    totalMs: 100,
+  });
+  assert.ok(offerScore(verified, snapshot) > offerScore(fallback, snapshot));
+});
+
+test("observational language rank dominates video quality between fallbacks", () => {
+  const snapshot = snapshotOf();
+  const preferred = offerOf({
+    sourceId: "clean-english",
+    verifiedTier: 1,
+    audioVerified: false,
+    audioFallback: true,
+    fallbackPreference: 0.8,
+    totalMs: 5_000,
+  });
+  const worseLanguage = offerOf({
+    sourceId: "foreign-burned-in",
+    verifiedTier: 4,
+    audioVerified: false,
+    audioFallback: true,
+    fallbackPreference: 0.4,
+    totalMs: 100,
+  });
+  assert.ok(
+    offerScore(preferred, snapshot) > offerScore(worseLanguage, snapshot),
+  );
+});
+
+test("observed sustainable playback breaks a fallback language tie", () => {
+  const snapshot = snapshotOf();
+  const fast = offerOf({
+    sourceId: "fast",
+    audioFallback: true,
+    fallbackPreference: 1,
+    fallbackPlaybackPreference: 0.9,
+    verifiedTier: 1,
+    totalMs: 5_000,
+  });
+  const buffers = offerOf({
+    sourceId: "buffers",
+    audioFallback: true,
+    fallbackPreference: 1,
+    fallbackPlaybackPreference: 0.1,
+    verifiedTier: 4,
+    totalMs: 100,
+  });
+  assert.ok(offerScore(fast, snapshot) > offerScore(buffers, snapshot));
+});
+
 test("an offer arriving late in the race gets what is left of the window", () => {
   assert.equal(graceDeadline(NOW, NOW), NOW + GRACE_MS);
   const late = NOW + HARD_MS - 100;
@@ -212,10 +315,6 @@ test("an offer arriving late in the race gets what is left of the window", () =>
 test("bestVerifiedTier defaults to nothing rather than guessing", () => {
   assert.equal(bestVerifiedTier({}), 0);
 });
-
-/* -------------------------------------------------------------------------- */
-/* The race                                                                   */
-/* -------------------------------------------------------------------------- */
 
 test("an excellent offer attaches at once, with no window armed", () => {
   const snapshot = snapshotOf();
@@ -240,6 +339,57 @@ test("an ordinary offer is held and the window starts running", () => {
   assert.equal(step.state.graceUntil, NOW + GRACE_MS);
 });
 
+test("unverified audio waits until the hard deadline for a language match", () => {
+  const step = raceStep(
+    initialRaceState(NOW),
+    {
+      type: "offer",
+      offer: offerOf({
+        audioVerified: false,
+        audioFallback: true,
+        verifiedTier: 4,
+      }),
+    },
+    NOW,
+    snapshotOf(),
+  );
+  assert.equal(step.action.type, "continue");
+  assert.equal(step.state.graceUntil, NOW + HARD_MS);
+});
+
+test("a verified-language offer replaces fallback audio and shortens the wait", () => {
+  let state = initialRaceState(NOW);
+  ({ state } = raceStep(
+    state,
+    {
+      type: "offer",
+      offer: offerOf({
+        sourceId: "fallback",
+        audioVerified: false,
+        audioFallback: true,
+        verifiedTier: 4,
+      }),
+    },
+    NOW,
+    snapshotOf(),
+  ));
+  const step = raceStep(
+    state,
+    {
+      type: "offer",
+      offer: offerOf({
+        sourceId: "verified",
+        audioVerified: true,
+        verifiedTier: 2,
+      }),
+    },
+    NOW + 100,
+    snapshotOf(),
+  );
+  assert.equal(step.state.held.sourceId, "verified");
+  assert.ok(step.state.graceUntil < NOW + HARD_MS);
+});
+
 test("a better offer inside the window replaces the held one", () => {
   const snapshot = snapshotOf();
   let state = initialRaceState(NOW);
@@ -256,7 +406,6 @@ test("a better offer inside the window replaces the held one", () => {
     snapshot,
   ));
   assert.equal(state.held.sourceId, "better");
-  // The window is measured from the first offer, not restarted by the second.
   assert.equal(state.graceUntil, NOW + GRACE_MS);
 });
 
@@ -464,10 +613,6 @@ test("a failed attach on the last source ends the race", () => {
   );
   assert.equal(step.action.type, "stop");
 });
-
-/* -------------------------------------------------------------------------- */
-/* Wording                                                                    */
-/* -------------------------------------------------------------------------- */
 
 test("the source menu says what is known, and admits when nothing is", () => {
   assert.equal(describeSource(snapshotOf(), "fresh"), "untried");

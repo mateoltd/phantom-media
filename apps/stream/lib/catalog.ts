@@ -5,14 +5,7 @@ import type {
   SeasonSummary,
 } from "./types";
 
-/**
- * Cinemeta is the whole catalog: one request answers a search, and one more
- * returns everything a title needs — artwork, rating, the TMDB id the playback
- * resolver speaks, and the full episode listing. The identifier bridge in
- * `id-bridge.ts` is only for the case someone arrives with a TMDB id instead.
- */
 const CINEMETA = "https://v3-cinemeta.strem.io";
-/** Browse listings live on their own host; the main one only redirects to it. */
 const CINEMETA_CATALOGS = "https://cinemeta-catalogs.strem.io";
 const USER_AGENT = "PhantomStream/1.0 (keyless catalog lookup)";
 
@@ -80,7 +73,6 @@ async function cinemeta<T>(
   }
 }
 
-/** Metahub serves the same artwork at several sizes; the small one is thumbnail-grade. */
 function upscale(url: string | undefined, size: "medium" | "large"): string | null {
   if (!url) return null;
   return url.replace("/poster/small/", `/poster/${size}/`);
@@ -89,7 +81,6 @@ function upscale(url: string | undefined, size: "medium" | "large"): string | nu
 function toYear(meta: CinemetaMeta): string {
   const raw = (meta.releaseInfo || meta.year || "").trim();
   if (raw) {
-    // A finished series reads `2011–2019`; an ongoing one reads `2011–`.
     return raw.replace(/[–-]\s*$/, "");
   }
   return meta.released?.slice(0, 4) ?? "";
@@ -121,14 +112,6 @@ function toMedia(meta: CinemetaMeta, mediaType: MediaType): MediaResult | null {
   };
 }
 
-/**
- * Films and series are searched separately, so the merge has to decide which
- * list leads. Two things settle it: an exact title beats the substring matches
- * around it, and the catalog's own `rank` for the query says which type it
- * thinks was meant — `suits` scores 7.5 as a series and 5.6 as a film, which
- * is the difference between finding the show and finding a 1999 film nobody
- * was looking for.
- */
 function relevance(
   media: MediaResult,
   query: string,
@@ -165,8 +148,6 @@ export async function searchCatalog(query: string): Promise<MediaResult[]> {
     }),
   );
 
-  // Each list is scored against its own position, so a film ranked first is
-  // weighed against the first series rather than against the whole merge.
   const seen = new Set<string>();
   return lists
     .flatMap((list) =>
@@ -186,7 +167,6 @@ export async function searchCatalog(query: string): Promise<MediaResult[]> {
     .slice(0, 24);
 }
 
-/** The listings the browse page is built from. */
 export type BrowseCatalog = "top" | "imdbRating" | "year";
 
 export interface BrowseRow {
@@ -215,11 +195,6 @@ export async function browseCatalog(
     .slice(0, options.limit ?? 24);
 }
 
-/**
- * The home page in one round of requests. Every row is a real listing rather
- * than a slice of the same one, so the page says something different as you
- * go down it.
- */
 export async function browseHome(): Promise<BrowseRow[]> {
   const rows: Array<{
     id: string;
@@ -315,7 +290,6 @@ export async function getTitle(
   return { media, seasons: toSeasons(episodes), episodes };
 }
 
-/** Everything a title needs when nothing but its identifiers are known. */
 export function placeholderTitle(
   mediaType: MediaType,
   ids: { imdbId?: string | null; tmdbId?: number | null },

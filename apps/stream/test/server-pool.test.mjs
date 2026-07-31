@@ -35,7 +35,23 @@ test("the ordinary failure ladder stops at a minute", () => {
   for (let attempt = 0; attempt < 8; attempt += 1) {
     pool.recordFailure("orion_", Object.assign(new Error("no"), { status: 502 }), 0);
   }
-  // It used to climb to two minutes, which is longer than the client's own
-  // cooldown — so a source came back, got an instant 503, and went away again.
   assert.equal(pool.cooldownRemaining("orion_", 0), 60_000);
+});
+
+test("a failure cools every alias in the same failure domain", () => {
+  const pool = new ServerPool(["one", "two", "other"], {
+    failureDomainFor: (server) =>
+      server === "other" ? "independent" : "shared",
+  });
+  pool.recordFailure(
+    "one",
+    Object.assign(new Error("upstream unavailable"), { status: 502 }),
+    1_000,
+  );
+
+  assert.equal(pool.cooldownRemaining("two", 1_001), 14_999);
+  assert.deepEqual(pool.available(undefined, 1_001), ["other"]);
+  pool.recordSuccess("two", 120);
+  assert.equal(pool.cooldownRemaining("one", 1_001), 14_999);
+  assert.equal(pool.cooldownRemaining("two", 1_001), 0);
 });

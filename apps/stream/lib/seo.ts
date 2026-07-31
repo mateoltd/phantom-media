@@ -7,11 +7,6 @@ export const siteConfig = {
   creator: "mateoltd",
 } as const;
 
-/**
- * Where infringement notices go. Unset by default: a takedown route with no
- * address behind it is worse than none, so the disclaimer omits that section
- * entirely until a deployment configures one.
- */
 export const noticeEmail = process.env.NEXT_PUBLIC_NOTICE_EMAIL?.trim() ?? "";
 
 export function getBaseUrl(): URL {

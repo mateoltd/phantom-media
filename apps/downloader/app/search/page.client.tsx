@@ -78,7 +78,6 @@ function SearchPageContent() {
           const option = getBestOption(data.options, container, quality);
           if (option) items.push({ video, option });
         } catch {
-          // A failed item should not block the rest of the batch.
         }
       }
 

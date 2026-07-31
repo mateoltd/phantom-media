@@ -12,13 +12,6 @@ interface TitleLogoProps {
   headingClassName: string;
 }
 
-/**
- * A title's own logotype, with its name set in ours when there isn't one — or
- * when the one there is fails to load, which the catalog's artwork host does
- * for anything nobody has uploaded art for.
- *
- * It stays an `h1` either way: the logotype is the heading, drawn.
- */
 export function TitleLogo({
   media,
   priority = false,

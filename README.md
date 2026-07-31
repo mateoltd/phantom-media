@@ -5,8 +5,8 @@ install.
 
 | Package                | What it is                                                              |
 | ---------------------- | ----------------------------------------------------------------------- |
-| `apps/downloader`      | Phantom Downloader — pull a video or a whole playlist down as a file.    |
-| `apps/stream`          | Phantom Stream — find a film or series and play it.                     |
+| `apps/downloader`      | Phantom Downloader pulls a video or a whole playlist down as a file.    |
+| `apps/stream`          | Phantom Stream finds a film or series and plays it.                     |
 | `packages/theme`       | Design tokens, base layer and CSS primitives. Tailwind v4.              |
 | `packages/ui`          | React components both apps share, consumed as source.                   |
 | `packages/config`      | tsconfig, ESLint and PostCSS bases.                                     |
@@ -39,8 +39,8 @@ what tells you the tree is sound.
 Both apps are Next.js 16 with React 19 and Tailwind v4, and both pin the same
 majors through the pnpm catalog in `pnpm-workspace.yaml`. A split there would
 break `@phantom/ui`, which ships as TypeScript source and is compiled by
-whichever app imports it — hence `transpilePackages: ["@phantom/ui"]` in both
-`next.config.ts` files.
+whichever app imports it. Both `next.config.ts` files therefore include
+`transpilePackages: ["@phantom/ui"]`.
 
 Styling is one import. Each app's `globals.css` is:
 
@@ -53,8 +53,8 @@ Styling is one import. Each app's `globals.css` is:
 That last line is not optional. Tailwind only ships classes it can find, and
 the shared components live outside the app it is scanning.
 
-Anything genuinely local stays local — the downloader keeps its locale-switcher
-transition, the stream app pulls in `@phantom/theme/player.css` for video
+Anything genuinely local stays local. The downloader keeps its locale-switcher
+transition. The stream app pulls in `@phantom/theme/player.css` for video
 chrome, and neither pays for the other's CSS.
 
 The theme also ships a second surface. `@phantom/theme/cinema.css` re-points
@@ -67,9 +67,9 @@ because its content is moving pictures; the downloader stays on paper.
 One accent on a paper ground, Sora over JetBrains Mono, generous radii. The
 search field is the same component in both apps: a pill, with a round icon
 button rather than a labelled one. Every other surface in the system is
-rounded — panels, menus, rails, modals — so a square field would have been the
-only hard corner on the page, and the field is already the loudest thing on a
-landing page without also shouting its own name.
+rounded, including panels, menus, rails and modals. A square field would have
+been the only hard corner on the page, and the field is already the loudest
+thing on a landing page without also shouting its own name.
 
 ## Deployment
 
@@ -84,9 +84,9 @@ FFmpeg, so it needs a real filesystem and real binaries. The Worker in
 pnpm --filter @phantom/downloader deploy
 ```
 
-The image builds from the workspace root — see `image_build_context` in
-`apps/downloader/wrangler.jsonc` — because the app compiles against packages
-that live outside its own folder.
+The image builds from the workspace root because the app compiles against
+packages that live outside its own folder. The `image_build_context` setting is
+in `apps/downloader/wrangler.jsonc`.
 
 **Stream** is pure Next with no processes to keep alive, so it runs on Workers
 directly through OpenNext.

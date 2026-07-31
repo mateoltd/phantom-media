@@ -1,11 +1,24 @@
 "use client";
 
 import Hls, { type ErrorData, type Events } from "hls.js";
+import type {
+  ErrorEvent as DashErrorEvent,
+  MediaInfo,
+  PeriodSwitchEvent,
+  QualityChangeRenderedEvent,
+  TrackChangeRenderedEvent,
+} from "dashjs";
 import { asSettled } from "./concurrent";
 import { debug, span } from "./debug";
+import { languageName, normalizeLanguage } from "./subtitles";
 import type { StreamCandidate } from "./types";
+import {
+  UNVERIFIED_AUDIO_LANGUAGE,
+  candidateAudioLanguages,
+  normalizeAudioLanguage,
+} from "../src/media-language.mjs";
+import { manifestVideoHeight } from "../src/media-quality.mjs";
 
-/** Hosts, never full URLs: a log is read at a glance or not at all. */
 function hostOf(url: string): string {
   try {
     return new URL(url).host;
@@ -15,7 +28,6 @@ function hostOf(url: string): string {
 }
 
 export interface QualityLevel {
-  /** Index into the controller's own level list; -1 is automatic. */
   index: number;
   label: string;
   height: number;
@@ -23,127 +35,214 @@ export interface QualityLevel {
 }
 
 export interface QualityState {
-  /** What was asked for: -1 when the stream picks for itself. */
   selected: number;
-  /** What is actually playing right now. */
   effective: number;
+}
+
+export interface PlayerAudioTrack {
+  index: number;
+  id: string;
+  label: string;
+  language: string;
+  channels?: string;
+  default: boolean;
+}
+
+export interface AudioState {
+  tracks: readonly PlayerAudioTrack[];
+  selected: number;
 }
 
 export interface PlayerController {
   destroy(): void;
-  /** Empty when the stream has no renditions to choose between. */
   levels: QualityLevel[];
   quality(): QualityState;
   setLevel(index: number): void;
   subscribeQuality(listener: (state: QualityState) => void): () => void;
+  audio(): AudioState;
+  setAudioTrack(index: number): void;
+  subscribeAudio(listener: (state: AudioState) => void): () => void;
 }
 
 export interface CandidateProbe {
   candidate: StreamCandidate;
-  /** True when a manifest answered, false when it did not, null when unprobed. */
   ok: boolean | null;
   latencyMs: number;
   tier: number;
+  audioLanguages: readonly string[];
+  languageMatch: boolean;
 }
 
 export interface CandidateProbeResult {
   ranked: StreamCandidate[];
   verified: StreamCandidate[];
+  unverified: StreamCandidate[];
   failed: StreamCandidate[];
   outcomes: CandidateProbe[];
-  /** Best tier among candidates that actually answered, 0 when none did. */
+  languageRejected: StreamCandidate[];
   verifiedTier: number;
-  /** How long the candidate that ranked first took, or null if none verified. */
+  unverifiedTier: number;
   probeMs: number | null;
 }
 
 const NO_LEVELS: PlayerController["levels"] = [];
+const NO_AUDIO: AudioState = { tracks: [], selected: -1 };
 
-/**
- * How many manifests are fetched at once, and how many are worth fetching.
- *
- * Probing every variant of every source in parallel was itself part of what
- * made finding a stream slow: five sources returning twenty variants each is
- * a hundred simultaneous cross-origin requests against a browser that will
- * only open six per host. The top few by resolution contain the answer in
- * every case that matters.
- *
- * The two numbers are equal on purpose, which makes probing exactly one round
- * and gives the whole of it a fixed ceiling of one timeout. At four they were
- * two rounds, so a source that had already answered went on holding its slot
- * in the race for another second and a half while the second round ran — time
- * charged to every source still queued behind it.
- */
 const MAX_PROBE_CANDIDATES = 6;
 const PROBE_CONCURRENCY = MAX_PROBE_CANDIDATES;
 
-/** Enough to see whether a playlist starts the way a playlist must. */
-const MANIFEST_HEAD_BYTES = 256;
+const MANIFEST_PROBE_BYTES = 256 * 1024;
 
-/**
- * How much a stream is worth before latency is considered. The difference
- * between 1080p and 480p is plain to see, and a stream half a second slower to
- * answer is not, so resolution decides first.
- *
- * A master playlist that declares no resolution of its own is the adaptive
- * case: it carries every rendition the source has, which is the best outcome
- * available, so it ranks just under a known 1080p.
- */
 export function qualityTier(candidate: StreamCandidate): number {
   const resolution = candidate.resolution ?? 0;
   if (resolution >= 1080) return 4;
-  if (resolution === 0 && candidate.type === "hls") return 3;
+  if (
+    resolution === 0 &&
+    (candidate.type === "hls" || candidate.type === "dash")
+  ) {
+    return 3;
+  }
   if (resolution >= 720) return 2;
   if (resolution > 0) return 1;
   return 0;
 }
 
-function staticQuality(destroy: () => void): PlayerController {
+function audioTrack(
+  index: number,
+  id: string | number | null | undefined,
+  label: string | null | undefined,
+  language: string | null | undefined,
+  channels: string | null | undefined,
+  isDefault: boolean,
+): PlayerAudioTrack {
+  const normalized = normalizeLanguage(language ?? undefined);
+  const named = label?.trim();
   return {
-    destroy,
+    index,
+    id: String(id ?? index),
+    label: named || languageName(normalized),
+    language: normalized,
+    channels: channels || undefined,
+    default: isDefault,
+  };
+}
+
+interface NativeAudioTrack {
+  enabled: boolean;
+  id?: string;
+  kind?: string;
+  label?: string;
+  language?: string;
+}
+
+interface NativeAudioTrackList extends EventTarget {
+  readonly length: number;
+  [index: number]: NativeAudioTrack;
+}
+
+function nativeAudioTracks(video: HTMLVideoElement): NativeAudioTrackList | null {
+  return (
+    (
+      video as HTMLVideoElement & {
+        audioTracks?: NativeAudioTrackList;
+      }
+    ).audioTracks ?? null
+  );
+}
+
+function nativeController(
+  video: HTMLVideoElement,
+  destroy: () => void,
+): PlayerController {
+  const nativeTracks = nativeAudioTracks(video);
+  const listeners = new Set<(state: AudioState) => void>();
+  const audio = (): AudioState => {
+    if (!nativeTracks) return NO_AUDIO;
+    const tracks = Array.from({ length: nativeTracks.length }, (_, index) => {
+      const track = nativeTracks[index]!;
+      return audioTrack(
+        index,
+        track.id,
+        track.label,
+        track.language,
+        undefined,
+        track.kind === "main",
+      );
+    });
+    const selected = tracks.findIndex((track) => nativeTracks[track.index]?.enabled);
+    return { tracks, selected };
+  };
+  const publishAudio = () => {
+    const state = audio();
+    for (const listener of listeners) listener(state);
+  };
+
+  nativeTracks?.addEventListener("addtrack", publishAudio);
+  nativeTracks?.addEventListener("removetrack", publishAudio);
+  nativeTracks?.addEventListener("change", publishAudio);
+
+  return {
+    destroy: () => {
+      nativeTracks?.removeEventListener("addtrack", publishAudio);
+      nativeTracks?.removeEventListener("removetrack", publishAudio);
+      nativeTracks?.removeEventListener("change", publishAudio);
+      listeners.clear();
+      destroy();
+    },
     levels: NO_LEVELS,
     quality: () => ({ selected: -1, effective: -1 }),
     setLevel: () => {},
     subscribeQuality: () => () => {},
+    audio,
+    setAudioTrack: (index) => {
+      if (!nativeTracks || index < 0 || index >= nativeTracks.length) return;
+      for (let position = 0; position < nativeTracks.length; position += 1) {
+        nativeTracks[position]!.enabled = position === index;
+      }
+      publishAudio();
+    },
+    subscribeAudio: (listener) => {
+      listeners.add(listener);
+      listener(audio());
+      return () => {
+        listeners.delete(listener);
+      };
+    },
   };
 }
 
-/**
- * Reads just enough of a response to tell a playlist from anything else.
- *
- * A `Range` header would look like the cheaper way to do this, and it is a
- * trap: it is not a safelisted request header, so asking for one turns every
- * probe into a preflighted request — an extra round trip per candidate, and an
- * outright failure against any host that does not answer OPTIONS. A HEAD is
- * worse still, since these hosts commonly answer it with 405 and the body is
- * the only thing that can be checked anyway. Capping the read is the version
- * of the idea that costs nothing.
- */
-async function readManifestHead(response: Response): Promise<string> {
+async function readManifestSample(response: Response): Promise<string> {
   if (!response.body) {
-    return (await response.text()).slice(0, MANIFEST_HEAD_BYTES);
+    return (await response.text()).slice(0, MANIFEST_PROBE_BYTES);
   }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
-  let head = "";
+  let sample = "";
+  let size = 0;
   try {
-    while (head.length < MANIFEST_HEAD_BYTES) {
+    while (size < MANIFEST_PROBE_BYTES) {
       const { done, value } = await reader.read();
       if (done) break;
-      head += decoder.decode(value, { stream: true });
+      size += value.byteLength;
+      sample += decoder.decode(
+        size > MANIFEST_PROBE_BYTES
+          ? value.subarray(0, value.byteLength - (size - MANIFEST_PROBE_BYTES))
+          : value,
+        { stream: true },
+      );
     }
   } finally {
-    // The rest of the playlist is hls.js's business, not ours.
     await reader.cancel().catch(() => {});
   }
-  return head;
+  return sample;
 }
 
 async function probeOne(
   candidate: StreamCandidate,
   timeoutMs: number,
   signal: AbortSignal | undefined,
+  preferredAudioLanguage: string | undefined,
 ): Promise<CandidateProbe> {
   const controller = new AbortController();
   const abort = () => controller.abort();
@@ -152,25 +251,50 @@ async function probeOne(
   const startedAt = performance.now();
 
   try {
+    // A Range header triggers a CORS preflight that many media hosts reject.
     const response = await fetch(candidate.url, {
       cache: "default",
       credentials: "omit",
       mode: "cors",
       signal: controller.signal,
     });
-    const head = response.ok ? await readManifestHead(response) : "";
-    const ok = response.ok && head.trimStart().startsWith("#EXTM3U");
+    const sample = response.ok ? await readManifestSample(response) : "";
+    const manifestOk =
+      response.ok &&
+      (candidate.type === "hls"
+        ? sample.trimStart().startsWith("#EXTM3U")
+        : /<MPD(?:\s|>)/i.test(sample));
+    const audioLanguages = candidateAudioLanguages(candidate, sample);
+    const preferred = normalizeAudioLanguage(preferredAudioLanguage);
+    const languageMatch =
+      preferred === UNVERIFIED_AUDIO_LANGUAGE
+        ? audioLanguages.length === 0
+        : audioLanguages.includes(preferred);
+    const ok = manifestOk;
+    const manifestHeight = manifestVideoHeight(candidate.type, sample);
+    const tier =
+      manifestHeight > 0
+        ? qualityTier({ ...candidate, resolution: manifestHeight })
+        : manifestOk && !(candidate.resolution && candidate.resolution > 0)
+          ? 2
+          : qualityTier(candidate);
     debug("probe", ok ? "ok" : "rejected", {
       host: hostOf(candidate.url),
       status: response.status,
       ms: performance.now() - startedAt,
-      tier: qualityTier(candidate),
+      tier,
+      manifestHeight,
+      audioLanguages,
+      preferredAudioLanguage: preferred,
+      languageMatch,
     });
     return {
       candidate,
       ok,
       latencyMs: performance.now() - startedAt,
-      tier: qualityTier(candidate),
+      tier,
+      audioLanguages,
+      languageMatch,
     };
   } catch (error) {
     debug("probe", "failed", {
@@ -184,6 +308,14 @@ async function probeOne(
       ok: false,
       latencyMs: performance.now() - startedAt,
       tier: qualityTier(candidate),
+      audioLanguages: candidateAudioLanguages(candidate),
+      languageMatch:
+        normalizeAudioLanguage(preferredAudioLanguage) ===
+        UNVERIFIED_AUDIO_LANGUAGE
+          ? candidateAudioLanguages(candidate).length === 0
+          : candidateAudioLanguages(candidate).includes(
+              normalizeAudioLanguage(preferredAudioLanguage),
+            ),
     };
   } finally {
     window.clearTimeout(timeout);
@@ -196,6 +328,7 @@ export async function probeCandidates(
   options: {
     timeoutMs?: number;
     signal?: AbortSignal;
+    preferredAudioLanguage?: string;
   } = {},
 ): Promise<CandidateProbeResult> {
   const timeoutMs = options.timeoutMs ?? 2_500;
@@ -204,17 +337,23 @@ export async function probeCandidates(
   const byTier = (left: StreamCandidate, right: StreamCandidate) =>
     qualityTier(right) - qualityTier(left) || position(left) - position(right);
 
-  // Only manifests can be checked without committing the video element to
-  // them, and only the best few are worth checking.
   const probeable = candidates
-    .filter((candidate) => candidate.type === "hls")
+    .filter(
+      (candidate) =>
+        candidate.type === "hls" || candidate.type === "dash",
+    )
     .sort(byTier)
     .slice(0, MAX_PROBE_CANDIDATES);
   const probeableIds = new Set(probeable.map((candidate) => candidate.id));
 
   const probed: CandidateProbe[] = [];
   for await (const settled of asSettled(probeable, PROBE_CONCURRENCY, (candidate) =>
-    probeOne(candidate, timeoutMs, options.signal),
+    probeOne(
+      candidate,
+      timeoutMs,
+      options.signal,
+      options.preferredAudioLanguage,
+    ),
   )) {
     if (settled.value) probed.push(settled.value);
   }
@@ -225,37 +364,84 @@ export async function probeCandidates(
 
   const unprobed: CandidateProbe[] = candidates
     .filter((candidate) => !probeableIds.has(candidate.id))
-    .map((candidate) => ({
-      candidate,
-      ok: null,
-      latencyMs: Number.POSITIVE_INFINITY,
-      tier: qualityTier(candidate),
-    }));
+    .map((candidate) => {
+      const audioLanguages = candidateAudioLanguages(candidate);
+      const preferred = normalizeAudioLanguage(options.preferredAudioLanguage);
+      return {
+        candidate,
+        ok: null,
+        latencyMs: Number.POSITIVE_INFINITY,
+        tier: qualityTier(candidate),
+        audioLanguages,
+        languageMatch:
+          preferred === UNVERIFIED_AUDIO_LANGUAGE
+            ? audioLanguages.length === 0
+            : audioLanguages.includes(preferred),
+      };
+    });
 
   const verifiedOutcomes = probed
-    .filter((outcome) => outcome.ok === true)
+    .filter((outcome) => outcome.ok === true && outcome.languageMatch)
     .sort(
       (left, right) =>
         right.tier - left.tier ||
         left.latencyMs - right.latencyMs ||
         position(left.candidate) - position(right.candidate),
     );
-  const untested = unprobed.sort(
+  const unverifiedOutcomes = [...probed, ...unprobed]
+    .filter(
+      (outcome) =>
+        outcome.audioLanguages.length === 0 && outcome.ok !== false,
+    )
+    .sort(
+      (left, right) =>
+        right.tier - left.tier ||
+        left.latencyMs - right.latencyMs ||
+        position(left.candidate) - position(right.candidate),
+    );
+  const untested = unprobed.filter((outcome) => outcome.languageMatch).sort(
     (left, right) =>
       right.tier - left.tier ||
       position(left.candidate) - position(right.candidate),
   );
-  const failedOutcomes = probed.filter((outcome) => outcome.ok === false);
+  const failedOutcomes = probed.filter(
+    (outcome) => outcome.ok === false && outcome.languageMatch,
+  );
+  const languageRejected = [...probed, ...unprobed].filter(
+    (outcome) =>
+      !outcome.languageMatch && outcome.audioLanguages.length > 0,
+  );
 
   return {
-    ranked: [...verifiedOutcomes, ...untested, ...failedOutcomes].map(
-      (outcome) => outcome.candidate,
-    ),
+    ranked: [
+      ...verifiedOutcomes,
+      ...untested,
+      ...unverifiedOutcomes.filter(
+        (outcome) =>
+          !verifiedOutcomes.includes(outcome) && !untested.includes(outcome),
+      ),
+      ...failedOutcomes,
+    ].map((outcome) => outcome.candidate),
     verified: verifiedOutcomes.map((outcome) => outcome.candidate),
+    unverified: unverifiedOutcomes.map((outcome) => outcome.candidate),
     failed: failedOutcomes.map((outcome) => outcome.candidate),
-    outcomes: [...verifiedOutcomes, ...untested, ...failedOutcomes],
+    outcomes: [
+      ...verifiedOutcomes,
+      ...untested,
+      ...unverifiedOutcomes.filter(
+        (outcome) =>
+          !verifiedOutcomes.includes(outcome) && !untested.includes(outcome),
+      ),
+      ...failedOutcomes,
+      ...languageRejected,
+    ],
+    languageRejected: languageRejected.map((outcome) => outcome.candidate),
     verifiedTier: verifiedOutcomes[0]?.tier ?? 0,
-    probeMs: verifiedOutcomes.length > 0 ? verifiedOutcomes[0]!.latencyMs : null,
+    unverifiedTier: unverifiedOutcomes[0]?.tier ?? 0,
+    probeMs:
+      verifiedOutcomes[0]?.latencyMs ??
+      unverifiedOutcomes[0]?.latencyMs ??
+      null,
   };
 }
 
@@ -276,7 +462,7 @@ function waitForNativeMedia(
       window.clearTimeout(timeout);
       video.removeEventListener("loadedmetadata", onReady);
       resolve(
-        staticQuality(() => {
+        nativeController(video, () => {
           cleanup();
           video.removeAttribute("src");
           video.load();
@@ -310,6 +496,18 @@ function levelLabel(height: number, bitrate: number): string {
   return "Stream";
 }
 
+function isBufferedAt(video: HTMLVideoElement, position: number): boolean {
+  for (let index = 0; index < video.buffered.length; index += 1) {
+    if (
+      video.buffered.start(index) <= position &&
+      position < video.buffered.end(index)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 async function attachHls(
   video: HTMLVideoElement,
   url: string,
@@ -322,16 +520,9 @@ async function attachHls(
     backBufferLength: 60,
     maxBufferLength: 40,
     maxMaxBufferLength: 120,
-    // These hosts are frequently slow rather than broken, and giving up on a
-    // fragment too early is what turns a hitch into a failover.
     fragLoadingMaxRetry: 4,
     manifestLoadingMaxRetry: 2,
     levelLoadingMaxRetry: 3,
-    // With no measurement yet, hls.js assumes a slow line and opens at the
-    // bottom rendition, which is where "why is this 360p" comes from. Starting
-    // from a realistic estimate opens at 1080p where the stream has it, and
-    // the usual adaptation still drops it within a segment or two if the
-    // connection cannot hold it.
     abrEwmaDefaultEstimate: 3_000_000,
   });
 
@@ -373,18 +564,50 @@ async function attachHls(
   }));
 
   const listeners = new Set<(state: QualityState) => void>();
+  const audioListeners = new Set<(state: AudioState) => void>();
   const quality = (): QualityState => ({
     selected: hls.autoLevelEnabled ? -1 : hls.currentLevel,
     effective: hls.currentLevel,
+  });
+  const audio = (): AudioState => ({
+    tracks: hls.audioTracks.map((track, index) =>
+      audioTrack(
+        index,
+        `${track.groupId}:${track.id}`,
+        track.name,
+        track.lang,
+        track.channels,
+        track.default,
+      ),
+    ),
+    selected: hls.audioTrack,
   });
   const publish = () => {
     const state = quality();
     for (const listener of listeners) listener(state);
   };
+  const publishAudio = () => {
+    const state = audio();
+    for (const listener of audioListeners) listener(state);
+  };
+  const onSeeking = () => {
+    const position = video.currentTime;
+    if (!Number.isFinite(position) || isBufferedAt(video, position)) return;
 
-  // A fatal error mid-play is usually one bad fragment or a dropped socket,
-  // both of which hls.js can come back from. Only a second failure of the same
-  // kind means the source is really gone and another one should be tried.
+    // A long scrub can leave the previous fragment request in flight. Restart
+    // loading at the new position and, in auto mode, fetch one low-bandwidth
+    // segment first so playback resumes before ABR climbs again.
+    if (hls.autoLevelEnabled) {
+      hls.nextLoadLevel = hls.minAutoLevel;
+    }
+    debug("attach", "hls.seek", {
+      host: hostOf(url),
+      position,
+      recoveryLevel: hls.nextLoadLevel,
+    });
+    hls.startLoad(position, true);
+  };
+
   let recoveredNetwork = false;
   let recoveredMedia = false;
   const onError = (_event: Events.ERROR, data: ErrorData) => {
@@ -409,15 +632,21 @@ async function attachHls(
 
   hls.on(Hls.Events.ERROR, onError);
   hls.on(Hls.Events.LEVEL_SWITCHED, publish);
+  hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, publishAudio);
+  hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, publishAudio);
+  video.addEventListener("seeking", onSeeking);
 
   return {
-    destroy: () => hls.destroy(),
+    destroy: () => {
+      listeners.clear();
+      audioListeners.clear();
+      video.removeEventListener("seeking", onSeeking);
+      hls.destroy();
+    },
     levels,
     quality,
     setLevel: (index: number) => {
       hls.currentLevel = index;
-      // `nextLevel` makes the switch take effect at the next fragment instead
-      // of stalling on a flush, which is what a manual pick should feel like.
       if (index >= 0) hls.nextLevel = index;
       publish();
     },
@@ -426,6 +655,246 @@ async function attachHls(
       listener(quality());
       return () => {
         listeners.delete(listener);
+      };
+    },
+    audio,
+    setAudioTrack: (index: number) => {
+      if (index < 0 || index >= hls.audioTracks.length) return;
+      hls.audioTrack = index;
+      publishAudio();
+    },
+    subscribeAudio: (listener) => {
+      audioListeners.add(listener);
+      listener(audio());
+      return () => {
+        audioListeners.delete(listener);
+      };
+    },
+  };
+}
+
+function dashErrorMessage(event: DashErrorEvent): string {
+  const error = event.error;
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = error.message;
+    if (typeof message === "string" && message) return message;
+  }
+  if ("event" in event && event.event && typeof event.event === "object") {
+    const detail = event.event;
+    if ("message" in detail && typeof detail.message === "string") {
+      return detail.message;
+    }
+  }
+  return "The DASH stream failed";
+}
+
+function dashAudioLabel(info: MediaInfo, index: number): string {
+  const matchingLabel =
+    info.labels.find((label) => label.lang === info.lang)?.text ??
+    info.labels[0]?.text;
+  return matchingLabel || languageName(info.lang ?? undefined) || `Audio ${index + 1}`;
+}
+
+async function attachDash(
+  video: HTMLVideoElement,
+  url: string,
+  timeoutMs: number,
+  onFatal: (error: Error) => void,
+): Promise<PlayerController> {
+  if (typeof MediaSource === "undefined") {
+    throw new Error("This browser cannot play DASH streams");
+  }
+
+  const { MediaPlayer } = await import("dashjs");
+  const player = MediaPlayer().create();
+  player.updateSettings({
+    debug: { logLevel: 0 },
+    streaming: {
+      buffer: {
+        bufferToKeep: 60,
+        bufferTimeDefault: 20,
+        bufferTimeAtTopQuality: 30,
+        bufferTimeAtTopQualityLongForm: 45,
+      },
+      retryAttempts: {
+        MPD: 2,
+        MediaSegment: 4,
+        InitializationSegment: 3,
+        IndexSegment: 3,
+      },
+      abr: {
+        initialBitrate: { video: 3_000 },
+      },
+    },
+  });
+
+  let destroyed = false;
+  const teardown = () => {
+    if (destroyed) return;
+    destroyed = true;
+    player.destroy();
+  };
+
+  await new Promise<void>((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("The DASH manifest did not respond in time"));
+    }, timeoutMs);
+    const cleanup = () => {
+      window.clearTimeout(timeout);
+      player.off(MediaPlayer.events.STREAM_INITIALIZED, onReady);
+      player.off(MediaPlayer.events.ERROR, onStartupError);
+    };
+    const onReady = () => {
+      cleanup();
+      resolve();
+    };
+    const onStartupError = (event: DashErrorEvent) => {
+      cleanup();
+      reject(new Error(dashErrorMessage(event)));
+    };
+
+    player.on(MediaPlayer.events.STREAM_INITIALIZED, onReady);
+    player.on(MediaPlayer.events.ERROR, onStartupError);
+    try {
+      player.initialize(video, url, false);
+    } catch (error) {
+      cleanup();
+      reject(error);
+    }
+  }).catch((error) => {
+    teardown();
+    throw error;
+  });
+
+  let selectedLevel = -1;
+  let dashAudioInfos: MediaInfo[] = [];
+  const qualityListeners = new Set<(state: QualityState) => void>();
+  const audioListeners = new Set<(state: AudioState) => void>();
+
+  const representations = player.getRepresentationsByType("video");
+  const levels: QualityLevel[] = representations.map((representation, index) => ({
+    index,
+    label: levelLabel(representation.height ?? 0, representation.bandwidth ?? 0),
+    height: representation.height ?? 0,
+    bitrate: representation.bandwidth ?? 0,
+  }));
+  const quality = (): QualityState => {
+    const current = player.getCurrentRepresentationForType("video");
+    return {
+      selected: selectedLevel,
+      effective: current
+        ? representations.findIndex(
+            (representation) => representation.id === current.id,
+          )
+        : -1,
+    };
+  };
+  const publishQuality = () => {
+    const state = quality();
+    for (const listener of qualityListeners) listener(state);
+  };
+
+  const refreshAudio = () => {
+    dashAudioInfos = player.getTracksFor("audio");
+  };
+  const audio = (): AudioState => {
+    const current = player.getCurrentTrackFor("audio");
+    const tracks = dashAudioInfos.map((info, index) =>
+      audioTrack(
+        index,
+        info.id,
+        dashAudioLabel(info, index),
+        info.lang,
+        info.audioChannelConfiguration?.[0]?.value,
+        info.roles?.some((role) => role.value === "main") ?? index === 0,
+      ),
+    );
+    const selected = current
+      ? dashAudioInfos.findIndex(
+          (info) =>
+            info === current ||
+            (info.id !== null && current.id !== null && info.id === current.id),
+        )
+      : -1;
+    return { tracks, selected };
+  };
+  const publishAudio = () => {
+    refreshAudio();
+    const state = audio();
+    for (const listener of audioListeners) listener(state);
+  };
+
+  const onQualityChanged = (event: QualityChangeRenderedEvent) => {
+    if (event.mediaType === "video") publishQuality();
+  };
+  const onAudioChanged = (event: TrackChangeRenderedEvent) => {
+    if (event.mediaType === "audio") publishAudio();
+  };
+  const onPeriodChanged = (_event: PeriodSwitchEvent) => {
+    publishQuality();
+    publishAudio();
+  };
+  let fatalReported = false;
+  const onError = (event: DashErrorEvent) => {
+    debug("attach", "dash.error", {
+      host: hostOf(url),
+      message: dashErrorMessage(event),
+    });
+    if (fatalReported || destroyed) return;
+    fatalReported = true;
+    onFatal(new Error(dashErrorMessage(event)));
+  };
+
+  refreshAudio();
+  player.on(MediaPlayer.events.ERROR, onError);
+  player.on(MediaPlayer.events.QUALITY_CHANGE_RENDERED, onQualityChanged);
+  player.on(MediaPlayer.events.TRACK_CHANGE_RENDERED, onAudioChanged);
+  player.on(MediaPlayer.events.PERIOD_SWITCH_COMPLETED, onPeriodChanged);
+
+  return {
+    destroy: () => {
+      qualityListeners.clear();
+      audioListeners.clear();
+      teardown();
+    },
+    levels,
+    quality,
+    setLevel: (index: number) => {
+      selectedLevel =
+        index >= 0 && index < representations.length ? index : -1;
+      player.updateSettings({
+        streaming: {
+          abr: {
+            autoSwitchBitrate: { video: selectedLevel === -1 },
+          },
+        },
+      });
+      if (selectedLevel >= 0) {
+        player.setRepresentationForTypeByIndex("video", selectedLevel, true);
+      }
+      publishQuality();
+    },
+    subscribeQuality: (listener) => {
+      qualityListeners.add(listener);
+      listener(quality());
+      return () => {
+        qualityListeners.delete(listener);
+      };
+    },
+    audio,
+    setAudioTrack: (index: number) => {
+      const track = dashAudioInfos[index];
+      if (!track) return;
+      player.setCurrentTrack(track);
+      publishAudio();
+    },
+    subscribeAudio: (listener) => {
+      audioListeners.add(listener);
+      listener(audio());
+      return () => {
+        audioListeners.delete(listener);
       };
     },
   };
@@ -458,8 +927,6 @@ export async function attachCandidate(
   };
 
   if (candidate.type === "hls") {
-    // hls.js gives a quality menu and error recovery, so it is preferred even
-    // where the browser could play the manifest itself.
     if (Hls.isSupported()) {
       return finish(attachHls(video, candidate.url, timeoutMs, options.onFatal));
     }
@@ -467,6 +934,10 @@ export async function attachCandidate(
       done({ ok: false, message: "no HLS support" });
       throw new Error("This browser cannot play HLS streams");
     }
+  }
+
+  if (candidate.type === "dash") {
+    return finish(attachDash(video, candidate.url, timeoutMs, options.onFatal));
   }
 
   const pending = waitForNativeMedia(video, timeoutMs, options.onFatal);

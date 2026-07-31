@@ -16,8 +16,8 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Phantom | Descargador de YouTube",
-    template: "%s | Phantom",
+    default: "Descargador de YouTube Phantom",
+    template: "%s en Phantom",
   },
   description:
     "Descarga vídeos, audio y listas de YouTube desde una interfaz rápida y sencilla.",

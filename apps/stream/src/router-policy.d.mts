@@ -16,6 +16,14 @@ export interface SourceOffer {
   label: string;
   /** At least one manifest answered with a real playlist. */
   verified: boolean;
+  /** The manifest explicitly matched the requested audio language. */
+  audioVerified?: boolean;
+  /** Unknown audio used only because no requested-language match won. */
+  audioFallback?: boolean;
+  /** Observational fallback rank in [0, 1], never manifest verification. */
+  fallbackPreference?: number;
+  /** Observed speed and sustainable-quality tie-breaker in [0, 1]. */
+  fallbackPlaybackPreference?: number;
   /** Best tier among verified candidates, 0-4. */
   verifiedTier: number;
   /** Resolve plus probe, for choosing between offers that both arrived. */
@@ -23,11 +31,17 @@ export interface SourceOffer {
   ranked: StreamCandidate[];
   attempts: StreamCandidate[];
   subtitles: SubtitleTrack[];
+  availableAudioLanguages?: readonly string[];
   resolveMs: number;
   probeMs: number | null;
 }
 
-export type FailureKind = "empty" | "unreachable" | "limited";
+export type FailureKind =
+  | "empty"
+  | "unplayable"
+  | "unreachable"
+  | "limited"
+  | "slow";
 
 export type RouterEvent =
   | { type: "offer"; offer: SourceOffer }
@@ -65,6 +79,7 @@ export interface OrderOptions {
   /** sourceId -> timestamp the in-memory cooldown expires. */
   cooling?: Record<string, number>;
   now?: number;
+  preferredAudioLanguage?: string;
 }
 
 export declare const MAX_WAVE: number;

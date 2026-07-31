@@ -1,14 +1,11 @@
 export type MediaType = "movie" | "tv";
 
 export interface MediaResult {
-  /** What `/watch/:type/:id` carries: an IMDb id when there is one. */
   id: string;
   imdbId: string | null;
-  /** The playback resolver speaks TMDB and nothing else. */
   tmdbId: number | null;
   mediaType: MediaType;
   title: string;
-  /** `2011`, or `2011–2019` for a series that has finished. */
   year: string;
   releaseDate: string;
   overview: string;
@@ -49,14 +46,69 @@ export interface StreamCandidate {
   format: string | null;
   size: number | string | null;
   score: number;
+  failureDomain?: string | null;
+  capacityDomains?: readonly string[];
+  playbackHints?: SourcePlaybackHints | null;
+  deliveryMode?:
+    | "native-direct"
+    | "resolver"
+    | "resolver-full-relay";
+  expiresAt?: number | null;
+  audioTracks?: readonly AudioTrack[];
+  audioLanguages?: readonly string[];
+  language?: string;
+  lang?: string;
 }
 
-/**
- * Every field is optional because the shape varies by where the track came
- * from: a playback source describes them one way, a subtitle catalogue
- * another. `captionUrl` and `captionLabel` in `lib/subtitles.ts` are what turn
- * this into something the player can use.
- */
+export type PlaybackHintConfidence = "unknown" | "low" | "medium" | "high";
+
+export interface PlaybackLanguageObservation {
+  status: "unknown" | "observed" | "none" | "present";
+  languages: readonly string[];
+  confidence: PlaybackHintConfidence;
+}
+
+export interface PlaybackObservationNote {
+  kind: "audio" | "burned-in-subtitles" | "video" | "performance";
+  languages: readonly string[];
+  confidence: PlaybackHintConfidence;
+  observedAt: string;
+  evidence: "user-report" | "user-screenshot" | "provider-lab";
+  text: string;
+}
+
+export interface PlaybackVideoObservation {
+  adaptive: boolean | null;
+  maxResolution: number | null;
+  typicalResolution: number | null;
+  confidence: PlaybackHintConfidence;
+}
+
+export interface PlaybackPerformanceObservation {
+  status: "unknown" | "slow" | "fast";
+  bufferingRisk: "unknown" | "low" | "high";
+  confidence: PlaybackHintConfidence;
+}
+
+export interface SourcePlaybackHints {
+  audio: PlaybackLanguageObservation;
+  burnedInSubtitles: PlaybackLanguageObservation;
+  video: PlaybackVideoObservation;
+  performance: PlaybackPerformanceObservation;
+  notes: readonly PlaybackObservationNote[];
+}
+
+export interface AudioTrack {
+  id?: string | number;
+  language?: string;
+  lang?: string;
+  label?: string;
+  name?: string;
+  channels?: string | number;
+  codec?: string;
+  default?: boolean;
+}
+
 export interface SubtitleTrack {
   id?: string;
   display?: string;
@@ -65,9 +117,7 @@ export interface SubtitleTrack {
   url?: string;
   lang?: string;
   language?: string;
-  /** Where the track was found. Catalogues are named; playback sources are not. */
   origin?: "source" | "opensubtitles";
-  /** Upstream's word for the encoding, so the proxy can decode it correctly. */
   encoding?: string;
   hearingImpaired?: boolean;
 }
@@ -78,4 +128,8 @@ export interface ResolverResponse {
   latencyMs: number;
   candidates: StreamCandidate[];
   subtitles: SubtitleTrack[];
+  alternates?: Array<{
+    classification: "proxy" | "external" | "invalid";
+    reason: string;
+  }>;
 }

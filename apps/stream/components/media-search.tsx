@@ -12,7 +12,6 @@ interface SearchPayload {
 }
 
 interface MediaSearchProps {
-  /** Prefills the field on the results page so the query stays editable. */
   initialQuery?: string;
   autoFocus?: boolean;
   size?: "default" | "compact";
@@ -25,14 +24,6 @@ function isLookupWorthy(query: string): boolean {
   return query.length >= MIN_QUERY_LENGTH || looksLikeIdentifier(query);
 }
 
-/**
- * The stream app's half of the shared search field: it owns the debounce and
- * decides whether a query lands on the results grid or straight on a title.
- *
- * Results from the previous query stay on screen while the next one is in
- * flight. Blanking the list on every keystroke is what made typing feel like
- * the field had stopped responding.
- */
 export function MediaSearch({
   initialQuery = "",
   autoFocus = false,
@@ -121,7 +112,6 @@ export function MediaSearch({
         }
       }}
       onSubmit={(query) => {
-        // One work, one destination: an identifier goes straight to the player.
         const only =
           looksLikeIdentifier(query) && results.length === 1 ? results[0] : null;
         go(only ? mediaHref(only) : `/search?q=${encodeURIComponent(query)}`);

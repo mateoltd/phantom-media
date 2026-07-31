@@ -171,6 +171,12 @@
   gap: 0.35rem;
 }
 
+@media (max-width: 640px) {
+  .meta-row {
+    gap: 0.35rem 0.7rem;
+  }
+}
+
 .meta-tag {
   padding: 0.2rem 0.6rem;
   border: 1px solid var(--color-border);

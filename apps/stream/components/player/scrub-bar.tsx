@@ -7,7 +7,6 @@ import type { TimeListener } from "./use-video-state";
 interface ScrubBarProps {
   subscribe: (listener: TimeListener) => () => void;
   onSeek: (seconds: number) => void;
-  /** Called on press and release so the chrome can stay awake during a drag. */
   onScrubbingChange?: (scrubbing: boolean) => void;
 }
 
@@ -16,15 +15,6 @@ function percent(value: number, total: number): string {
   return `${Math.max(0, Math.min(1, value / total)) * 100}%`;
 }
 
-/**
- * A pointer-driven timeline rather than an `<input type="range">`: it has to
- * show how much is buffered and preview the time under the cursor, neither of
- * which a native range control can do.
- *
- * Nothing here is React state. The playhead, the buffer and the hover preview
- * are written straight onto the element as custom properties, so sixty updates
- * a second cost sixty style writes rather than sixty renders of the player.
- */
 export function ScrubBar({
   subscribe,
   onSeek,
@@ -35,6 +25,7 @@ export function ScrubBar({
   const tooltipRef = useRef<HTMLSpanElement>(null);
   const durationRef = useRef(0);
   const scrubbingRef = useRef(false);
+  const pendingRatioRef = useRef<number | null>(null);
 
   useEffect(
     () =>
@@ -45,8 +36,6 @@ export function ScrubBar({
         if (!rail || !root) return;
 
         root.style.setProperty("--buffered", percent(bufferedTo, duration));
-        // A drag owns the playhead until it ends, so the element's own time —
-        // which lags a seek on a slow source — cannot pull the head backwards.
         if (!scrubbingRef.current) {
           root.style.setProperty("--played", percent(currentTime, duration));
         }
@@ -83,29 +72,39 @@ export function ScrubBar({
     onScrubbingChange?.(scrubbing);
   };
 
-  const seekToRatio = (ratio: number) => {
+  const previewSeek = (ratio: number) => {
+    pendingRatioRef.current = ratio;
     rootRef.current?.style.setProperty("--played", `${ratio * 100}%`);
-    onSeek(ratio * durationRef.current);
   };
 
   const handlePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     if (durationRef.current <= 0) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     setScrubbing(true);
-    seekToRatio(ratioAt(event.clientX));
+    previewSeek(ratioAt(event.clientX));
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLButtonElement>) => {
     const ratio = ratioAt(event.clientX);
     rootRef.current?.classList.add("scrub-hovering");
     previewAt(ratio);
-    if (scrubbingRef.current) seekToRatio(ratio);
+    if (scrubbingRef.current) previewSeek(ratio);
   };
 
-  const endScrub = (event: PointerEvent<HTMLButtonElement>) => {
+  const endScrub = (
+    event: PointerEvent<HTMLButtonElement>,
+    cancelled = false,
+  ) => {
     if (!scrubbingRef.current) return;
-    event.currentTarget.releasePointerCapture(event.pointerId);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    const ratio = pendingRatioRef.current;
+    pendingRatioRef.current = null;
     setScrubbing(false);
+    if (!cancelled && ratio !== null) {
+      onSeek(ratio * durationRef.current);
+    }
   };
 
   return (
@@ -122,7 +121,7 @@ export function ScrubBar({
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={endScrub}
-        onPointerCancel={endScrub}
+        onPointerCancel={(event) => endScrub(event, true)}
         onPointerLeave={() => rootRef.current?.classList.remove("scrub-hovering")}
       >
         <span className="scrub-track">

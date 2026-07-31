@@ -7,7 +7,7 @@ import { noticeEmail, siteConfig } from "@/lib/seo";
 export const metadata: Metadata = {
   title: "Legal disclaimer",
   description:
-    "Phantom Stream hosts no media. This page sets out what the service is, the limits of responsibility for its operators, and the rules users are expected to follow.",
+    "Phantom Stream stores no media library. This page sets out what the service is, the limits of responsibility for its operators, and the rules users are expected to follow.",
   alternates: { canonical: "/disclaimer" },
 };
 
@@ -40,35 +40,34 @@ export default function DisclaimerPage() {
           </h1>
           <p className="mt-6 text-[14px] leading-7 text-text-secondary">
             {siteConfig.name} is an independent search interface for publicly
-            reachable media. It stores no media, transmits no media, and has no
-            control over the third-party services it links to. This page sets
-            out what the service does, what it does not do, and where
-            responsibility sits.
+            reachable media. It stores no media library and has no control over
+            the third-party services it connects to. Most playback is direct;
+            a constrained compatibility relay may transmit media bytes when a
+            public source cannot be requested by a browser. This page sets out
+            what the service does, what it does not do, and where responsibility
+            sits.
           </p>
         </header>
 
         <div className="mt-10 space-y-7">
-          <Section title="No media is hosted here">
+          <Section title="No stored media library">
             <p>
-              {siteConfig.name} hosts no video, audio, subtitles, or other media
-              files. It operates no media servers, no content delivery network,
-              and no storage of media of any kind. Nothing you play through this
-              interface is uploaded to, cached by, copied by, or passed through
-              infrastructure operated by this project.
+              {siteConfig.name} operates no media library or content delivery
+              network and persistently stores no video or audio. It does not
+              upload, mirror, transcode, re-encode, seed, or retain media files.
             </p>
             <p>
               When you ask for a title, the service queries publicly reachable
-              third-party services and returns the addresses they publish. Media
-              is then requested by your own browser, directly from whichever
-              third party is serving it. The connection carrying the video is
-              between you and that third party, and this project is not a party
-              to it.
+              third-party services and returns the addresses they publish.
+              Browser-ready media is requested directly from the third party.
+              For a public source whose media endpoints reject ordinary browser
+              requests, the service may use a narrowly allowlisted compatibility
+              relay that streams responses without persistent storage.
             </p>
             <p>
-              This project does not upload, index, store, seed, mirror,
-              transcode, re-encode, or redistribute any media file, and does not
-              select, review, approve, or moderate what those third parties
-              choose to make available.
+              This project does not select, review, approve, or moderate what
+              third parties choose to make available. It supports no paid or
+              authenticated media services and does not bypass DRM.
             </p>
           </Section>
 

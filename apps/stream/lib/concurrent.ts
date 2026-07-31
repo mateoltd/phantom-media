@@ -4,14 +4,6 @@ export interface Settled<T, R> {
   error?: unknown;
 }
 
-/**
- * Runs `task` over `items` with a fixed number in flight and yields each one
- * as it settles, fastest first.
- *
- * Asking one source at a time is what made finding a stream feel slow: most of
- * that wait was a handful of dead hosts timing out in sequence. Consuming this
- * lazily also means the work stops as soon as the caller stops asking.
- */
 export async function* asSettled<T, R>(
   items: readonly T[],
   limit: number,

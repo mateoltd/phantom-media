@@ -8,7 +8,6 @@ export function kindLabel(mediaType: MediaType): string {
   return mediaType === "tv" ? "Series" : "Film";
 }
 
-/** `1:04:12` for anything an hour or longer, `4:12` below that. */
 export function formatTimecode(value: number): string {
   if (!Number.isFinite(value) || value < 0) return "0:00";
   const hours = Math.floor(value / 3600);
@@ -20,10 +19,6 @@ export function formatTimecode(value: number): string {
     : `${minutes}:${paddedSeconds}`;
 }
 
-/**
- * Identifiers are handled differently from titles: they resolve to exactly one
- * work, so the app skips the results grid and opens it.
- */
 export function looksLikeIdentifier(query: string): boolean {
   return (
     /tt\d{5,12}/i.test(query) ||

@@ -22,11 +22,6 @@ export interface DownloadWorkerCallbacks {
   signal: AbortSignal;
 }
 
-/**
- * Creates a bounded server-side yt-dlp job, polls its progress, then hands the
- * finished file to the browser's native download manager. Media is never held
- * in browser memory and the browser never contacts a YouTube CDN directly.
- */
 export async function executeDownload(
   option: DownloadOption,
   videoId: string,
@@ -131,11 +126,6 @@ class HttpError extends Error {
   }
 }
 
-/**
- * The server runs a limited number of jobs at once, so a busy answer means
- * "wait your turn", not "this download failed". Keep asking until a slot frees
- * up, and only surface the server's message once waiting stops being sensible.
- */
 async function createJob(
   input: CreateDownloadJobRequest,
   signal: AbortSignal,

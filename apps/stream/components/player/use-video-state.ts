@@ -2,10 +2,6 @@
 
 import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
 
-/**
- * What the chrome re-renders for. Everything here changes a handful of times
- * per viewing; the playhead does not, so it is deliberately absent.
- */
 export interface VideoState {
   playing: boolean;
   waiting: boolean;
@@ -20,7 +16,6 @@ export interface VideoState {
 export interface TimeSnapshot {
   currentTime: number;
   duration: number;
-  /** End of the buffered range the playhead is currently inside, in seconds. */
   bufferedTo: number;
 }
 
@@ -39,7 +34,6 @@ const INITIAL: VideoState = {
 
 const EMPTY_TIME: TimeSnapshot = { currentTime: 0, duration: 0, bufferedTo: 0 };
 
-/** Events that change something the chrome renders. All of them are rare. */
 const STATE_EVENTS = [
   "play",
   "playing",
@@ -52,7 +46,6 @@ const STATE_EVENTS = [
   "canplay",
 ] as const;
 
-/** Events that move the playhead or the buffer without changing the chrome. */
 const TIME_EVENTS = [
   "timeupdate",
   "progress",
@@ -80,15 +73,6 @@ function readTime(video: HTMLVideoElement): TimeSnapshot {
   };
 }
 
-/**
- * Mirrors the media element into React and hands back the commands the chrome
- * needs. The element stays the single source of truth, so the UI cannot drift
- * from what is playing.
- *
- * The playhead is published through `subscribeTime` rather than through state:
- * at sixty frames a second, routing it through React would re-render the whole
- * stage — controls, menus, poster and all — for every frame of a scrub.
- */
 export function useVideoState(
   videoRef: RefObject<HTMLVideoElement | null>,
   containerRef: RefObject<HTMLElement | null>
@@ -157,9 +141,6 @@ export function useVideoState(
     };
   }, [emitTime, videoRef]);
 
-  // `timeupdate` fires about four times a second, which is visibly steppy on a
-  // progress bar. While something is playing the bar is driven off the frame
-  // clock instead, and stops the moment playback does.
   useEffect(() => {
     if (!state.playing) return;
     const tick = () => {
@@ -216,7 +197,6 @@ export function useVideoState(
       const video = videoRef.current;
       if (!video) return;
       video.volume = Math.max(0, Math.min(1, level));
-      // Reaching for the slider means you want to hear it.
       if (video.volume > 0) video.muted = false;
     },
     [videoRef]

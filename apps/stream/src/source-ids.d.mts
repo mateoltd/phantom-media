@@ -1,9 +1,20 @@
 export declare const SOURCE_IDS: readonly string[];
 export declare const RETIRED_SOURCE_IDS: ReadonlySet<string>;
+export declare const RESERVED_SOURCE_IDS: ReadonlySet<string>;
+export declare const STREMIO_SOURCE_IDS: readonly string[];
+export declare const VIDEASY_SOURCE_ID: string;
+export declare const VIDFAST_SOURCE_ID: string;
+export declare const NON_RELAY_SOURCE_IDS: readonly string[];
+export declare const STREMIO_ADDON_URLS: Readonly<Record<string, string>>;
 export declare const ACTIVE_SOURCE_IDS: readonly string[];
+export declare const AUTOMATIC_SOURCE_IDS: readonly string[];
+export declare const RELAY_CAPABLE_SOURCE_IDS: readonly string[];
+export declare const RELAY_SOURCE_IDS: readonly string[];
 export declare const SOURCE_ALIASES: Readonly<Record<string, string>>;
+export declare function parseStremioManifestUrl(value: unknown): string | null;
 export declare function sourceAlias(id: string): string;
 export declare const SOURCE_ROSTER: ReadonlyArray<{
   readonly id: string;
   readonly label: string;
+  readonly automatic: boolean;
 }>;

@@ -1,10 +1,6 @@
 @import "tailwindcss";
 @import "@phantom/theme";
-/* Order matters: the cinema surface re-points the theme's own variables, so it
-   has to land after the values it is replacing. */
 @import "@phantom/theme/cinema.css";
 @import "@phantom/theme/player.css";
 
-/* Shared components live outside this app's root, so Tailwind is pointed at
-   them explicitly or their classes never make it into the bundle. */
 @source "../../../packages/ui/src";

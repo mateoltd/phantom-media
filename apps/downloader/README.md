@@ -26,7 +26,7 @@ desktop application, or local media processor.
 
 ```mermaid
 flowchart LR
-    U["User's browser"] -->|"search / resolve"| A["Next.js API"]
+    U["User's browser"] -->|"search or resolve"| A["Next.js API"]
     A -->|"metadata requests"| Y["YouTube"]
     U -->|"create job"| Q["In-process job queue"]
     Q -->|"bounded child process"| D["yt-dlp + FFmpeg"]

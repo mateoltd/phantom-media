@@ -44,27 +44,36 @@ import {
 import type { EpisodeSummary } from "@/lib/types";
 import { RaceProgress, type RaceProgressModel } from "./race-progress";
 import { ScrubBar } from "./scrub-bar";
-import { StageSettings, type SettingsSection } from "./stage-settings";
+import {
+  StageSettings,
+  type SettingsSection,
+  type SignalStrength,
+} from "./stage-settings";
 import { UpNext } from "./up-next";
 import { useCaptions } from "./use-captions";
 import type { Chapter } from "./use-chapters";
 import { useVideoState, type TimeListener } from "./use-video-state";
+import { stageAspectRatio } from "@/src/player-layout.mjs";
 
 export type StageStatus = "idle" | "working" | "ready" | "error";
 
 export interface StageMenuModel {
-  options: readonly { value: string; label: string; detail?: string }[];
+  options: readonly {
+    value: string;
+    label: string;
+    detail?: string;
+    language?: string;
+    signal?: SignalStrength;
+  }[];
   value: string | null;
   onChange: (value: string) => void;
   summary?: string;
 }
 
 export interface CaptionChoice {
-  /** Index into `tracks`, as a string. */
   value: string;
   label: string;
   detail?: string;
-  /** Normalised code, so a language can be remembered between episodes. */
   language: string;
 }
 
@@ -76,47 +85,61 @@ export interface StageToast {
 interface VideoStageProps {
   videoRef: RefObject<HTMLVideoElement | null>;
   title: string;
-  /** Episode identity, shown in the top band beside the title. */
   subtitle?: string;
   poster?: string | null;
   status: StageStatus;
   statusText: string;
-  /** The big centre button: starts the search for a playable source. */
   onRequestPlayback: () => void;
   canRequestPlayback: boolean;
   requestLabel: string;
-  /** Per-source detail while a race is running. */
   progress?: RaceProgressModel;
   quality?: StageMenuModel;
-  /** The source roster, kept in here rather than beside the picture. */
+  language?: StageMenuModel;
+  audio?: StageMenuModel;
   sources?: StageMenuModel;
   captions?: readonly CaptionChoice[];
-  /** `<track>` elements, which have to be children of the media element. */
   tracks?: ReactNode;
-  /** Changes when the track list is replaced, so captions re-read it. */
   trackKey?: string;
-  /** Said once, dismissible, never blocking. */
   toast?: StageToast | null;
   onDismissToast?: () => void;
-  /** Set for a series that has somewhere to go after this episode. */
   onNextEpisode?: () => void;
   onEnded?: () => void;
-  /** The episode list, rendered inside the stage so it survives fullscreen. */
   episodePanel?: ReactNode;
   episodesOpen?: boolean;
   onEpisodesOpenChange?: (open: boolean) => void;
-  /** Whatever the stream declared. Empty for the many that declare nothing. */
   chapters?: readonly Chapter[];
-  /** Offered over the credits. The stage owns the timing; the page owns the
-   *  episode and what happens when it is taken. */
   upNext?: { episode: EpisodeSummary; onPlay: () => void };
   children?: ReactNode;
 }
 
 const CAPTIONS_OFF = "off";
+const STAGE_SHORT_HEIGHT = 420;
 const IDLE_DELAY_MS = 2600;
 const DOUBLE_TAP_MS = 320;
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] as const;
+
+const PAGE_LEVEL_KEYS: ReadonlySet<string> = new Set([
+  " ",
+  "k",
+  "j",
+  "l",
+  "m",
+  "f",
+  "c",
+  "ArrowLeft",
+  "ArrowRight",
+  "?",
+  "Escape",
+]);
+
+interface ShortcutEvent {
+  key: string;
+  metaKey: boolean;
+  ctrlKey: boolean;
+  altKey: boolean;
+  target: EventTarget | null;
+  preventDefault: () => void;
+}
 
 const CUE_SIZE_CLASS: Record<CaptionSize, string> = {
   small: "stage-cues-sm",
@@ -124,19 +147,10 @@ const CUE_SIZE_CLASS: Record<CaptionSize, string> = {
   large: "stage-cues-lg",
 };
 
-/**
- * Picture-in-picture support is a fact about the browser, and the server has
- * no browser. Reading it during render is what made the two trees disagree, so
- * it is read as an external value with an explicit server answer of "no".
- */
 const NEVER_CHANGES = () => () => {};
 const pipSupported = () => document.pictureInPictureEnabled;
 const saysNoOnServer = () => false;
 
-/**
- * Touch and mouse want different things from the same surface: a tap on a
- * phone should show the controls, where a click on a desktop should pause.
- */
 const COARSE_QUERY = "(pointer: coarse)";
 function subscribeToPointer(listener: () => void) {
   const query = window.matchMedia(COARSE_QUERY);
@@ -146,16 +160,16 @@ function subscribeToPointer(listener: () => void) {
 const isCoarsePointer = () => window.matchMedia(COARSE_QUERY).matches;
 
 const SHORTCUTS: ReadonlyArray<readonly [string, string]> = [
-  ["Space / K", "Play or pause"],
-  ["← / →", "Back or forward 5 seconds"],
-  ["J / L", "Back or forward 10 seconds"],
-  ["↑ / ↓", "Volume"],
+  ["Space or K", "Play or pause"],
+  ["Left or right arrow", "Back or forward 5 seconds"],
+  ["J or L", "Back or forward 10 seconds"],
+  ["Up or down arrow", "Volume"],
   ["M", "Mute"],
   ["C", "Subtitles on or off"],
   ["F", "Fullscreen"],
   ["N", "Next episode"],
   ["E", "Episodes"],
-  ["< / >", "Slower or faster"],
+  ["Comma or period", "Slower or faster"],
   ["0–9", "Jump through the runtime"],
   ["?", "This list"],
 ];
@@ -172,6 +186,8 @@ export function VideoStage({
   requestLabel,
   progress,
   quality,
+  language,
+  audio,
   sources,
   captions = [],
   tracks,
@@ -198,7 +214,6 @@ export function VideoStage({
   const [flash, setFlash] = useState<{ id: number; text: string } | null>(null);
   const [skippable, setSkippable] = useState<Chapter | null>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  /** Which stream ended, rather than a flag that has to be reset. */
   const [endedKey, setEndedKey] = useState<string | null>(null);
 
   const prefs: PlayerPrefs = useSyncExternalStore(
@@ -234,22 +249,15 @@ export function VideoStage({
     setFlash({ id: Date.now(), text });
   }, []);
 
-  /* ------------------------------------------------------------ preferences */
-
   const update = useCallback((next: Partial<PlayerPrefs>) => {
     savePrefs(next);
   }, []);
 
-  // Preferences are the source of truth and the element follows them, which is
-  // why nothing that changes a setting touches the element itself.
   useEffect(() => {
     const video = videoRef.current;
     if (video) video.playbackRate = prefs.playbackRate;
   }, [prefs.playbackRate, videoRef]);
 
-  // Volume is the exception: it is adjusted on the element, by a slider and by
-  // the keyboard, so it flows the other way. Debounced, because it is not
-  // worth a write per pixel of slider travel.
   const restoredVolumeRef = useRef(false);
   useEffect(() => {
     const video = videoRef.current;
@@ -284,38 +292,20 @@ export function VideoStage({
     [prefs.playbackRate, setSpeed],
   );
 
-  /* ------------------------------------------------------------------ idle */
-
-  // Hiding the chrome is a class on one element, so the pointer can move
-  // across the picture without React hearing about it at all.
   const setIdle = useCallback((idle: boolean) => {
     containerRef.current?.classList.toggle("stage-idle", idle);
   }, []);
 
-  /**
-   * The stage takes the film's own shape.
-   *
-   * A fixed 16:9 box has to put the difference somewhere, and that somewhere is
-   * a band down the sides of anything wider — which is most films. Reading the
-   * intrinsic size means the picture meets every edge of the stage, so there is
-   * no band to colour in, and a 2.39:1 film is short enough that the whole
-   * player clears the fold on its own.
-   */
   useEffect(() => {
     const video = videoRef.current;
     const container = containerRef.current;
     if (!video || !container) return;
 
     const apply = () => {
-      if (!video.videoWidth || !video.videoHeight) return;
-      container.style.setProperty(
-        "--stage-ratio",
-        `${video.videoWidth} / ${video.videoHeight}`,
-      );
+      const ratio = stageAspectRatio(video.videoWidth, video.videoHeight);
+      if (ratio) container.style.setProperty("--stage-ratio", ratio);
     };
     apply();
-    // `resize` is the one that fires when a rendition swap changes the frame
-    // size mid-playback; `loadedmetadata` covers the first read.
     video.addEventListener("loadedmetadata", apply);
     video.addEventListener("resize", apply);
     return () => {
@@ -336,8 +326,6 @@ export function VideoStage({
     scheduleIdle();
   }, [scheduleIdle, setIdle]);
 
-  // Playback starting is enough to begin the countdown; the pointer does not
-  // have to move first. Pausing brings the chrome back and keeps it up.
   useEffect(() => {
     playingRef.current = state.playing;
     if (!state.playing) setIdle(false);
@@ -356,24 +344,48 @@ export function VideoStage({
     [scheduleIdle, setIdle],
   );
 
-  /* -------------------------------------------------------------- captions */
+  useEffect(() => {
+    holdAwake(episodesOpen);
+  }, [episodesOpen, holdAwake]);
 
-  /**
-   * Which track is showing follows from the remembered language rather than
-   * being held separately.
-   *
-   * Picking a language once should pick it for the series, not for the
-   * episode, and the index of a language changes with every track list while
-   * the language itself does not. Deriving it means an episode change simply
-   * finds the same language in the new list, with nothing to keep in step.
-   */
+  useEffect(() => {
+    const stage = containerRef.current;
+    if (!stage) return;
+    const measure = () =>
+      stage.classList.toggle(
+        "stage-short",
+        stage.clientHeight < STAGE_SHORT_HEIGHT,
+      );
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
+
+  const toggleEpisodes = useCallback(
+    () => onEpisodesOpenChange?.(!episodesOpen),
+    [episodesOpen, onEpisodesOpenChange],
+  );
+
+  // The stored preference is a language, which is all that can carry to the
+  // next episode: the tracks themselves are a different set every time. Which
+  // of a language's tracks is playing is a decision about this sitting.
+  const [picked, setPicked] = useState<{ key: string; value: string } | null>(
+    null,
+  );
+  const pickedCaption = picked?.key === trackKey ? picked.value : null;
+
   const caption = useMemo(() => {
+    if (pickedCaption === CAPTIONS_OFF) return CAPTIONS_OFF;
+    if (pickedCaption && captions.some((c) => c.value === pickedCaption)) {
+      return pickedCaption;
+    }
     if (!prefs.captionLanguage) return CAPTIONS_OFF;
     return (
       captions.find((choice) => choice.language === prefs.captionLanguage)
         ?.value ?? CAPTIONS_OFF
     );
-  }, [captions, prefs.captionLanguage]);
+  }, [captions, pickedCaption, prefs.captionLanguage]);
 
   const captionIndex = caption === CAPTIONS_OFF ? null : Number(caption);
   useCaptions(videoRef, cuesRef, captionIndex, trackKey);
@@ -381,10 +393,24 @@ export function VideoStage({
   const changeCaption = useCallback(
     (value: string) => {
       const choice = captions.find((entry) => entry.value === value);
+      setPicked({ key: trackKey, value });
       update({ captionLanguage: choice ? choice.language : null });
     },
-    [captions, update],
+    [captions, trackKey, update],
   );
+
+  // One row per language rather than six rows reading "English": the tracks
+  // behind a language differ only in who typed them, which is nothing to
+  // choose from until you have heard one that does not fit.
+  const captionGroups = useMemo(() => {
+    const groups = new Map<string, CaptionChoice[]>();
+    captions.forEach((choice) => {
+      const group = groups.get(choice.label);
+      if (group) group.push(choice);
+      else groups.set(choice.label, [choice]);
+    });
+    return [...groups.entries()].map(([label, choices]) => ({ label, choices }));
+  }, [captions]);
 
   const toggleCaptions = useCallback(() => {
     if (captions.length === 0) return;
@@ -399,14 +425,29 @@ export function VideoStage({
     showFlash(first.label);
   }, [caption, captions, changeCaption, showFlash]);
 
-  /* -------------------------------------------------------------- chapters */
+  const changeAudio = useCallback(
+    (value: string) => {
+      if (!audio) return;
+      const choice = audio.options.find((entry) => entry.value === value);
+      if (choice?.language) update({ audioLanguage: choice.language });
+      audio.onChange(value);
+      if (choice) showFlash(choice.label);
+    },
+    [audio, showFlash, update],
+  );
 
-  // Entering and leaving a chapter happens a handful of times an episode, so
-  // this one is allowed to be state — it has a label to render.
+  useEffect(() => {
+    if (!audio || !prefs.audioLanguage) return;
+    const preferred = audio.options.find(
+      (choice) => choice.language === prefs.audioLanguage,
+    );
+    if (preferred && preferred.value !== audio.value) {
+      audio.onChange(preferred.value);
+    }
+  }, [audio, prefs.audioLanguage]);
+
   useEffect(
     () =>
-      // The subscription answers immediately, so an empty chapter list clears
-      // the offer on the same tick it arrives.
       subscribeTime(({ currentTime }) => {
         const inside =
           chapters.find(
@@ -426,15 +467,13 @@ export function VideoStage({
     skipRef.current?.classList.toggle("stage-skip-visible", Boolean(skippable));
   }, [skippable]);
 
-  /* -------------------------------------------------------------- keyboard */
-
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    // Let the browser own typing and tabbing.
+  const handleKeyDown = (event: ShortcutEvent, fromPage = false) => {
     if (event.metaKey || event.ctrlKey || event.altKey) return;
-    const target = event.target as HTMLElement;
-    if (target.tagName === "INPUT" || target.isContentEditable) return;
+    const target = event.target as HTMLElement | null;
+    if (target?.tagName === "INPUT" || target?.isContentEditable) return;
 
     const key = event.key;
+    if (fromPage && (status !== "ready" || !PAGE_LEVEL_KEYS.has(key))) return;
     const handlers: Record<string, () => void> = {
       " ": () => {
         togglePlay();
@@ -475,13 +514,19 @@ export function VideoStage({
       c: toggleCaptions,
       f: () => toggleFullscreen(),
       n: () => onNextEpisode?.(),
-      e: () => onEpisodesOpenChange?.(!episodesOpen),
+      e: toggleEpisodes,
       "<": () => nudgeSpeed(-1),
       ",": () => nudgeSpeed(-1),
       ">": () => nudgeSpeed(1),
       ".": () => nudgeSpeed(1),
       "?": () => setShortcutsOpen((open) => !open),
-      Escape: () => setShortcutsOpen(false),
+      Escape: () => {
+        if (episodesOpen) {
+          onEpisodesOpenChange?.(false);
+          return;
+        }
+        setShortcutsOpen(false);
+      },
       Home: () => seekTo(0),
       End: () => seekTo(state.duration),
     };
@@ -501,18 +546,48 @@ export function VideoStage({
     handler();
   };
 
-  /* ------------------------------------------------------------ tap to seek */
+  const shortcutRef = useRef(handleKeyDown);
+  useEffect(() => {
+    shortcutRef.current = handleKeyDown;
+  });
+
+  useEffect(() => {
+    const onDocumentKeyDown = (event: KeyboardEvent) => {
+      const active = document.activeElement;
+      if (active && active !== document.body && active !== document.documentElement) {
+        return;
+      }
+      shortcutRef.current(event, true);
+    };
+
+    document.addEventListener("keydown", onDocumentKeyDown);
+    return () => document.removeEventListener("keydown", onDocumentKeyDown);
+  }, []);
+
+  const handlePointerLeave = (event: React.PointerEvent<HTMLDivElement>) => {
+    // Touch emits pointerleave before click, so hiding here would swallow the tap.
+    if (event.pointerType !== "mouse") return;
+    if (playingRef.current) setIdle(true);
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "mouse") return;
+    wake();
+  };
 
   const handleVideoClick = (event: React.MouseEvent<HTMLVideoElement>) => {
     if (status !== "ready") return;
+
+    if (episodesOpen) {
+      onEpisodesOpenChange?.(false);
+      return;
+    }
 
     if (!coarsePointer) {
       togglePlay();
       return;
     }
 
-    // On a touch screen the picture is not a play button — it is where the
-    // controls live. A second tap in the same place is the seek.
     const rect = event.currentTarget.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const now = Date.now();
@@ -538,10 +613,26 @@ export function VideoStage({
     else setIdle(true);
   };
 
-  /* -------------------------------------------------------------- settings */
-
   const settingsSections = useMemo<SettingsSection[]>(() => {
     const sections: SettingsSection[] = [];
+
+    if (language && language.options.length > 0) {
+      sections.push({
+        id: "language",
+        title: "Audio",
+        note:
+          "Only languages found on currently viable sources are shown. Unverified means the manifest did not identify its audio.",
+        options: language.options,
+        value: language.value,
+        onChange: (value) => {
+          language.onChange(value);
+          const selected = language.options.find(
+            (option) => option.value === value,
+          );
+          if (selected) showFlash(`${selected.label} audio`);
+        },
+      });
+    }
 
     if (quality && quality.options.length > 1) {
       sections.push({
@@ -550,6 +641,16 @@ export function VideoStage({
         options: quality.options,
         value: quality.value,
         onChange: quality.onChange,
+      });
+    }
+
+    if (audio && audio.options.length > 1) {
+      sections.push({
+        id: "audio",
+        title: "Audio",
+        options: audio.options,
+        value: audio.value,
+        onChange: changeAudio,
       });
     }
 
@@ -568,7 +669,39 @@ export function VideoStage({
       sections.push({
         id: "subtitles",
         title: "Subtitles",
-        options: [{ value: CAPTIONS_OFF, label: "Off" }, ...captions],
+        options: [
+          { value: CAPTIONS_OFF, label: "Off" },
+          ...captionGroups.map(({ label, choices }) => {
+            const active = choices.findIndex(
+              (choice) => choice.value === caption,
+            );
+            const showing = choices[active] ?? choices[0]!;
+            return {
+              value: showing.value,
+              label,
+              detail:
+                active >= 0
+                  ? showing.detail
+                  : (showing.detail ??
+                    (choices.length > 1
+                      ? `${choices.length} versions`
+                      : undefined)),
+              variant:
+                active >= 0 && choices.length > 1
+                  ? {
+                      index: active,
+                      count: choices.length,
+                      onStep: (direction: 1 | -1) => {
+                        const next =
+                          (active + direction + choices.length) %
+                          choices.length;
+                        changeCaption(choices[next]!.value);
+                      },
+                    }
+                  : undefined,
+            };
+          }),
+        ],
         value: caption,
         onChange: changeCaption,
       });
@@ -585,8 +718,8 @@ export function VideoStage({
             value: "backdrop",
             label: "Backdrop",
             detail: prefs.captionBackdrop
-              ? "On — easier over bright footage"
-              : "Off — a shadow instead",
+              ? "On for easier reading over bright footage"
+              : "Off with a shadow instead",
           },
         ],
         value: `size:${prefs.captionSize}`,
@@ -604,9 +737,7 @@ export function VideoStage({
       sections.push({
         id: "source",
         title: "Source",
-        // The tab already says Source. What it does not say is that choosing
-        // one keeps it, which is the part nobody would guess.
-        note: "Choosing a source keeps it. Automatic races all of them.",
+        note: "Automatic is recommended. Change this only to troubleshoot playback.",
         options: sources.options,
         value: sources.value,
         onChange: sources.onChange,
@@ -615,14 +746,19 @@ export function VideoStage({
 
     return sections;
   }, [
+    audio,
     caption,
+    captionGroups,
     captions,
+    changeAudio,
     changeCaption,
     prefs.captionBackdrop,
     prefs.captionSize,
     prefs.playbackRate,
+    language,
     quality,
     setSpeed,
+    showFlash,
     sources,
     update,
   ]);
@@ -640,20 +776,14 @@ export function VideoStage({
   return (
     <div
       ref={containerRef}
-      className="stage w-full overflow-hidden outline-none"
+      className="stage w-full overflow-hidden"
       tabIndex={0}
       role="region"
       aria-label={`${title} player`}
       onKeyDown={handleKeyDown}
-      onPointerMove={wake}
-      onPointerLeave={() => playingRef.current && setIdle(true)}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
     >
-      {/* Bright enough to be a picture. At 45% under a scrim that was 45% at
-          its thinnest, the artwork came through at about a quarter strength —
-          which on a handset stage is a black box with a spinner in it, and
-          reads as something broken rather than as something loading. The
-          gradient still goes solid at the bottom, because the controls sit
-          there and need the contrast. */}
       {showPoster && (
         <Artwork
           src={poster}
@@ -686,8 +816,6 @@ export function VideoStage({
 
       {children}
 
-      {/* Painted here rather than by the browser, so they can be sized and can
-          move clear of the controls. */}
       <div
         ref={cuesRef}
         aria-live="polite"
@@ -696,9 +824,6 @@ export function VideoStage({
         }`}
       />
 
-      {/* Only in fullscreen. In the page the site header is already sitting
-          over the top of the picture and the title is right underneath it, so
-          a second band saying the same thing is two things doing one job. */}
       {status === "ready" && state.fullscreen && (
         <div className="stage-top">
           <button
@@ -722,8 +847,6 @@ export function VideoStage({
         </div>
       )}
 
-      {/* The centre affordance is whatever the stage needs next: start, retry,
-          or nothing at all once a source is attached. */}
       {(status === "idle" || status === "error") && (
         <div className="stage-center">
           <button
@@ -916,7 +1039,11 @@ export function VideoStage({
             {episodePanel && (
               <StageButton
                 label="Episodes"
-                onClick={() => onEpisodesOpenChange?.(!episodesOpen)}
+                onClick={toggleEpisodes}
+                expanded={episodesOpen}
+                className={
+                  episodesOpen ? "flex bg-white/12 text-stage-text" : "flex"
+                }
               >
                 <IconLayoutList size={19} stroke={1.9} />
               </StageButton>
@@ -966,11 +1093,6 @@ export function VideoStage({
   );
 }
 
-/**
- * Subscribes to the playhead directly and writes it to the DOM. Rendering the
- * timecode through React would drag the whole chrome along with it once a
- * second.
- */
 function Timecode({
   subscribe,
 }: {
@@ -993,16 +1115,14 @@ function Timecode({
   );
 
   return (
-    // `shrink-0` and no wrapping: this is the one item in the row with no fixed
-    // width, so it is the one that folds in half when the row runs out of
-    // space — which put the elapsed time above the buttons and the runtime
-    // below them.
-    <p className="ml-1 shrink-0 whitespace-nowrap font-mono text-[11px] tabular-nums text-stage-muted">
+    <p className="ml-1 min-w-0 overflow-hidden whitespace-nowrap font-mono text-[11px] tabular-nums text-stage-muted">
       <span ref={currentRef} className="text-stage-text">
         0:00
       </span>
-      {" / "}
-      <span ref={totalRef}>0:00</span>
+      <span className="hidden sm:inline">
+        {" of "}
+        <span ref={totalRef}>0:00</span>
+      </span>
     </p>
   );
 }
@@ -1011,11 +1131,13 @@ function StageButton({
   label,
   onClick,
   className = "",
+  expanded,
   children,
 }: {
   label: string;
   onClick: () => void;
   className?: string;
+  expanded?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -1024,6 +1146,7 @@ function StageButton({
       onClick={onClick}
       aria-label={label}
       title={label}
+      aria-expanded={expanded}
       className={`h-8 w-8 shrink-0 items-center justify-center rounded-lg text-stage-text/85 transition-colors hover:bg-white/12 hover:text-stage-text sm:h-9 sm:w-9 ${
         className || "flex"
       }`}

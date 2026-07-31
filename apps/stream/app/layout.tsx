@@ -15,8 +15,8 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: `${siteConfig.name} | ${siteConfig.tagline}`,
-    template: `%s | ${siteConfig.name}`,
+    default: `${siteConfig.name}: ${siteConfig.tagline}`,
+    template: `%s from ${siteConfig.name}`,
   },
   description: siteConfig.description,
   applicationName: siteConfig.name,
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   metadataBase: getBaseUrl(),
   alternates: { canonical: "/" },
   openGraph: {
-    title: `${siteConfig.name} — ${siteConfig.tagline}`,
+    title: `${siteConfig.name}: ${siteConfig.tagline}`,
     description: siteConfig.description,
     url: "/",
     siteName: siteConfig.name,
@@ -34,13 +34,13 @@ export const metadata: Metadata = {
         url: "/og.png",
         width: 1730,
         height: 909,
-        alt: `${siteConfig.name} — ${siteConfig.tagline}`,
+        alt: `${siteConfig.name}: ${siteConfig.tagline}`,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: `${siteConfig.name} — ${siteConfig.tagline}`,
+    title: `${siteConfig.name}: ${siteConfig.tagline}`,
     description: siteConfig.description,
     images: ["/og.png"],
   },
@@ -53,11 +53,17 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const localDebug =
+    process.env.NODE_ENV !== "production" && process.env.DEBUG === "1";
+
   return (
     <html
       lang="en"
       className={`${sora.variable} ${jetbrainsMono.variable} font-sans`}
     >
+      <head>
+        {localDebug ? <meta name="phantom-debug" content="1" /> : null}
+      </head>
       <body>{children}</body>
     </html>
   );

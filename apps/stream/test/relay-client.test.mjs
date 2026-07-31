@@ -89,8 +89,6 @@ test("normalizes upstream source objects into player candidates", async () => {
     requestUrl.searchParams.get("secret"),
     generateContentHash(tvMedia),
   );
-  // The upstream host name ("Emerald") must not survive normalisation: every
-  // candidate is labelled with this source's in-house alias instead.
   assert.equal(result.serverLabel, "Source 03");
   assert.equal(result.candidates[0].serverLabel, "Source 03");
   assert.equal(result.candidates[0].server, "va");
@@ -113,7 +111,6 @@ test("hands the caller's abort signal to the upstream request", async () => {
 
   const controller = new AbortController();
   await client.resolveScraper(tvMedia, "va", { signal: controller.signal });
-  // Without this the subrequest outlives the router that gave up on it.
   assert.equal(seen, controller.signal);
 });
 
@@ -124,8 +121,6 @@ test("a rate limit cools down every source, not just the one that hit it", async
 
   await assert.rejects(client.resolveScraper(tvMedia, "va"), { status: 429 });
 
-  // A limiter armed upstream is armed for all of them, so asking a different
-  // source next would only deepen it.
   await assert.rejects(
     client.resolveScraper(tvMedia, "k9"),
     (error) => {
@@ -177,12 +172,25 @@ test("a second request for the same episode is served from cache", async () => {
   assert.equal(calls, 2);
 });
 
-/**
- * The router aborts every sibling request the moment one source wins. Each of
- * those aborts used to land in the pool as that source failing, so a race that
- * went perfectly still cooled the four sources it had abandoned — in a pool
- * that outlives the page, which is why the fault survived reloads.
- */
+test("an empty episode is availability data, not a provider outage", async () => {
+  let calls = 0;
+  const client = new RelayClient({
+    fetchImpl: async () => {
+      calls += 1;
+      return jsonResponse({ sources: {}, captions: [] });
+    },
+  });
+
+  const result = await client.resolveScraper(tvMedia, "va");
+  assert.deepEqual(result.candidates, []);
+  assert.equal(client.serverHealth().va.cooldownUntil, 0);
+  assert.equal(client.serverHealth().va.failures, 0);
+
+  const cached = await client.resolveScraper(tvMedia, "va");
+  assert.deepEqual(cached.candidates, []);
+  assert.equal(calls, 1);
+});
+
 test("a request the caller hung up on is not held against the source", async () => {
   const controller = new AbortController();
   const client = new RelayClient({
@@ -212,6 +220,26 @@ test("a request the caller hung up on is not held against the source", async () 
   assert.equal(client.serverHealth().va.consecutiveFailures, 0);
 });
 
+test("a late HTTP failure after the caller hung up cannot arm a cooldown", async () => {
+  const caller = new AbortController();
+  const client = new RelayClient({
+    fetchImpl: async () => {
+      caller.abort();
+      return jsonResponse({ error: "late gateway failure" }, 502);
+    },
+  });
+
+  await assert.rejects(
+    client.resolveScraper(tvMedia, "va", { abandoned: caller.signal }),
+    (error) => {
+      assert.equal(error.abandoned, true);
+      return true;
+    },
+  );
+  assert.equal(client.serverHealth().va.cooldownUntil, 0);
+  assert.equal(client.serverHealth().va.consecutiveFailures, 0);
+});
+
 test("a source that really did fail is still cooled", async () => {
   const client = new RelayClient({
     fetchImpl: async () => jsonResponse({ error: "upstream fell over" }, 502),
@@ -222,8 +250,6 @@ test("a source that really did fail is still cooled", async () => {
 });
 
 test("our own deadline firing is a failure, not an abandonment", async () => {
-  // `abandoned` is the browser's signal alone. When it has not aborted, an
-  // abort from the route's own ceiling means upstream was genuinely too slow.
   const caller = new AbortController();
   const client = new RelayClient({
     fetchImpl: async () => {

@@ -5,13 +5,10 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 type NativeButton = ButtonHTMLAttributes<HTMLButtonElement>;
 
 const VARIANTS = {
-  /** The one action the panel exists for. */
   primary:
     "bg-phantom px-5 text-white hover:bg-phantom-dark disabled:cursor-not-allowed disabled:bg-transparent disabled:text-text-tertiary disabled:shadow-[inset_0_0_0_1px_var(--color-border)]",
-  /** Dismissals and secondary paths. */
   ghost:
     "px-4 text-text-secondary hover:bg-surface-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-50",
-  /** Outlined, for a secondary action that still needs an edge. */
   outline:
     "border border-border bg-surface px-4 text-text hover:border-text/30 disabled:cursor-not-allowed disabled:opacity-50",
 } as const;
@@ -39,8 +36,6 @@ export function Button({
   );
 }
 
-// Spelled out rather than interpolated: Tailwind only ships classes it can
-// find as literal strings in the source.
 const ICON_SIZES = {
   sm: "h-8 w-8",
   md: "h-9 w-9",

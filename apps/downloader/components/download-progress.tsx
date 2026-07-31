@@ -103,7 +103,7 @@ export function getProgressStats(
     item.totalBytes > 0
   ) {
     parts.push(
-      `${formatFileSize(item.downloadedBytes)} / ${formatFileSize(item.totalBytes)}`
+      `${formatFileSize(item.downloadedBytes)} of ${formatFileSize(item.totalBytes)}`
     );
   }
   if (typeof item.bytesPerSecond === "number" && item.bytesPerSecond > 0) {

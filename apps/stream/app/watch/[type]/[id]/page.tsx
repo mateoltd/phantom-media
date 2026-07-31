@@ -10,11 +10,16 @@ import {
 } from "@/lib/catalog";
 import { imdbToTmdb, tmdbToImdb } from "@/lib/id-bridge";
 import { kindLabel } from "@/lib/media";
+import {
+  parseEpisodeSelection,
+  resolveEpisodeSelection,
+} from "@/src/episode-selection.mjs";
 import { SOURCE_ROSTER } from "@/src/source-ids.mjs";
 import type { MediaType } from "@/lib/types";
 
 interface WatchParams {
   params: Promise<{ type: string; id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 function parseParams(type: string, id: string): [MediaType, string] | null {
@@ -23,10 +28,6 @@ function parseParams(type: string, id: string): [MediaType, string] | null {
   return [type, id];
 }
 
-/**
- * Routing is by IMDb id because that is what the catalog returns, but a pasted
- * TMDB link has to keep working, so a numeric id is translated first.
- */
 async function loadTitle(
   mediaType: MediaType,
   id: string,
@@ -45,8 +46,6 @@ async function loadTitle(
     };
   }
 
-  // The resolver only speaks TMDB. Cinemeta almost always carries that id; the
-  // bridge covers the rest, so a title never arrives unplayable.
   if (detail.media.tmdbId === null) {
     detail.media.tmdbId =
       tmdbFromRoute ?? (await imdbToTmdb(mediaType, detail.media.imdbId ?? ""));
@@ -66,21 +65,25 @@ export async function generateMetadata({
   return {
     title: media.year ? `${media.title} (${media.year})` : media.title,
     description:
-      media.overview || `Watch ${media.title} — ${kind} on Phantom Stream.`,
+      media.overview || `Watch ${media.title}, a ${kind}, on Phantom Stream.`,
     alternates: { canonical: `/watch/${media.mediaType}/${media.id}` },
     robots: { index: false, follow: true },
   };
 }
 
-export default async function Page({ params }: WatchParams) {
+export default async function Page({ params, searchParams }: WatchParams) {
   const { type, id } = await params;
   const parsed = parseParams(type, id);
   if (!parsed) notFound();
 
   const { media, seasons, episodes } = await loadTitle(...parsed);
+  const query = await searchParams;
+  const initialEpisode = resolveEpisodeSelection(
+    seasons,
+    episodes,
+    parseEpisodeSelection(query.season, query.episode),
+  );
 
-  // A page about one title should not be a dead end. The catalog has no
-  // similarity data, so this is honestly what it is: more of the same genre.
   const genre = media.genres[0];
   const related = genre
     ? (await browseCatalog(media.mediaType, "top", { genre, limit: 20 })).filter(
@@ -96,6 +99,8 @@ export default async function Page({ params }: WatchParams) {
       related={related}
       relatedTitle={genre ? `More ${genre.toLowerCase()}` : ""}
       sources={SOURCE_ROSTER}
+      initialSeason={initialEpisode.season}
+      initialEpisode={initialEpisode.episode}
     />
   );
 }

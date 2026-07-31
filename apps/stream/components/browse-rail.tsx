@@ -1,11 +1,6 @@
 import { PosterTile } from "@/components/poster-tile";
 import type { BrowseRow } from "@/lib/catalog";
 
-/**
- * A row of titles. The rail runs to the right edge of the window rather than
- * stopping inside the column, because a row that ends flush reads as the end
- * of the list when it is only the end of the screen.
- */
 export function BrowseRail({
   row,
   priority = false,

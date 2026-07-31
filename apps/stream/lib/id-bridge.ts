@@ -1,15 +1,8 @@
 import type { MediaType } from "./types";
 
-/**
- * The catalog is keyed by IMDb id and the playback resolver is keyed by TMDB
- * id. Cinemeta usually carries both, so this only runs when it does not — or
- * when someone arrives with a pasted TMDB link. One SPARQL query per lookup,
- * asking for the other identifier directly rather than for the whole entity.
- */
 const QUERY_BASE = "https://query.wikidata.org/sparql";
 const USER_AGENT = "PhantomStream/1.0 (keyless identifier bridge)";
 
-/** IMDb id, TMDB film id, TMDB series id. */
 const IMDB = "P345";
 const TMDB_BY_TYPE: Record<MediaType, string> = { movie: "P4947", tv: "P4983" };
 

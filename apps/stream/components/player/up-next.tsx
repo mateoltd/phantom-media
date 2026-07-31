@@ -10,36 +10,15 @@ interface UpNextProps {
   episode: EpisodeSummary;
   subscribe: (listener: TimeListener) => () => void;
   onPlay: () => void;
-  /** Fires when the episode ends and the countdown is allowed to run out. */
   autoAdvance?: boolean;
 }
 
-/**
- * How close to the end counts as "the credits". Proportional, because a
- * forty-minute episode and a two-hour film do not end over the same stretch,
- * and bounded so it is neither a flash nor a banner across the last act.
- */
 function creditsWindow(duration: number): number {
   return Math.max(45, Math.min(150, duration * 0.06));
 }
 
-/** Long enough to reach for the cancel, short enough not to be a wait. */
 const COUNTDOWN_SECONDS = 8;
 
-/**
- * Offers the next episode over the tail of this one, and takes over when the
- * episode ends.
- *
- * The end of an episode used to jump straight to the next one with no way to
- * stop it, which is the wrong default for anyone who has finished watching:
- * the credits are part of the thing, and being thrown out of them is worse
- * than one more click. A countdown keeps the convenience and gives it back a
- * way out.
- *
- * Visibility over the credits is a class, so a card that depends on the
- * playhead never re-renders the player. The countdown is state, because it
- * runs for eight seconds once.
- */
 export function UpNext({
   episode,
   subscribe,
@@ -82,44 +61,43 @@ export function UpNext({
       ref={rootRef}
       className={`stage-upnext ${counting ? "stage-upnext-visible" : ""}`}
     >
-      <p className="eyebrow text-stage-muted">Up next</p>
-
-      <div className="mt-2 flex items-center gap-3">
-        <span className="relative aspect-video w-[92px] shrink-0 overflow-hidden rounded-lg bg-stage-raised">
-          <Artwork src={episode.stillUrl} sizes="92px" />
-        </span>
-        <span className="min-w-0">
-          <span className="block text-[10px] font-semibold text-stage-muted">
-            S{episode.seasonNumber}E{episode.episodeNumber}
+      <button
+        type="button"
+        onClick={onPlay}
+        className="stage-upnext-card"
+        aria-label={`Play S${episode.seasonNumber}E${episode.episodeNumber}, ${episode.name}`}
+      >
+        <span className="stage-upnext-still">
+          <Artwork src={episode.stillUrl} sizes="96px" />
+          <span className="stage-upnext-play" aria-hidden="true">
+            <IconPlayerPlayFilled size={11} />
           </span>
-          <span className="line-clamp-2 text-[12px] font-bold leading-tight text-stage-text">
+        </span>
+        <span className="stage-upnext-text">
+          <span className="stage-upnext-label">
+            {counting ? `Playing in ${countdown}s` : "Next episode"}
+          </span>
+          <span className="stage-upnext-title">
+            <span className="stage-upnext-code">
+              S{episode.seasonNumber}E{episode.episodeNumber}
+            </span>
             {episode.name}
           </span>
         </span>
-      </div>
+      </button>
 
-      <div className="mt-3 flex items-center gap-2">
+      {counting && (
         <button
           type="button"
-          onClick={onPlay}
-          className="flex h-9 flex-1 items-center justify-center gap-2 rounded-lg bg-phantom text-[12px] font-extrabold text-white transition-colors hover:bg-phantom-dark"
+          onClick={() => {
+            cancelledRef.current = true;
+            setCountdown(null);
+          }}
+          className="stage-upnext-cancel"
         >
-          <IconPlayerPlayFilled size={13} />
-          {counting ? `Playing in ${countdown}` : "Play next"}
+          Cancel
         </button>
-        {counting && (
-          <button
-            type="button"
-            onClick={() => {
-              cancelledRef.current = true;
-              setCountdown(null);
-            }}
-            className="h-9 shrink-0 rounded-lg px-3 text-[12px] font-bold text-stage-muted transition-colors hover:bg-white/10 hover:text-stage-text"
-          >
-            Cancel
-          </button>
-        )}
-      </div>
+      )}
     </div>
   );
 }

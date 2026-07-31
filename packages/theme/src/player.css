@@ -8,6 +8,7 @@
 }
 
 .stage:fullscreen {
+  --stage-clip: 0px;
   aspect-ratio: auto;
   width: 100%;
   height: 100%;
@@ -24,40 +25,30 @@
   box-shadow: none;
 }
 
-/* The stage is a fixed ratio of the window's width, so a wide, short window
-   asks for a taller picture than there is room under the header and the
-   transport row lands below the fold — you have to scroll the page to pause.
-   The picture keeps its width and gives ground at the top instead: the excess
-   runs up behind the header, where it is clipped, and the controls come to
-   rest exactly on the fold.
+@media (max-width: 640px) {
+  .stage-frame {
+    padding-top: 0.75rem;
+    background: transparent;
+  }
 
-   The floor stops that from running away on a very wide window. However much
-   the ratio asks for, what stays visible is never narrower than a scope frame
-   — up to that point the crop is eating the black bar a 2.35:1 title already
-   carries, past it it would start taking heads off. */
+  .stage-frame .stage {
+    border-radius: 14px;
+  }
+}
+
 @media (min-width: 1024px) {
   .stage-frame {
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    /* `clip` and not `hidden`: `hidden` makes a scroll container, and focusing
-       anything in the hidden strip would scroll the picture back down and push
-       the controls off the bottom again. */
     overflow: clip;
     max-height: max(calc(100svh - var(--app-header-h)), 42.55vw);
   }
 
-  /* Otherwise the cap squeezes the stage to fit rather than overflowing it,
-     and the aspect ratio goes with it. */
   .stage-frame > .stage {
     flex: none;
   }
 
-  /* How much of the picture went up behind the header — the same expression as
-     the cap, subtracted from what the ratio asked for. Everything the stage
-     draws from its top edge has to start below that instead: the play button
-     and the race read as centred, and the episode drawer runs the height of
-     the picture, so measured from the box they would sit half above the screen. */
   .stage-frame {
     --stage-clip: max(
       0px,
@@ -66,18 +57,33 @@
   }
 
   .stage-frame .stage-center,
-  .stage-frame .stage-panel,
   .stage-frame .stage-shortcuts {
     inset-block-start: var(--stage-clip);
   }
 
-  /* Fullscreen leaves the frame's layout behind but not its custom properties:
-     the stage is still a descendant, so the offset would follow it in. */
   .stage-frame .stage:fullscreen .stage-center,
-  .stage-frame .stage:fullscreen .stage-panel,
   .stage-frame .stage:fullscreen .stage-shortcuts {
     inset-block-start: 0;
   }
+}
+
+.stage :focus-visible {
+  outline: 2px solid var(--color-stage-text);
+  outline-offset: 2px;
+}
+
+.stage:focus-visible {
+  outline: 2px solid rgba(246, 241, 230, 0.55);
+  outline-offset: -2px;
+}
+
+.stage .scrub-hit:focus-visible {
+  outline: none;
+}
+
+.stage .scrub-hit:focus-visible .scrub-track {
+  outline: 2px solid var(--color-stage-text);
+  outline-offset: 3px;
 }
 
 .stage::after {
@@ -176,8 +182,16 @@
   .stage-upnext {
     right: 0.6rem;
     bottom: 4rem;
-    width: 12.5rem;
-    padding: 0.7rem;
+    width: min(17rem, calc(100% - 1.2rem));
+  }
+
+  .stage-upnext-still {
+    width: 4.5rem;
+  }
+
+  .stage-upnext-title {
+    font-size: 12px;
+    -webkit-line-clamp: 1;
   }
 
   .stage-skip {
@@ -319,13 +333,17 @@
 }
 
 .stage-sheet {
+  /* Floor and ceiling are the same number on purpose: the card holds its size
+     while you move between tabs, and the body scrolls when a tab is long. */
+  --sheet-height: min(20rem, calc(100% - 5.75rem));
   position: absolute;
   z-index: 4;
-  right: 0;
-  bottom: calc(100% + 0.5rem);
+  right: 0.75rem;
+  bottom: 4.75rem;
   display: flex;
-  width: min(20rem, calc(100vw - 2rem));
-  max-height: min(24rem, 60svh);
+  width: min(20rem, calc(100% - 1.5rem));
+  min-height: var(--sheet-height);
+  max-height: var(--sheet-height);
   flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--color-stage-line);
@@ -341,20 +359,34 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@media (max-width: 640px) {
+  .stage-sheet {
+    --sheet-height: min(18rem, calc(100% - 1rem));
+    inset: auto 0.5rem 0.5rem;
+    width: auto;
+  }
+}
+
 .stage-sheet-tabs {
-  display: flex;
+  display: grid;
+  /* Six sections do not fit one 20rem line, so the strip wraps into rows of
+     equal tabs. The column count comes from the sheet, which knows how many
+     sections it has and keeps the rows even. */
+  grid-template-columns: repeat(var(--sheet-tabs, 3), minmax(0, 1fr));
   gap: 0.25rem;
   padding: 0.5rem;
   border-bottom: 1px solid var(--color-stage-line);
 }
 
 .stage-sheet-tab {
-  flex: 1;
+  overflow: hidden;
   padding: 0.4rem 0.3rem;
   border-radius: 8px;
   color: var(--color-stage-muted);
   font-size: 11px;
   font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   transition:
     background 0.16s ease,
     color 0.16s ease;
@@ -389,6 +421,49 @@
 
 .stage-sheet-row:hover { background: rgba(255, 255, 255, 0.08); }
 
+.stage-sheet-pick {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: left;
+}
+
+.stage-sheet-steps {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.05rem;
+  margin-left: 0.25rem;
+}
+
+.stage-sheet-step {
+  display: flex;
+  width: 1.5rem;
+  height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--color-stage-muted);
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+}
+
+.stage-sheet-step:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--color-stage-text);
+}
+
+.stage-sheet-count {
+  min-width: 1.7rem;
+  color: var(--color-stage-muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
 .stage-sheet-note {
   padding: 0.45rem 0.5rem 0.3rem;
   color: var(--color-stage-muted);
@@ -417,32 +492,128 @@
 .stage-panel {
   position: absolute;
   z-index: 3;
-  inset-block: 0;
-  right: 0;
+  top: calc(var(--stage-clip, 0px) + 3.25rem);
+  right: 0.75rem;
+  bottom: 4.75rem;
   display: flex;
-  width: min(23rem, 88%);
+  width: min(22rem, 42%);
   flex-direction: column;
-  border-left: 1px solid var(--color-stage-line);
-  background: rgba(11, 10, 8, 0.94);
-  animation: stage-panel-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+  overflow: hidden;
+  border: 1px solid var(--color-stage-line);
+  border-radius: 14px;
+  background: rgba(20, 19, 15, 0.98);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  animation: stage-sheet-in 0.16s ease both;
   backdrop-filter: blur(18px);
 }
 
-@keyframes stage-panel-in {
-  from { opacity: 0; transform: translateX(1.5rem); }
-  to { opacity: 1; transform: translateX(0); }
+.stage-panel:focus-visible,
+.stage-panel-list:focus-visible {
+  outline: none;
 }
 
-.stage-panel-seasons {
+.stage-panel-head {
   display: flex;
-  gap: 0.4rem;
-  overflow-x: auto;
-  padding: 0.7rem 1rem;
+  flex: none;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.4rem 0.4rem 0.7rem;
   border-bottom: 1px solid var(--color-stage-line);
-  scrollbar-width: none;
 }
 
-.stage-panel-seasons::-webkit-scrollbar {
+.stage-panel-season {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 0.25rem 0.4rem;
+  border-radius: 8px;
+  color: var(--color-stage-text);
+  font-size: 12.5px;
+  font-weight: 800;
+  transition: background 0.14s ease;
+}
+
+.stage-panel-season:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.stage-panel-list {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+}
+
+.stage-ep {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.5rem 0.7rem;
+  text-align: left;
+  transition: background 0.14s ease;
+}
+
+.stage-ep + .stage-ep {
+  box-shadow: inset 0 1px 0 rgba(246, 241, 230, 0.08);
+}
+
+.stage-ep:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.stage-ep-current {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.stage-ep-still {
+  position: relative;
+  flex: none;
+  width: 5rem;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--color-stage-raised);
+}
+
+@media (max-width: 640px) {
+  .stage-panel {
+    top: calc(var(--stage-clip, 0px) + 2.75rem);
+    right: 0.5rem;
+    bottom: 4rem;
+    left: 0.5rem;
+    width: auto;
+  }
+
+  .stage-ep {
+    padding: 0.5rem 0.55rem;
+  }
+
+  .stage-ep-still {
+    width: 4.25rem;
+  }
+}
+
+.stage-short .stage-panel {
+  top: calc(var(--stage-clip, 0px) + 0.5rem);
+  bottom: 3.9rem;
+}
+
+.stage-short .stage-panel-head {
+  padding: 0.15rem 0.3rem 0.15rem 0.55rem;
+}
+
+.stage-short .stage-ep {
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem;
+}
+
+.stage-short .stage-ep-still {
+  width: 3.25rem;
+  border-radius: 5px;
+}
+
+.stage-short .stage-ep-overview {
   display: none;
 }
 
@@ -451,18 +622,117 @@
   z-index: 2;
   right: 0.9rem;
   bottom: 5rem;
-  width: 15.5rem;
-  padding: 0.85rem;
-  border: 1px solid var(--color-stage-line);
-  border-radius: 14px;
-  background: rgba(11, 10, 8, 0.88);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
+  width: min(19rem, calc(100% - 1.8rem));
   opacity: 0;
   visibility: hidden;
   transform: translateY(0.5rem);
   transition:
     opacity 0.22s ease,
     transform 0.22s ease;
+}
+
+.stage-upnext-card {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem;
+  border: 1px solid var(--color-stage-line);
+  border-radius: 12px;
+  background: rgba(11, 10, 8, 0.88);
+  text-align: left;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease;
   backdrop-filter: blur(14px);
+}
+
+.stage-upnext-card:hover {
+  border-color: rgba(246, 241, 230, 0.26);
+  background: rgba(20, 19, 15, 0.94);
+}
+
+.stage-upnext-still {
+  position: relative;
+  flex: none;
+  width: 6rem;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--color-stage-raised);
+}
+
+.stage-upnext-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  width: 1.5rem;
+  height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--color-phantom);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, -50%);
+  transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.stage-upnext-card:hover .stage-upnext-play {
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.stage-upnext-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.stage-upnext-label {
+  display: block;
+  color: var(--color-stage-muted);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.stage-upnext-title {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 0.1rem;
+  color: var(--color-stage-text);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.stage-upnext-code {
+  margin-right: 0.4rem;
+  color: var(--color-stage-muted);
+}
+
+.stage-upnext-cancel {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--color-stage-line);
+  border-radius: 9px;
+  background: rgba(11, 10, 8, 0.88);
+  color: var(--color-stage-muted);
+  font-size: 11px;
+  font-weight: 700;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease;
+  backdrop-filter: blur(14px);
+}
+
+.stage-upnext-cancel:hover {
+  background: rgba(20, 19, 15, 0.94);
+  color: var(--color-stage-text);
 }
 
 .stage-upnext-visible {

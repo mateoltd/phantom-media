@@ -74,11 +74,6 @@ async function attachCandidate({ video, Hls, candidate, timeoutMs }) {
   return { destroy() {} };
 }
 
-/**
- * Resolve providers lazily and switch servers only when playback proves that
- * the current one is unusable. `resolveServer` should return the wrapper's
- * `{ candidates }` response for the requested alias.
- */
 export async function playWithServerFallback(options) {
   const {
     video,

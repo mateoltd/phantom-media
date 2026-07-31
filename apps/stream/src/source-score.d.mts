@@ -36,6 +36,9 @@ export declare const TITLE_WEIGHT_CAP: number;
 export declare function shouldRecord(
   observation: Pick<SourceObservation, "outcome">,
 ): boolean;
+export declare function observationScopes(
+  observation: Pick<SourceObservation, "outcome">,
+): { global: boolean; title: boolean };
 export declare function reward(
   observation: Omit<SourceObservation, "sourceId" | "titleKey">,
 ): number;

@@ -2,7 +2,7 @@
   "name": "phantom",
   "version": "1.0.0",
   "private": true,
-  "description": "Phantom — the monorepo behind the Phantom services.",
+  "description": "The monorepo behind the Phantom services.",
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",

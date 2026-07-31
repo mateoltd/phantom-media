@@ -4,11 +4,6 @@ import { IconPlayerPlayFilled } from "@tabler/icons-react";
 import { mediaHref } from "@/lib/media";
 import type { MediaResult } from "@/lib/types";
 
-/**
- * One title in a rail or a grid. Everything but the artwork is held back until
- * the pointer arrives: a wall of posters reads as a wall of posters, and a
- * wall of posters with captions reads as a spreadsheet.
- */
 export function PosterTile({
   media,
   priority = false,

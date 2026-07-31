@@ -6,14 +6,9 @@ export interface Chapter {
   label: string;
   start: number;
   end: number;
-  /** True when the label names something a viewer would want to skip past. */
   skippable: boolean;
 }
 
-/**
- * Words that mark a segment as worth jumping. Kept deliberately narrow: the
- * point is to act on what a stream declares, not to guess.
- */
 const SKIPPABLE = /\b(intro|opening|title sequence|recap|previously|advert|ad break|sponsor)\b/i;
 
 function readChapters(video: HTMLVideoElement): Chapter[] {
@@ -37,36 +32,41 @@ function readChapters(video: HTMLVideoElement): Chapter[] {
   return chapters.sort((left, right) => left.start - right.start);
 }
 
-/**
- * Chapters, when the stream carries them.
- *
- * There is no public source of intro and credit timings for film and
- * television — the services that offer "skip intro" generate those markers
- * themselves from the files they host, and the one open dataset that exists
- * (AniSkip) covers anime only. So this reads the markers the media itself
- * declares and offers nothing when there are none, rather than guessing at a
- * fixed offset that would be wrong for most of what it is applied to.
- */
+function chaptersMatch(left: readonly Chapter[], right: readonly Chapter[]): boolean {
+  return (
+    left.length === right.length &&
+    left.every((chapter, index) => {
+      const candidate = right[index];
+      return (
+        candidate !== undefined &&
+        chapter.label === candidate.label &&
+        chapter.start === candidate.start &&
+        chapter.end === candidate.end &&
+        chapter.skippable === candidate.skippable
+      );
+    })
+  );
+}
+
 export function useChapters(
   videoRef: RefObject<HTMLVideoElement | null>,
-  /** Changes whenever a different stream is attached. */
   streamKey: string | null
 ): Chapter[] {
   const [chapters, setChapters] = useState<Chapter[]>([]);
 
   const sync = useCallback(() => {
     const video = videoRef.current;
-    setChapters(video ? readChapters(video) : []);
+    const next = video ? readChapters(video) : [];
+    setChapters((current) => (chaptersMatch(current, next) ? current : next));
   }, [videoRef]);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !streamKey) {
-      setChapters([]);
+      setChapters((current) => (current.length === 0 ? current : []));
       return;
     }
 
-    // Cues arrive after the track loads, which can be well after metadata.
     const tracks = video.textTracks;
     tracks.addEventListener("addtrack", sync);
     tracks.addEventListener("change", sync);

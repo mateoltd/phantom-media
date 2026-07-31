@@ -12,6 +12,7 @@ import {
   decayFactor,
   effectiveWeight,
   mergeRecords,
+  observationScopes,
   posterior,
   relocate,
   reward,
@@ -38,13 +39,11 @@ function observation(overrides = {}) {
 
 test("a fast, verified 1080p source scores near the top", () => {
   const r = reward(observation({ resolveMs: 1_000, probeMs: 200 }));
-  // 0.5 + 0.3 * 1 + 0.2 * (1 - 1200/8000)
   assert.equal(Math.round(r * 100) / 100, 0.97);
 });
 
 test("an adaptive master that took six seconds is still respectable", () => {
   const r = reward(observation({ tier: 3, resolveMs: 5_800, probeMs: 200 }));
-  // 0.5 + 0.3 * 0.75 + 0.2 * 0.25
   assert.equal(Math.round(r * 100) / 100, 0.78);
 });
 
@@ -78,6 +77,25 @@ test("a rate limit is never blamed on the source that was in flight", () => {
   for (const outcome of ["verified", "empty", "unreachable"]) {
     assert.equal(shouldRecord({ outcome }), true);
   }
+});
+
+test("availability evidence is stored at the scope it actually describes", () => {
+  assert.deepEqual(observationScopes({ outcome: "verified" }), {
+    global: true,
+    title: true,
+  });
+  assert.deepEqual(observationScopes({ outcome: "empty" }), {
+    global: false,
+    title: true,
+  });
+  assert.deepEqual(observationScopes({ outcome: "unreachable" }), {
+    global: true,
+    title: false,
+  });
+  assert.deepEqual(observationScopes({ outcome: "limited" }), {
+    global: false,
+    title: false,
+  });
 });
 
 test("one half-life halves the weight and leaves the value alone", () => {
@@ -210,6 +228,5 @@ test("moving continents halves confidence without discarding what was learned", 
   assert.equal(after.b.v, 0.1);
   assert.equal(after.a.w, 4);
   assert.equal(after.b.w, 1.5);
-  // Halving drops it back under the floor, so exploration resumes.
   assert.ok(after.b.w < EXPLORE_WEIGHT_FLOOR);
 });

@@ -14,8 +14,6 @@ export const SERVER_LABELS = Object.freeze({
   athena_: "Athena V",
 });
 
-// These names and the salt are shipped to every browser in the upstream
-// client. Keeping them isolated makes upstream changes easy to follow.
 export const FIELD_MAP = Object.freeze({
   id: "a7d9f2c14b8e63e591f4",
   frontendToken: "d3b84a71e5c9f2618af43d7b",

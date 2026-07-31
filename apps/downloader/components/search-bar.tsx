@@ -22,10 +22,6 @@ interface SearchBarProps {
 
 const VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 
-/**
- * The downloader's half of the shared search field: it owns the debounce, the
- * per-query cache and the choice between resolving a link and searching text.
- */
 export function SearchBar({
   onSubmit,
   onSelectVideo,
@@ -137,8 +133,6 @@ export function SearchBar({
       onSuggestionSelect={(suggestion) => {
         const video = videos.find((item) => item.id === suggestion.id);
         if (!video) return;
-        // The title is about to become the query; skip the lookup that would
-        // otherwise fire for it.
         skipNextLookupRef.current = true;
         setValue(video.title);
         if (onSelectVideo) onSelectVideo(video);

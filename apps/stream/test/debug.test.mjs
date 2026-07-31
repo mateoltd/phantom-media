@@ -5,8 +5,13 @@ import {
   CHANNELS,
   createEventLog,
   formatEntry,
+  sanitizeDebugValue,
   summarize,
 } from "../src/debug.mjs";
+import {
+  normalizeTraceId,
+  serverDebugEnabled,
+} from "../src/debug-server.mjs";
 
 function fixedClock() {
   let now = 1_000;
@@ -76,9 +81,6 @@ test("an unknown channel is filed rather than lost", () => {
   assert.ok(CHANNELS.includes(log.entries()[0].channel));
 });
 
-// A log that holds a live reference to a video element or an hls instance is a
-// leak wearing a diagnostic's clothes, and one that throws while serialising a
-// payload takes down the thing it was watching.
 test("payloads are flattened to values that can be serialised", () => {
   const log = createEventLog({ enabled: true, clock: fixedClock().read });
   const cyclic = { name: "x" };
@@ -147,4 +149,24 @@ test("one entry is one readable line", () => {
   assert.match(line, /source\/http/);
   assert.match(line, /status=200/);
   assert.match(line, /source="Source 07"/);
+});
+
+test("debug payloads redact credentials and URL query strings", () => {
+  const value = sanitizeDebugValue({
+    token: "secret-value",
+    target: "https://media.example/pl/master.m3u8?token=secret-value",
+    message:
+      "failed at https://media.example/pl/master.m3u8?token=secret-value",
+  });
+  assert.equal(value.token, "[redacted]");
+  assert.equal(value.target, "[redacted]");
+  assert.equal(value.message, "failed at https://media.example/pl/master.m3u8");
+});
+
+test("DEBUG=1 is an exact development-only server trace flag", () => {
+  assert.equal(serverDebugEnabled({ NODE_ENV: "development", DEBUG: "1" }), true);
+  assert.equal(serverDebugEnabled({ NODE_ENV: "development", DEBUG: "0" }), false);
+  assert.equal(serverDebugEnabled({ NODE_ENV: "production", DEBUG: "1" }), false);
+  assert.equal(normalizeTraceId("playback:abc-123"), "playback:abc-123");
+  assert.equal(normalizeTraceId("../../bad"), null);
 });

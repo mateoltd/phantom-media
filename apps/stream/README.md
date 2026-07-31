@@ -7,13 +7,13 @@ Part of the [Phantom monorepo](../../README.md). Install from the root.
 
 ## What it does
 
-- Searches by title, IMDb link, TMDB URL or `movie:ID` / `tv:ID`. No API key
+- Searches by title, IMDb link, TMDB URL, `movie:ID` or `tv:ID`. No API key
   and no account are involved at any point.
 - Reads artwork, ratings, synopses and the full episode listing from Cinemeta
   in a single request, which is also where the TMDB id the resolver needs
   comes from. Wikidata bridges the identifiers on the rare title that lacks it.
-- Starts routing the moment the page opens, asking several sources at once and
-  taking the first that answers with something playable.
+- Starts routing the moment the page opens and verifies what the active source
+  returned before handing it to the native player.
 - Prefers 1080p and above when ranking what a source offers, because the
   difference is plain to see and half a second of extra latency is not.
 - Reports what it learned about every source it asked, so picking one by hand
@@ -28,21 +28,20 @@ Part of the [Phantom monorepo](../../README.md). Install from the root.
 | ------------------ | --------------------------------------------------------------------------- |
 | `/`                | Browse: a featured title over rails of popular and highly rated films and series. |
 | `/search?q=`       | Results grid.                                                               |
-| `/watch/:type/:id` | Player and episode list. `:type` is `movie` or `tv`, `:id` is an IMDb id (a TMDB id still resolves). |
+| `/watch/:type/:id` | Player and episode list. `:type` is `movie` or `tv`, `:id` is an IMDb id (a TMDB id still resolves). TV URLs accept `?season=5&episode=2` and keep the selection in browser history. |
 
 ## Type
 
-Labels, kickers and status words are set in the display face with tracking —
-`.eyebrow` in the theme — not in the monospace one. Monospace is reserved for
+Labels, kickers and status words are set in the display face with tracking
+through `.eyebrow` in the theme, not in the monospace one. Monospace is reserved for
 figures that have to line up or be read exactly: timecodes, ratings, bitrates,
 episode numbers.
 
-Metadata rows are separated by space, not by interpuncts, and genres are tags
-rather than a punctuated list. A row of `·` is a habit from printed listings.
+Metadata rows use spacing, and genres are tags rather than a punctuated list.
 
 ## Surface
 
-This app runs on the cinema surface — `@phantom/theme/cinema.css` — which
+This app runs on the cinema surface defined by `@phantom/theme/cinema.css`, which
 re-points the theme's own variables to ink. Same accent, same type, same radii
 as the paper apps; nothing else in the system has to know which one it is on. A
 paper ground would have sat in front of the thing you came to look at.
@@ -51,8 +50,9 @@ paper ground would have sat in front of the thing you came to look at.
 
 Upstream identifies each playback source by a short code and labels it with a
 third party's brand. This app keeps the codes, because the API needs them, and
-replaces every label with a fixed in-house alias — `Source 01` through
-`Source 14`. The mapping lives in `src/source-ids.mjs` and is the only place
+replaces every label with a fixed in-house alias from `Source 01` through
+`Source 28`. Retired and unconfigured slots remain hidden. The mapping lives in
+`src/source-ids.mjs` and is the only place
 those names are decided, so no third-party brand reaches a response body, a
 screen or a log line. The aliases are positional and the order never changes,
 which keeps `Source 07` meaning the same thing between sessions. That last part
@@ -61,7 +61,7 @@ is why the id list is append-only: inserting one renumbers every alias after it.
 ### Retiring one
 
 Add its code to `RETIRED_SOURCE_IDS` with the reason beside it. Nothing is
-deleted from `SOURCE_IDS` — the alias *is* the index, so removing an entry
+deleted from `SOURCE_IDS`. The alias *is* the index, so removing an entry
 would slide every source after it up a number and quietly change what a
 persisted score, a debug log or a support conversation from last week refers
 to. The retired code stays known forever and stops resolving: no descriptor, no
@@ -77,12 +77,12 @@ rather than something each new provider has to remember.
 ### Adding one
 
 - **Another relay scraper.** Append its two-character code to `SOURCE_IDS` in
-  `src/source-ids.mjs`. Nothing else — the alias, the catalog entry, the
-  registry entry, the roster and the API route all follow.
+  `src/source-ids.mjs`. The alias, catalog entry,
+  registry entry, roster and API route all follow.
 - **A different kind of source.** Append `{ id, kind }` to `DECLARED` in
   `src/providers/catalog.mjs`, write `src/providers/<kind>.mjs` exporting
   `create<Kind>Resolver(id)`, and add one line to `RESOLVERS` in
-  `registry.mjs`. Resolvers are keyed by kind, so fourteen more of a kind that
+  `registry.mjs`. Resolvers are keyed by kind, so more sources of a kind that
   already works cost nothing. The whole contract:
 
   ```js
@@ -96,28 +96,70 @@ rather than something each new provider has to remember.
   Errors throw a `RelayError` shape: `{ status, retryable, retryAfterMs }`. A
   provider never names itself and never scores itself.
 
+### Native playback only
+
+Production sources must resolve to HLS, DASH or MP4 that Phantom can attach to
+its own player. Wrapper pages and third-party iframes are not playback
+candidates: they can navigate to advertising or unrelated landing pages, hide
+their real failure state, and bypass the app's language and recovery policy.
+
+Sources 19 through 27 remain reserved so historical aliases never shift, but
+their embed-only implementations are retired. Research against those providers
+can return one to production only after it establishes a reproducible public
+native-media contract. Duplicate native routes remain useful; shared
+failure-domain fingerprints serialize them instead of deleting a route that
+may work better for a particular title or region.
+
+Only Source 28 and Source 04 are active during the focused reliability trial;
+the old resolvers remain checked in but cannot be selected or raced. Source 28
+follows Vidfast's public, unauthenticated bootstrap and stream endpoints.
+Source 04 follows Videasy's public seed contract and asks only its Breach and
+Yoru server families, decrypting the public response into native HLS instead of
+loading Videasy's player. Breach advertises its English alternate-audio track;
+Yoru remains an unverified-audio fallback.
+
+Vidfast's internal server list is treated as fallback capacity inside one
+source. Videasy's Breach worker has its own failure fingerprint, while Yoru
+shares Vidfast's Ironwall failure domain so those duplicate routes are not
+counted as independent capacity.
+
+The final CDN requires the public Vidfast Origin/Referer contract, so native
+playback uses `/api/sources/vidfast/proxy`. That relay accepts exact media
+hosts plus Vidfast's tightly constrained opaque segment-path shape on its
+rotating `.site` hosts, refuses redirects and DRM key formats, forwards byte
+ranges, and rewrites every HLS child URI back through itself. It is a media
+relay, not an embed and not a general-purpose URL proxy.
+
+Videasy's Breach worker also requires its public player Origin/Referer contract.
+The compatibility relay accepts only that exact worker hostname and its signed
+`payload`, `headers` and optional `type=m3u8` query shape. It rewrites child
+audio, quality and segment requests through the same constraint and briefly
+caches successful manifests so probing and attachment do not duplicate the
+slowest public request. Yoru stays browser-direct.
+
 ## Routing
 
 Sources are raced, not tried in turn, and the race is decided by what each one
-actually produced rather than by which answered first — a fast source holding a
+actually produced rather than by which answered first. A fast source holding a
 480p file should not beat a slower one holding 1080p.
 
 - Five at a time, narrowing to two after a rate limit and climbing back one per
   clean race. One request here is one request upstream, and a single 429 arms a
-  cooldown that affects every source on the isolate, so a wider burst is
-  actively dangerous rather than merely rude.
+  cooldown that affects every source on the isolate. Sources that share a
+  control plane or media-host fingerprint never occupy independent race slots
+  at the same time.
 - Seven seconds per source, end to end: five for the scrape and one round of
   manifest probing after it. The sum is the number that matters, because a slot
-  is the scarcest thing in the race — every source still queued is waiting
+  is the scarcest thing in the race. Every source still queued is waiting
   behind whoever holds one.
 - **A request the router walks away from is not a failure.** When one source
   wins, its four siblings are aborted; those aborts used to reach the server as
   errors and cool the source that was serving them, so every *successful* race
   benched the four it had abandoned. The pool outlives the page, so the next
-  load raced without them — which is what the minute-long waits actually were.
-- An offer that is already excellent — a **verified** 1080p or adaptive master —
-  goes on screen immediately. Anything less is held for up to 1.2s, capped at
-  4s from the start of the race, to see whether something better is close
+  load raced without them. This caused the minute-long waits.
+- An offer that is already excellent, such as a **verified** 1080p or adaptive
+  master, goes on screen immediately. Anything less is held for up to 1.2s,
+  capped at 4s from the start of the race, to see whether something better is close
   behind. A stream that merely *claims* 1080p has proven nothing; only a
   manifest that answered counts.
 - Attaching runs alongside collection instead of blocking it, so a source that
@@ -129,9 +171,11 @@ actually produced rather than by which answered first — a fast source holding 
 ### Scoring
 
 `src/source-score.mjs` turns one race against one source into a reward in
-`[0,1]` — half for producing a playable stream at all, 0.3 for resolution, 0.2
-for speed, with half taken back if it dies within thirty seconds of attaching —
-and folds it into a running mean whose weight decays with wall-clock age.
+`[0,1]`. Half comes from producing a playable stream at all, 0.3 from
+resolution and 0.2 from speed. Half is taken back if the stream dies within
+thirty seconds of attaching. The reward is folded into a running mean whose
+weight decays with wall-clock age.
+
 Records are kept per source and per source-and-season; the global record is the
 prior that per-title evidence shifts, so a title that loads cleanly from one
 source bends *that title* toward it while everything unmeasured still follows
@@ -144,21 +188,23 @@ least-measured one, so nothing gets buried by two unlucky attempts.
 
 Scores live in `localStorage` behind a two-method synchronous transport
 (`lib/source-score.ts`), so they are per-device today and a shared store is a
-drop-in later — `{v, w, t}` records merge as weighted means, which is what would
-make "voted down by other sessions" work without a schema change.
+drop-in later. The `{v, w, t}` records merge as weighted means, which would
+allow voting from other sessions without a schema change.
 
 ## Subtitles
 
 Whatever the playback source returned, merged with the keyless OpenSubtitles
 addon (`opensubtitles-v3.strem.io`, keyed on IMDb ids). OpenSubtitles' own REST
-API is not usable here — a free account allows five to twenty downloads a *day*.
+API is not usable here because a free account allows five to twenty downloads a *day*.
 
-Everything is fetched through `/api/subtitles/file`, which converts SubRip to
-WebVTT, decodes legacy encodings, and serves same-origin. That last part is the
-reason it exists: a `<track>` on a `crossOrigin="anonymous"` video fails
+Catalogue subtitles are fetched through `/api/subtitles/file`, which converts
+SubRip to WebVTT, decodes legacy encodings, and serves same-origin. Vidfast's
+WebVTT tracks use its restricted media relay because they live on the same
+header-protected CDN as the video. Same-origin delivery matters: a `<track>` on
+a `crossOrigin="anonymous"` video fails
 silently against any host without CORS headers, which is most of them, and
 silently is the worst way for a subtitle to fail. The route is restricted to
-the catalogue's own hosts — without an allowlist, an endpoint that fetches a URL
+the catalogue's own hosts. Without an allowlist, an endpoint that fetches a URL
 from a query string is an open proxy.
 
 Cues are painted by the player rather than by the browser, which is the only way
@@ -175,16 +221,23 @@ has to reach into attachment and failure handling.
   than having one heavy strip along the bottom. The top one carries what is
   playing, which in fullscreen is otherwise nowhere on screen.
 - Scrub bar with buffered ranges, hover preview and pointer dragging.
-- One settings sheet — quality, speed, subtitles, subtitle appearance, source —
-  instead of four popovers behind four near-identical glyphs.
+- One settings sheet for audio language, quality, speed, subtitles, subtitle
+  appearance and the secondary source override.
 - A quality menu of the stream's actual renditions, not of its URLs, with
   automatic switching that opens high rather than climbing up from 360p.
 - While a race is running: a mark per source coloured by what it said, and a
   count. A spinner looks the same whether three sources have answered or none,
   which is what made a slow search feel like a stuck one.
-- Volume, subtitle language, subtitle size and speed are remembered. Picking a
-  language once picks it for the series — the index of a language changes with
-  every track list, the language does not.
+- Audio language is a strict routing constraint: HLS and DASH manifests must
+  prove that the selected language exists before playback can start, and the
+  matching track is selected before `play()`. Unknown or mismatched audio is
+  rejected instead of guessed. The language picker is built from reachable
+  source manifests and the active player's real tracks; a language disappears
+  when the sources advertising it are empty, unreachable or cooling.
+- Volume, audio language, subtitle language, subtitle size and speed are
+  remembered. The source override keeps stable Source numbers but orders
+  verified/current entries first and shows green, orange, red or grey status
+  indicators for availability.
 - Resuming says so, dismissibly, with a way to start over. It used to seek
   silently.
 - The full episode list inside the picture, so changing episode never means
@@ -193,7 +246,7 @@ has to reach into attachment and failure handling.
 - An "up next" card over the closing stretch, sized to the runtime rather than
   to a fixed number of seconds, and a cancellable countdown at the end rather
   than a jump nobody asked for.
-- Chapter skipping when — and only when — the stream declares chapters. There
+- Chapter skipping only when the stream declares chapters. There
   is no public source of intro and credit timings for film and television: the
   services that offer "skip intro" generate those markers from the files they
   host, and the one open dataset (AniSkip) covers anime only. A fixed guess
@@ -214,8 +267,22 @@ has to reach into attachment and failure handling.
 
 ## Debugging a slow start
 
+For a complete local trace, start the app with:
+
+```sh
+pnpm --filter @phantom/stream dev:debug
+```
+
+That is equivalent to `DEBUG=1 pnpm --filter @phantom/stream dev`. In
+development, `DEBUG=1` enables both halves of the trace, prints server events
+to stdout, and appends a combined redacted NDJSON stream to
+`.debug/phantom-stream.ndjson`. Browser and server entries share a playback
+trace id. Media tokens, credentials, encoded proxy targets and URL query
+strings are removed before they reach disk. Set `STREAM_DEBUG_LOG` to override
+the path.
+
 Append `?debug=1` to any watch URL. The choice is remembered, which is the
-point — a race that is slow once and fine the next four times is only ever
+point. A race that is slow once and fine the next four times is only ever
 caught by an instrument that was already running.
 
 Every timing the router has goes to the console and into a ring buffer of the
@@ -234,8 +301,10 @@ __phantom.copy()      // the whole buffer as JSON, onto the clipboard
 __phantom.off()       // and stop
 ```
 
-`STREAM_DEBUG=1` does the server's half, onto stdout: relay cache hits, cooldown
-state, upstream latency per scrape.
+`STREAM_DEBUG=1` remains available for the server half only. Prefer `DEBUG=1`
+when reproducing a player problem because it captures candidate eligibility,
+source answers, manifest probes, language evidence, failure-domain cooldown
+changes, attachment and the final race outcome in one file.
 
 Switched off, the log costs one `if` per call site and allocates nothing.
 
@@ -250,20 +319,24 @@ pnpm --filter @phantom/stream build
 
 ## Configuration
 
-Copy `.env.example` to `.env`. Both values are optional; the app runs without
-either.
+Copy `.env.example` to `.env`. Every value is optional. Stremio entries must be
+public, unauthenticated HTTPS addon manifests; authenticated or paid services
+are intentionally unsupported.
 
 ## Legal
 
-Phantom Stream hosts nothing. Every stream is played straight from a
-third-party host by the viewer's own browser, and the project is affiliated
-with none of the catalogs or playback providers it talks to.
+Phantom Stream stores no media library and is affiliated with none of the
+catalogs or playback providers it talks to. Browser-ready streams play directly
+from third-party hosts. A narrowly allowlisted compatibility relay is used for
+the public VidSrc source because its media endpoints reject normal browser
+requests; relayed bytes are streamed through without persistent storage. The
+same constrained relay is used for Videasy's public Breach worker contract.
 
-`/disclaimer` states that in full: no hosting, no affiliation, authorized use
-only, no warranty, and a limitation of liability. It is linked from the footer
-of every page.
+`/disclaimer` states that in full: no stored media library, no affiliation,
+authorized use only, no warranty, and a limitation of liability. It is linked
+from the footer of every page.
 
 Set `NEXT_PUBLIC_NOTICE_EMAIL` before deploying. Until it is set, the page
 omits its infringement-reporting section, because a takedown route with no
-address behind it is worse than none — and a reachable takedown route is the
+address behind it is worse than none. A reachable takedown route is the
 most useful thing on a page like this.

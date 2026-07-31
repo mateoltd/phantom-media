@@ -99,8 +99,6 @@ export function DownloadOptionsDialog({
       open={open}
       onClose={onClose}
       labelledBy="format-dialog-title"
-      // The chooser is held at one height so it cannot grow with the number of
-      // formats; a running download is sized to its own, much shorter content.
       height={`max-h-[92svh] sm:max-h-[88vh] ${
         job ? "" : "h-[72svh] sm:h-[560px]"
       }`}
@@ -213,7 +211,6 @@ export function DownloadOptionsDialog({
       <div className="flex items-center justify-end gap-1 border-t border-border/70 p-3 sm:px-5 sm:py-4">
         {job ? (
           <>
-            {/* Whatever happened, the formats stay one click away. */}
             {job.status !== "started" && job.status !== "enqueued" && (
               <Button
                 variant="ghost"

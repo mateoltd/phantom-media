@@ -10,28 +10,22 @@ import {
 
 export type { DebugChannel, LogEntry };
 
-/**
- * Switching the log on, and the console you read it in.
- *
- * The buffer and the formatting are in `src/debug.mjs` so they can be tested
- * under `node --test`; what lives here is everything that only means something
- * in a browser — the query parameter, the preference that survives a reload,
- * and the handful of commands worth having at three in the morning when the
- * player is sitting at nought answered and you want to know why.
- *
- * Turn it on with `?debug=1`, and it stays on until `__phantom.off()`. That
- * matters more than it looks: the fault being chased survives page reloads, so
- * an instrument that does not would never be running when it happened.
- */
-
 const STORAGE_KEY = "phantom.stream.debug";
 const QUERY_KEY = "debug";
+const TRACE_ENDPOINT = "/api/debug/trace";
+const TRACE_BATCH_MS = 100;
+const TRACE_BATCH_SIZE = 100;
 
 const log = sharedLog();
 
-/** Printing every entry is the point when it is on, and unbearable when it is
- *  not wanted; `quiet()` keeps the buffer and stops the noise. */
 let printing = true;
+let traceTimer: number | null = null;
+let traceQueue: LogEntry[] = [];
+
+const traceSessionId =
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
 const COLOURS: Record<string, string> = {
   router: "#a78bfa",
@@ -50,7 +44,6 @@ function readPreference(): boolean | null {
     if (stored === "1") return true;
     if (stored === "0") return false;
   } catch {
-    // Storage can be disabled. The query parameter still works.
   }
   return null;
 }
@@ -59,11 +52,11 @@ function writePreference(value: boolean): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, value ? "1" : "0");
   } catch {
-    // Then it lasts for this page only, which is better than nothing.
   }
 }
 
 function detect(): boolean {
+  if (localTraceEnabled()) return true;
   try {
     const query = new URLSearchParams(window.location.search).get(QUERY_KEY);
     if (query !== null) {
@@ -72,28 +65,71 @@ function detect(): boolean {
       return on;
     }
   } catch {
-    // Not a browser context worth reading a URL from.
   }
   const stored = readPreference();
   if (stored !== null) return stored;
   return process.env.NEXT_PUBLIC_STREAM_DEBUG === "1";
 }
 
-function print(entry: LogEntry): void {
-  if (!printing) return;
-  const colour = COLOURS[entry.channel] ?? "#94a3b8";
-  console.debug(
-    `%c${formatEntry(entry)}`,
-    `color:${colour}`,
-    entry.data ?? "",
+function localTraceEnabled(): boolean {
+  return (
+    document
+      .querySelector('meta[name="phantom-debug"]')
+      ?.getAttribute("content") === "1"
   );
+}
+
+async function flushTrace(): Promise<void> {
+  traceTimer = null;
+  if (traceQueue.length === 0 || !localTraceEnabled()) return;
+  const entries = traceQueue.splice(0, TRACE_BATCH_SIZE);
+  try {
+    const response = await fetch(TRACE_ENDPOINT, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sessionId: traceSessionId, entries }),
+      keepalive: true,
+    });
+    if (!response.ok) throw new Error("Local debug trace rejected the batch");
+  } catch {
+    traceQueue = [...entries, ...traceQueue].slice(-TRACE_BATCH_SIZE * 4);
+  }
+  if (traceQueue.length > 0) {
+    traceTimer = window.setTimeout(() => {
+      void flushTrace();
+    }, TRACE_BATCH_MS);
+  }
+}
+
+function persist(entry: LogEntry): void {
+  if (!localTraceEnabled()) return;
+  traceQueue.push(entry);
+  if (traceQueue.length > TRACE_BATCH_SIZE * 4) {
+    traceQueue = traceQueue.slice(-TRACE_BATCH_SIZE * 4);
+  }
+  if (traceTimer === null) {
+    traceTimer = window.setTimeout(() => {
+      void flushTrace();
+    }, TRACE_BATCH_MS);
+  }
+}
+
+function print(entry: LogEntry): void {
+  if (printing) {
+    const colour = COLOURS[entry.channel] ?? "#94a3b8";
+    console.debug(
+      `%c${formatEntry(entry)}`,
+      `color:${colour}`,
+      entry.data ?? "",
+    );
+  }
+  persist(entry);
 }
 
 export function debugEnabled(): boolean {
   return log.enabled;
 }
 
-/** The instrumented call sites use these two and nothing else. */
 export function debug(channel: DebugChannel, name: string, data?: unknown): void {
   log.event(channel, name, data);
 }
@@ -106,15 +142,16 @@ export function span(
   return log.span(channel, name, data);
 }
 
-/**
- * The response header the resolve route sets when it is asked to. Server
- * timings arriving alongside the response is the only way to tell an upstream
- * that is slow from a route that is queued behind something else.
- */
 export const DEBUG_HEADER = "x-phantom-debug";
 
-export function debugRequestHeaders(): HeadersInit | undefined {
-  return log.enabled ? { [DEBUG_HEADER]: "1" } : undefined;
+export const DEBUG_TRACE_HEADER = "x-phantom-trace-id";
+
+export function debugRequestHeaders(traceId?: string): HeadersInit | undefined {
+  if (!log.enabled) return undefined;
+  return {
+    [DEBUG_HEADER]: "1",
+    ...(traceId ? { [DEBUG_TRACE_HEADER]: traceId } : {}),
+  };
 }
 
 export function readServerTiming(response: Response): Record<string, string> | null {
@@ -165,8 +202,6 @@ function install(): void {
     },
     entries: () => log.entries(),
     sources() {
-      // One row per source per race is the view that answers "what was it
-      // doing while the counter said nought".
       const rows = log
         .entries()
         .filter((entry) => entry.channel === "source")
@@ -196,8 +231,8 @@ function install(): void {
     help() {
       console.log(
         [
-          "__phantom.on() / .off()   record, and remember the choice across reloads",
-          "__phantom.quiet() / .loud()  stop or resume printing while still recording",
+          "__phantom.on() or .off()   record, and remember the choice across reloads",
+          "__phantom.quiet() or .loud()  stop or resume printing while still recording",
           "__phantom.sources()       table of every source's progress this session",
           "__phantom.summary()       counts per channel and the twenty slowest spans",
           "__phantom.dump()          the whole buffer as JSON",
@@ -217,7 +252,9 @@ if (typeof window !== "undefined") {
   install();
   if (log.enabled) {
     console.info(
-      "%cPhantom debug logging is on. __phantom.help() for what to do with it.",
+      localTraceEnabled()
+        ? "%cPhantom DEBUG=1 is recording locally and in .debug/phantom-stream.ndjson."
+        : "%cPhantom debug logging is on. __phantom.help() for what to do with it.",
       "color:#a78bfa;font-weight:bold",
     );
   }

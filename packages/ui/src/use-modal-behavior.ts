@@ -5,12 +5,6 @@ import { useEffect } from "react";
 let openModals = 0;
 let releaseScroll: (() => void) | null = null;
 
-/**
- * `html` carries `overflow-x: clip`, which stops `body { overflow: hidden }`
- * from ever reaching the viewport, so the lock has to be set on the root
- * element as well. Losing the scrollbar widens the page, so the width it took
- * is handed back as padding to keep the layout still.
- */
 function lockPageScroll(): void {
   openModals += 1;
   if (openModals > 1) return;

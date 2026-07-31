@@ -48,8 +48,6 @@ export default function SearchPageClient() {
     return () => controller.abort();
   }, [query]);
 
-  // With no query nothing is ever fetched, so treating "no results yet" as
-  // loading left the spinner turning on a page that had not asked anything.
   const loading = Boolean(query) && results === null && !error;
 
   return (
@@ -57,12 +55,6 @@ export default function SearchPageClient() {
       <AppHeader initialQuery={query} />
 
       <div className="app-shell flex-1 pb-14">
-        {/* The query is in the field two centimetres above this, so setting it
-            again in 24px type under an eyebrow said nothing twice and put a
-            rule under it for emphasis. What is not already on screen is how
-            many came back, so that is what is left — one quiet line, in the
-            gutter the grid uses, with the wording kept for anything reading
-            the page aloud. */}
         <h1 className="sr-only">
           {query ? `Search results for ${query}` : "Search"}
         </h1>

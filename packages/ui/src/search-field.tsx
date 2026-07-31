@@ -20,10 +20,8 @@ export interface SearchSuggestion {
   id: string;
   title: string;
   subtitle?: string;
-  /** Right-aligned column: a year, a rating, anything that separates near-duplicates. */
   meta?: string;
   imageUrl?: string | null;
-  /** Short overlay printed on the thumbnail, e.g. a duration. */
   badge?: string;
 }
 
@@ -33,9 +31,7 @@ export interface SearchFieldLabels {
   working: string;
   suggestions: string;
   looking: string;
-  /** Set to show the clipboard button. */
   paste?: string;
-  /** Set to say so when a finished lookup matched nothing. */
   empty?: string;
 }
 
@@ -51,21 +47,12 @@ export interface SearchFieldProps {
   suggestionsLoading?: boolean;
   onSuggestionsOpenChange?: (open: boolean) => void;
   onSuggestionSelect?: (suggestion: SearchSuggestion) => void;
-  /** Fired on hover, on keyboard highlight and on press, so callers can warm a fetch. */
   onSuggestionPrefetch?: (suggestion: SearchSuggestion) => void;
-  /** Landscape thumbnails for video, 2:3 for posters. */
   thumbnail?: "video" | "poster" | "none";
-  /**
-   * `compact` takes twelve pixels off the pill and scales what sits inside it
-   * to match. For a field in a bar, where the height it costs is height the
-   * page below it does not get; `default` is the one that stands on its own in
-   * a hero and must not change.
-   */
   size?: "default" | "compact";
   className?: string;
 }
 
-/** Every measurement that differs between the two, in one place. */
 const SIZES = {
   default: {
     form: "h-[52px] pl-4 pr-1.5 sm:h-14",
@@ -91,14 +78,6 @@ const SIZES = {
   },
 } as const;
 
-/**
- * The one search field in the Phantom system. It is rounded because every
- * other surface here is — panels, rails, menus — and a square field would be
- * the only hard corner on the page.
- *
- * The caller owns the query, the fetching and the debounce; this owns the
- * chrome, the keyboard model and the combobox semantics.
- */
 export function SearchField({
   value,
   onValueChange,
@@ -120,9 +99,6 @@ export function SearchField({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
-  // The highlight is held as an id, not an index, so a list that changes
-  // underneath the keyboard drops the highlight instead of moving it onto
-  // whatever now happens to sit at that position.
   const [activeId, setActiveId] = useState<string | null>(null);
   const activeIndex = suggestions.findIndex(
     (suggestion) => suggestion.id === activeId
@@ -131,7 +107,6 @@ export function SearchField({
   const empty = Boolean(labels.empty) && !suggestionsLoading && suggestions.length === 0;
   const open = suggestionsOpen && (suggestionsLoading || suggestions.length > 0 || empty);
 
-  // Arrowing past the fold has to bring the row with it.
   useEffect(() => {
     if (!activeId) return;
     listRef.current
@@ -306,9 +281,6 @@ export function SearchField({
         </button>
       </form>
 
-      {/* The rounded panel and the scrolling list are two elements on purpose:
-          a browser draws the scrollbar on the padding edge, where the corner
-          radius slices it into a sliver that hangs outside the panel. */}
       {open && (
         <div className="animate-panel-in absolute inset-x-0 top-[calc(100%+10px)] z-50 overflow-hidden rounded-[22px] border border-border bg-surface/98 shadow-[0_28px_80px_var(--surface-shadow)] backdrop-blur-md">
           <div

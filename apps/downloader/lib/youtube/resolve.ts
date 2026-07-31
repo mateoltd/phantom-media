@@ -51,7 +51,6 @@ function tryParseVideoId(query: string): string | null {
       if (/^[a-zA-Z0-9_-]{11}$/.test(id)) return id;
     }
   } catch {
-    // Not a URL
   }
   return null;
 }
@@ -67,7 +66,6 @@ function tryParsePlaylistId(query: string): string | null {
       if (list) return list;
     }
   } catch {
-    // Not a URL
   }
   return null;
 }
@@ -88,7 +86,6 @@ function tryParseChannelIdentifier(
     const slugMatch = url.pathname.match(/^\/(?:c|user)\/([a-zA-Z0-9._-]+)/);
     if (slugMatch) return { type: "slug", value: slugMatch[1] };
   } catch {
-    // Not a URL
   }
   return null;
 }
@@ -124,7 +121,6 @@ async function tryResolvePlaylist(
   const playlistId = tryParsePlaylistId(query);
   if (!playlistId) return null;
 
-  // Skip personal playlists
   if (["WL", "LL", "LM"].some((p) => playlistId.startsWith(p))) return null;
 
   try {
@@ -135,7 +131,6 @@ async function tryResolvePlaylist(
     );
     let items = [...playlist.items];
 
-    // Continuations are bounded so one request cannot exhaust the server.
     let page = playlist;
     while (page.has_continuation && items.length < maxItems) {
       page = await page.getContinuation();
@@ -202,13 +197,11 @@ async function tryResolveVideo(
             ],
           };
         } catch {
-          // Try next client type
         }
       }
       throw new Error("All clients failed");
     });
   } catch {
-    // All Innertube attempts failed, so fall through to oEmbed.
   }
 
   return resolveVideoFromOEmbed(videoId);

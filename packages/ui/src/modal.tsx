@@ -6,25 +6,13 @@ import { useModalBehavior } from "./use-modal-behavior";
 export interface ModalProps {
   open: boolean;
   onClose: () => void;
-  /** id of the element naming the dialog, usually its heading. */
   labelledBy: string;
-  /** Tailwind width class for the panel, e.g. `max-w-2xl`. */
   width?: string;
-  /**
-   * Height classes applied to the panel. Pass a fixed height for panels whose
-   * content would otherwise grow with the number of options, and leave it off
-   * for panels that should size to what they are showing.
-   */
   height?: string;
   className?: string;
   children: ReactNode;
 }
 
-/**
- * Every Phantom dialog: a scrim that closes on a backdrop press, a panel that
- * rises from the bottom edge on phones and centres on wider screens, page
- * scroll locked while it is open, and Escape wired to `onClose`.
- */
 export function Modal({
   open,
   onClose,

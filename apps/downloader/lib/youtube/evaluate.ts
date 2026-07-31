@@ -1,9 +1,5 @@
 import vm from "vm";
 
-/**
- * JavaScript evaluator for youtubei.js player script deciphering.
- * Evaluates YouTube's player JavaScript to transform signature/n parameters.
- */
 export default function evaluate(
   data: { output: string; exported: string[] },
   env: Record<string, string>

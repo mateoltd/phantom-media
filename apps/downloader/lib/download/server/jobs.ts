@@ -484,9 +484,7 @@ function buildYtDlpArgs(
   }
 
   const ffmpegPath = process.env.FFMPEG_PATH?.trim();
-  // A bare executable name should be resolved through PATH. yt-dlp interprets
-  // --ffmpeg-location as a filesystem path, so passing "ffmpeg" makes it look
-  // for /app/ffmpeg instead of the executable available on PATH.
+  // yt-dlp treats a bare executable name as a path, so only explicit paths belong here.
   if (ffmpegPath && /[\\/]/.test(ffmpegPath)) {
     args.push("--ffmpeg-location", ffmpegPath);
   }
@@ -697,11 +695,6 @@ function enforceCapacity(clientIp: string, expectedSize?: number): void {
   }
 }
 
-/**
- * Temporary space a job is expected to occupy. Reserving the maximum allowed
- * file size for every job would let two ordinary videos exhaust the budget, so
- * the estimate follows the size the client actually asked for.
- */
 function reservationFor(
   expectedSize: number | undefined,
   maxFileBytes: number

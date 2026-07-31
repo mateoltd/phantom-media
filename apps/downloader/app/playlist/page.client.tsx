@@ -62,7 +62,6 @@ function PlaylistPageContent() {
           const bestOption = getBestOption(data.options, container, quality);
           if (bestOption) items.push({ video, option: bestOption });
         } catch {
-          // A failed item should not block the rest of the batch.
         }
       }
       return items.length > 0 ? enqueueBatch(items) : [];

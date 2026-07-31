@@ -6,11 +6,6 @@ import { TitleMeta } from "@/components/title-meta";
 import { mediaHref } from "@/lib/media";
 import type { MediaResult } from "@/lib/types";
 
-/**
- * The top of the home page: one title, its own backdrop, and its own logotype
- * where the catalog has one. A title's wordmark is the most recognisable thing
- * about it, so it is used in place of setting the name in ours.
- */
 export function CinemaHero({ media }: { media: MediaResult }) {
   return (
     <section className="cinema-hero">
@@ -22,10 +17,6 @@ export function CinemaHero({ media }: { media: MediaResult }) {
       />
       <div className="cinema-hero-scrim" aria-hidden="true" />
 
-      {/* The top padding clears the floating bar and then some, so the title
-          sits in the lower half of the art rather than against its top edge.
-          On a phone the art is a third the height and the same 9rem of it is
-          most of what there is, so it scales too. */}
       <div className="app-shell relative z-10 pb-12 pt-24 sm:pb-20 sm:pt-36">
         <div className="max-w-xl">
           <TitleLogo

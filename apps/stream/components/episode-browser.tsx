@@ -3,7 +3,13 @@
 import { useMemo, useSyncExternalStore } from "react";
 import { IconPlayerPlayFilled } from "@tabler/icons-react";
 import { Artwork } from "@phantom/ui";
-import { parseProgress, progressKey, readProgressRaw } from "@/lib/resume";
+import {
+  parseProgress,
+  progressKey,
+  readProgressRaw,
+  subscribeProgress,
+  watchedPercent,
+} from "@/lib/resume";
 import type { EpisodeSummary, MediaResult, SeasonSummary } from "@/lib/types";
 
 interface EpisodeBrowserProps {
@@ -16,15 +22,8 @@ interface EpisodeBrowserProps {
   onSelect: (episode: EpisodeSummary) => void;
 }
 
-/** Nothing else writes to it while the list is on screen. */
-const noStorageUpdates = () => () => {};
 const noProgressOnServer = () => "";
 
-/**
- * The full run, on the page. The same list is available inside the player for
- * when you are already watching; this is the one for deciding what to watch,
- * so it gets the room to show stills and synopses.
- */
 export function EpisodeBrowser({
   media,
   seasons,
@@ -37,17 +36,13 @@ export function EpisodeBrowser({
   const seasonEpisodes = episodes.filter((item) => item.seasonNumber === season);
   const current = seasons.find((item) => item.seasonNumber === season);
 
-  // Read as a raw string and parsed once: the string is stable between reads,
-  // an object would be a new identity every time and never settle.
   const storedProgress = useSyncExternalStore(
-    noStorageUpdates,
+    subscribeProgress,
     readProgressRaw,
     noProgressOnServer
   );
   const progress = useMemo(() => parseProgress(storedProgress), [storedProgress]);
 
-  // Some series carry no listing at all. Typing the numbers still reaches an
-  // episode, and is better than a page with no way to leave the pilot.
   if (seasons.length === 0) {
     return (
       <section className="mt-12 border-t border-border pt-6">
@@ -123,10 +118,7 @@ export function EpisodeBrowser({
             progress[
               progressKey(media, item.seasonNumber, item.episodeNumber)
             ];
-          const watched =
-            point && point.duration > 0
-              ? Math.min(100, (point.time / point.duration) * 100)
-              : 0;
+          const watched = watchedPercent(point);
           return (
             <li key={`${item.seasonNumber}-${item.episodeNumber}`}>
               <button
@@ -139,9 +131,6 @@ export function EpisodeBrowser({
                   {item.episodeNumber}
                 </span>
 
-                {/* The still is the first thing to give ground on a narrow
-                    screen. At 132px it left the synopsis a column about three
-                    words wide, which is longer to read than no synopsis. */}
                 <span className="relative aspect-video w-[104px] shrink-0 overflow-hidden rounded-xl bg-surface sm:w-[168px]">
                   <Artwork src={item.stillUrl} sizes="(min-width: 640px) 168px, 104px" />
                   <span
@@ -180,11 +169,6 @@ export function EpisodeBrowser({
                       </span>
                     )}
                   </span>
-                  {/* No `block` beside the clamp: clamping works by setting
-                      `display: -webkit-box`, so any display utility next to it
-                      turns it off. On a phone that is the difference between
-                      two lines and a whole synopsis in a column three words
-                      wide. */}
                   {item.overview && (
                     <span className="mt-1.5 line-clamp-2 max-w-2xl text-[12px] leading-5 text-text-secondary">
                       {item.overview}

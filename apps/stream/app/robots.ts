@@ -7,7 +7,6 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      // Query-driven and per-title pages carry nothing worth indexing.
       disallow: ["/search", "/watch"],
     },
     sitemap: new URL("/sitemap.xml", base).toString(),

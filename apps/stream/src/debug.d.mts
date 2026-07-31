@@ -68,6 +68,11 @@ export declare function createEventLog(options?: {
 
 export declare function formatEntry(entry: LogEntry): string;
 export declare function summarize(entries: readonly LogEntry[]): LogSummary;
+export declare function sanitizeDebugValue(
+  value: unknown,
+  depth?: number,
+  key?: string,
+): unknown;
 export declare function sharedLog(): EventLog;
 export declare function debugEvent(
   channel: DebugChannel,

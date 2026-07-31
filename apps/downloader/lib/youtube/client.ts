@@ -8,10 +8,6 @@ import evaluate from "./evaluate";
 
 export type InnerTubeClient = Types.InnerTubeClient;
 
-/**
- * IOS client first: returns pre-signed direct URLs, no PO token required,
- * minimal bot detection. Mirrors cobalt.tools' production strategy.
- */
 export const CLIENT_FALLBACK_ORDER: InnerTubeClient[] = [
   "IOS",
   "ANDROID",
@@ -21,7 +17,6 @@ let innertubeInstance: Innertube | null = null;
 let innertubePromise: Promise<Innertube> | null = null;
 let platformPatched = false;
 
-// Serialize session resets to prevent a thundering herd after a shared failure.
 let resetLock: Promise<Innertube> | null = null;
 
 let lastResetTime = 0;
@@ -106,7 +101,6 @@ export async function withSessionRetry<T>(
     const yt = await getInnertube();
     return await operation(yt);
   } catch {
-    // fall through to retry
   }
   console.log("[innertube] Retrying with fresh session");
   const yt = await resetInnertube();

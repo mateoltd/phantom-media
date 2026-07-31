@@ -1,35 +1,77 @@
-/**
- * Which playback sources exist, and what kind of thing each one is.
- *
- * This is the file to edit when a source is added. Everything else — the
- * alias, the registry entry, the roster the watch page renders, what the API
- * route will accept — follows from it, so adding another scraper of the kind
- * already supported costs one line in `source-ids.mjs` and nothing here.
- *
- * Labels are never declared alongside the id: they come from `sourceAlias`,
- * which is the only place a source's public name is decided.
- *
- * Deliberately free of node builtins: the browser bundle imports this too.
- */
 
-import { ACTIVE_SOURCE_IDS, sourceAlias } from "../source-ids.mjs";
+import {
+  ACTIVE_SOURCE_IDS,
+  RELAY_SOURCE_IDS,
+  STREMIO_ADDON_URLS,
+  VIDEASY_SOURCE_ID,
+  VIDFAST_SOURCE_ID,
+  sourceAlias,
+} from "../source-ids.mjs";
+import {
+  capacityDomainsFor,
+  failureDomainFor,
+} from "../failure-domain.mjs";
+import { sourcePlaybackHints } from "../source-observations.mjs";
 
-/**
- * The relay speaks to all of these the same way, so they share a kind. A
- * source reached some other way declares its own, and a resolver for that kind
- * has to exist in the registry or nothing starts.
- *
- * Built from the active list, so a retired source has no descriptor, no
- * registry entry and no route: asking for one by name is a 400 rather than a
- * request nobody meant to make.
- */
 const DECLARED = Object.freeze([
-  ...ACTIVE_SOURCE_IDS.map((id) => Object.freeze({ id, kind: "relay" })),
+  ...RELAY_SOURCE_IDS.map((id) =>
+    Object.freeze({
+      id,
+      kind: "relay",
+      deliveryMode: "resolver",
+      autoRace: true,
+    }),
+  ),
+  ...Object.entries(STREMIO_ADDON_URLS).map(([id, manifestUrl]) =>
+    Object.freeze({
+      id,
+      kind: "stremio",
+      deliveryMode: "native-direct",
+      autoRace: true,
+      manifestUrl,
+    }),
+  ),
+  ...(ACTIVE_SOURCE_IDS.includes("n1")
+    ? [
+        Object.freeze({
+          id: "n1",
+          kind: "vidsrc",
+          deliveryMode: "resolver-full-relay",
+          autoRace: true,
+        }),
+      ]
+    : []),
+  ...(ACTIVE_SOURCE_IDS.includes(VIDEASY_SOURCE_ID)
+    ? [
+        Object.freeze({
+          id: VIDEASY_SOURCE_ID,
+          kind: "videasy",
+          deliveryMode: "native-direct",
+          autoRace: true,
+        }),
+      ]
+    : []),
+  ...(ACTIVE_SOURCE_IDS.includes(VIDFAST_SOURCE_ID)
+    ? [
+        Object.freeze({
+          id: VIDFAST_SOURCE_ID,
+          kind: "vidfast",
+          deliveryMode: "resolver-full-relay",
+          autoRace: true,
+        }),
+      ]
+    : []),
 ]);
 
 export const PROVIDER_CATALOG = Object.freeze(
-  DECLARED.map(({ id, kind }) =>
-    Object.freeze({ id, kind, label: sourceAlias(id) }),
+  DECLARED.map((entry) =>
+    Object.freeze({
+      ...entry,
+      label: sourceAlias(entry.id),
+      failureDomain: failureDomainFor(entry.id),
+      capacityDomains: capacityDomainsFor(entry.id),
+      playbackHints: sourcePlaybackHints(entry.id),
+    }),
   ),
 );
 

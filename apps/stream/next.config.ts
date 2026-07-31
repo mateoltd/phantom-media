@@ -9,8 +9,6 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  // Manifests, segments and artwork are fetched straight from the upstream
-  // hosts, so the player cannot be pinned to 'self' the way the rest is.
   "connect-src 'self' https:",
   "media-src 'self' blob: https:",
   "worker-src 'self' blob:",
@@ -21,9 +19,9 @@ const contentSecurityPolicy = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  distDir: process.env.PHANTOM_NEXT_DIST_DIR ?? ".next",
   poweredByHeader: false,
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
-  // The shared package is published as source, so the app's compiler owns it.
   transpilePackages: ["@phantom/ui"],
   images: {
     remotePatterns: [
@@ -33,7 +31,6 @@ const nextConfig: NextConfig = {
     ],
   },
   async redirects() {
-    // The app used to be a single client-side screen; these were its states.
     return [
       { source: "/watch", destination: "/", permanent: false, missing: [{ type: "query", key: "id" }] },
       { source: "/search", destination: "/", permanent: false, missing: [{ type: "query", key: "q" }] },

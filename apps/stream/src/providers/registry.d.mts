@@ -9,17 +9,24 @@ export interface ProviderMedia {
   episode?: number;
   title?: string;
   year?: string;
+  audioLanguage?: string;
 }
 
 export interface ProviderResolveOptions {
   signal?: AbortSignal;
   /** Skip whatever the provider has cached for this exact request. */
   fresh?: boolean;
+  proxyOrigin?: string;
+  abandoned?: AbortSignal;
 }
 
 export interface ProviderResolveResult {
   candidates: StreamCandidate[];
   subtitles: SubtitleTrack[];
+  alternates?: Array<{
+    classification: "proxy" | "external" | "invalid";
+    reason: string;
+  }>;
   latencyMs: number;
 }
 

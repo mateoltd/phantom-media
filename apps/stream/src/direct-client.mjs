@@ -249,7 +249,6 @@ export class DirectClient {
     const ranked = this.pool.available(preferred);
     const attempted = [];
 
-    // If every provider is cooling down, allow the highest-ranked one to retry.
     const servers = ranked.length > 0 ? ranked : this.pool.rank(preferred).slice(0, 1);
 
     for (const server of servers) {

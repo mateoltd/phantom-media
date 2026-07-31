@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { AppHeader } from "@/components/app-header";
 import { BrowseRail } from "@/components/browse-rail";
 import { EpisodeBrowser } from "@/components/episode-browser";
@@ -22,8 +29,14 @@ import {
   type SourceEntry,
 } from "@/components/player/use-source-router";
 import { formatTimecode } from "@/lib/media";
-import { readPrefs } from "@/lib/player-prefs";
-import { progressKey } from "@/lib/resume";
+import {
+  prefsOnServer,
+  prefsSnapshot,
+  readPrefs,
+  savePrefs,
+  subscribePrefs,
+} from "@/lib/player-prefs";
+import { progressKey, saveResumePoint } from "@/lib/resume";
 import {
   captionDetail,
   captionLabel,
@@ -38,6 +51,24 @@ import type {
   StreamCandidate,
   SubtitleTrack,
 } from "@/lib/types";
+import {
+  episodeSelectionFromUrl,
+  urlWithEpisodeSelection,
+} from "@/src/episode-selection.mjs";
+import {
+  UNVERIFIED_AUDIO_LANGUAGE,
+  audioLanguageName,
+  normalizeAudioLanguage,
+} from "@/src/media-language.mjs";
+import {
+  collectAvailableAudioLanguages,
+  orderAvailableAudioLanguages,
+} from "@/src/audio-availability.mjs";
+import {
+  sourceAvailabilityBars,
+  sourceAvailabilityRank,
+  sourceAvailabilityTone,
+} from "@/src/source-availability.mjs";
 
 export type { SourceEntry };
 
@@ -54,15 +85,6 @@ function candidateLabel(candidate: StreamCandidate, index: number): string {
   return candidate.format?.toUpperCase() || candidate.type.toUpperCase();
 }
 
-function firstSeason(seasons: readonly SeasonSummary[]): number {
-  return (
-    seasons.find((season) => season.seasonNumber > 0)?.seasonNumber ??
-    seasons[0]?.seasonNumber ??
-    1
-  );
-}
-
-/** The four phases the stage draws differently. */
 const STAGE_STATUS: Record<string, StageStatus> = {
   idle: "idle",
   racing: "working",
@@ -80,6 +102,8 @@ export default function WatchPageClient({
   related,
   relatedTitle,
   sources,
+  initialSeason,
+  initialEpisode,
 }: {
   media: MediaResult;
   seasons: readonly SeasonSummary[];
@@ -87,26 +111,39 @@ export default function WatchPageClient({
   related: readonly MediaResult[];
   relatedTitle: string;
   sources: readonly SourceEntry[];
+  initialSeason: number;
+  initialEpisode: number;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [season, setSeason] = useState(() => firstSeason(seasons));
-  const [episode, setEpisode] = useState(1);
+  const [season, setSeason] = useState(initialSeason);
+  const [episode, setEpisode] = useState(initialEpisode);
   const [episodesOpen, setEpisodesOpen] = useState(false);
   const [catalogTracks, setCatalogTracks] = useState<SubtitleTrack[]>([]);
   const [toastDismissed, setToastDismissed] = useState(false);
 
-  const router = useSourceRouter({ videoRef, media, season, episode, sources });
+  const playerPrefs = useSyncExternalStore(
+    subscribePrefs,
+    prefsSnapshot,
+    prefsOnServer,
+  );
+  const preferredAudioLanguage = normalizeAudioLanguage(
+    playerPrefs.audioLanguage,
+  );
+  const router = useSourceRouter({
+    videoRef,
+    media,
+    season,
+    episode,
+    sources,
+    preferredAudioLanguage,
+  });
   const { state } = router;
   const status = STAGE_STATUS[state.phase] ?? "idle";
 
-  // Only while something is actually on screen: writing a resume point for a
-  // stalled element would store a position nobody watched to.
   useResumeTracking(
     videoRef,
     state.phase === "playing" ? progressKey(media, season, episode) : null,
   );
-
-  /* -------------------------------------------------------------- episodes */
 
   const position = useMemo(
     () =>
@@ -119,15 +156,52 @@ export default function WatchPageClient({
   const nextEpisode = position >= 0 ? episodes[position + 1] : undefined;
 
   const changeEpisode = useCallback(
-    (nextSeason: number, next: number) => {
+    (
+      nextSeason: number,
+      next: number,
+      history: "push" | "none" = "push",
+    ) => {
+      if (nextSeason === season && next === episode) return;
+
+      const video = videoRef.current;
+      if (state.phase === "playing" && video) {
+        saveResumePoint(
+          progressKey(media, season, episode),
+          video.currentTime,
+          video.duration,
+        );
+      }
       router.cancel();
       setCatalogTracks([]);
       setToastDismissed(false);
       setSeason(nextSeason);
       setEpisode(next);
+      if (history === "push") {
+        window.history.pushState(
+          null,
+          "",
+          urlWithEpisodeSelection(window.location.href, {
+            season: nextSeason,
+            episode: next,
+          }),
+        );
+      }
     },
-    [router],
+    [episode, media, router, season, state.phase],
   );
+
+  useEffect(() => {
+    const onPopState = () => {
+      const selected = episodeSelectionFromUrl(
+        window.location.href,
+        seasons,
+        episodes,
+      );
+      changeEpisode(selected.season, selected.episode, "none");
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [changeEpisode, episodes, seasons]);
 
   const goToEpisode = useCallback(
     (target?: EpisodeSummary) => {
@@ -138,10 +212,6 @@ export default function WatchPageClient({
     [changeEpisode],
   );
 
-  /* ------------------------------------------------------------- subtitles */
-
-  // Asked for alongside the race rather than after it: subtitles are an
-  // addition to a picture, never a reason to wait for one.
   useEffect(() => {
     if (!media.imdbId) return;
     const controller = new AbortController();
@@ -160,7 +230,6 @@ export default function WatchPageClient({
         setCatalogTracks(body.tracks ?? []);
       })
       .catch(() => {
-        // A catalogue that is down means no extra subtitles, not an error.
       });
 
     return () => controller.abort();
@@ -182,21 +251,15 @@ export default function WatchPageClient({
     [captionTracks],
   );
 
-  // Changes whenever the element's track list is replaced, which is what tells
-  // the caption renderer to read it again.
   const trackKey = useMemo(
     () => `${state.activeCandidate?.id ?? "none"}:${captionTracks.length}`,
     [captionTracks.length, state.activeCandidate?.id],
   );
 
-  /* --------------------------------------------------------------- chapters */
-
   const chapters = useChapters(
     videoRef,
     state.phase === "playing" ? (state.activeCandidate?.id ?? null) : null,
   );
-
-  /* ----------------------------------------------------------------- menus */
 
   const changeQuality = useCallback(
     (value: string) => {
@@ -213,10 +276,6 @@ export default function WatchPageClient({
     [router],
   );
 
-  /**
-   * Renditions inside one stream are the real quality choice. Switching whole
-   * streams is the fallback for sources that only ever offer fixed files.
-   */
   const qualityMenu = useMemo<StageMenuModel | undefined>(() => {
     const { levels, quality, candidates, activeCandidate } = state;
     if (levels.length > 1) {
@@ -265,31 +324,40 @@ export default function WatchPageClient({
     return undefined;
   }, [changeQuality, state]);
 
-  /**
-   * Automatic sits at the top because it is what most sittings want, and
-   * because it is the way back out of a pinned source. Picking a named source
-   * pins it: the router will not quietly play a different one, which is the
-   * whole point of picking.
-   */
   const sourceMenu = useMemo<StageMenuModel>(() => {
     const byId = new Map(state.progress.map((entry) => [entry.id, entry]));
+    const ordinal = new Map(
+      sources.map((source, index) => [source.id, index]),
+    );
     const playingLabel = state.activeSource
       ? (sources.find((entry) => entry.id === state.activeSource)?.label ?? null)
       : null;
+    const ordered = [...sources].sort((left, right) => {
+      const difference =
+        sourceAvailabilityRank(byId.get(left.id)?.status) -
+        sourceAvailabilityRank(byId.get(right.id)?.status);
+      return difference || (ordinal.get(left.id) ?? 0) - (ordinal.get(right.id) ?? 0);
+    });
 
     return {
       options: [
         {
           value: AUTO_SOURCE,
           label: "Automatic",
-          detail: playingLabel ? `now ${playingLabel}` : "best available",
+          detail: playingLabel ? `using ${playingLabel}` : "recommended",
         },
-        ...sources.map((source) => {
+        ...ordered.map((source) => {
           const progress = byId.get(source.id);
           return {
             value: source.id,
             label: source.label,
-            detail: liveDetail(progress?.status) ?? progress?.reputation,
+            detail:
+              liveDetail(progress?.status) ??
+              progress?.reputation,
+            signal: {
+              bars: sourceAvailabilityBars(progress?.status),
+              tone: sourceAvailabilityTone(progress?.status),
+            },
           };
         }),
       ],
@@ -299,7 +367,45 @@ export default function WatchPageClient({
     };
   }, [router, sources, state.activeSource, state.pinned, state.progress]);
 
-  /* ----------------------------------------------------------------- toast */
+  const languageMenu = useMemo<StageMenuModel>(() => {
+    const languages = orderAvailableAudioLanguages(
+      collectAvailableAudioLanguages(
+        [
+          {
+            status: "offered",
+            languages: state.availableAudioLanguages,
+          },
+        ],
+        state.audio.tracks,
+      ),
+      preferredAudioLanguage,
+    );
+    const effectiveLanguage =
+      state.audioUnverified ||
+      preferredAudioLanguage === UNVERIFIED_AUDIO_LANGUAGE
+        ? UNVERIFIED_AUDIO_LANGUAGE
+        : preferredAudioLanguage;
+    return {
+      options: languages.map((language) => ({
+        value: language,
+        label: audioLanguageName(language),
+        language,
+      })),
+      value: effectiveLanguage,
+      onChange: (value) => {
+        const next = normalizeAudioLanguage(value);
+        savePrefs({ audioLanguage: next });
+        if (next === preferredAudioLanguage) router.start();
+      },
+      summary: audioLanguageName(effectiveLanguage),
+    };
+  }, [
+    preferredAudioLanguage,
+    router,
+    state.audio.tracks,
+    state.audioUnverified,
+    state.availableAudioLanguages,
+  ]);
 
   const toast = useMemo<StageToast | null>(() => {
     if (toastDismissed || state.resumedFrom === null) return null;
@@ -316,14 +422,11 @@ export default function WatchPageClient({
     };
   }, [state.resumedFrom, toastDismissed]);
 
-  // Said once. A card that stays up forever is a card nobody reads.
   useEffect(() => {
     if (state.resumedFrom === null || toastDismissed) return;
     const timer = window.setTimeout(() => setToastDismissed(true), 9_000);
     return () => window.clearTimeout(timer);
   }, [state.resumedFrom, toastDismissed]);
-
-  /* ---------------------------------------------------------------- render */
 
   const requestLabel =
     media.tmdbId === null
@@ -331,8 +434,8 @@ export default function WatchPageClient({
       : router.retrySeconds > 0
         ? `Cooling down, ${router.retrySeconds}s left`
         : state.phase === "error" || state.phase === "cooldown"
-          ? "Try every source again"
-          : "Find a source and play";
+          ? "Try playback again"
+          : "Play";
 
   const isSeries = media.mediaType === "tv";
   const hasListing = isSeries && episodes.length > 0;
@@ -341,24 +444,13 @@ export default function WatchPageClient({
     <main className="workspace-canvas flex min-h-screen flex-col">
       <AppHeader />
 
-      {/* The picture runs the width of the window, and everything that changes
-          what is playing is reachable from inside it.
-
-          What it is *called* comes first on a narrow screen and second on a
-          wide one. The stage is a fixed ratio of the width, so on a desktop the
-          whole of it clears the fold and leading with it is the right thing —
-          it is what the page is for. On a phone the same stage is a 240px
-          strip, and a strip of chrome directly under the bar identifies the
-          page as nothing at all; the title, the rating and the synopsis do that
-          in the space the picture cannot. Order only, not markup: one tree,
-          one component, no duplicated block to keep in step. */}
-      <div className="order-2 stage-frame lg:order-1">
+      <div className="stage-frame">
         <VideoStage
           videoRef={videoRef}
           title={media.title}
           subtitle={
             currentEpisode
-              ? `S${currentEpisode.seasonNumber} E${currentEpisode.episodeNumber} · ${currentEpisode.name}`
+              ? `S${currentEpisode.seasonNumber} E${currentEpisode.episodeNumber} ${currentEpisode.name}`
               : media.year
           }
           poster={media.backdropUrl}
@@ -375,6 +467,7 @@ export default function WatchPageClient({
             elapsedMs: state.raceElapsedMs,
           }}
           quality={qualityMenu}
+          language={languageMenu}
           sources={sourceMenu}
           captions={captionChoices}
           trackKey={trackKey}
@@ -387,11 +480,11 @@ export default function WatchPageClient({
           episodePanel={
             hasListing ? (
               <EpisodePanel
+                media={media}
                 seasons={seasons}
                 episodes={episodes}
                 season={season}
                 episode={episode}
-                onSeasonChange={(next) => changeEpisode(next, 1)}
                 onSelect={goToEpisode}
                 onClose={() => setEpisodesOpen(false)}
               />
@@ -415,7 +508,7 @@ export default function WatchPageClient({
       </div>
 
       <div
-        className="order-1 app-shell pb-5 pt-5 lg:order-2 lg:pb-0 lg:pt-7"
+        className="app-shell pb-5 pt-5 lg:pb-0 lg:pt-7"
         id="about"
       >
         <div className="max-w-3xl">
@@ -442,9 +535,7 @@ export default function WatchPageClient({
           </div>
 
           {(currentEpisode?.overview || media.overview) && (
-            <p className="mt-5 text-[13.5px] leading-6 text-text-secondary">
-              {currentEpisode?.overview || media.overview}
-            </p>
+            <Synopsis text={currentEpisode?.overview || media.overview} />
           )}
         </div>
       </div>
@@ -476,9 +567,6 @@ export default function WatchPageClient({
         </div>
       )}
 
-      {/* `mt-auto` rather than a `flex-1` on a content block: with the blocks
-          reordered, whichever one carried the growth would open a gap in a
-          different place at each breakpoint. */}
       <div className="order-5 app-shell mt-auto">
         <SiteFooter />
       </div>
@@ -486,29 +574,63 @@ export default function WatchPageClient({
   );
 }
 
-/** What the roster shows for a source that is doing something right now. */
 function liveDetail(status?: string): string | undefined {
   switch (status) {
+    case "idle":
+      return "not checked";
+    case "queued":
+      return "waiting";
     case "asking":
-      return "asking now";
+      return "checking";
     case "offered":
-      return "has streams";
+      return "available";
     case "holding":
-      return "best so far";
+      return "available";
     case "playing":
-      return "playing";
+      return "current";
     case "empty":
-      return "nothing for this";
+      return "unavailable";
+    case "unplayable":
+      return "stream failed";
+    case "languageUnknown":
+      return "audio not verified";
+    case "languageMismatch":
+      return "different audio";
+    case "slow":
+      return "slow response";
     case "unreachable":
-      return "did not answer";
+      return "offline";
     case "limited":
-      return "rate limited";
+      return "cooling down";
     default:
       return undefined;
   }
 }
 
-/** The saved subtitle language first, then whatever the browser asks for. */
+function Synopsis({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="mt-5">
+      <p
+        className={`text-[13.5px] leading-6 text-text-secondary ${
+          expanded ? "" : "line-clamp-3 sm:line-clamp-none"
+        }`}
+      >
+        {text}
+      </p>
+      <button
+        type="button"
+        onClick={() => setExpanded((open) => !open)}
+        aria-expanded={expanded}
+        className="mt-1.5 text-[10.5px] font-bold text-text-secondary underline decoration-border decoration-1 underline-offset-[3px] transition-colors hover:text-text hover:decoration-text sm:hidden"
+      >
+        {expanded ? "Less" : "More"}
+      </button>
+    </div>
+  );
+}
+
 function preferredLanguages(): string[] {
   const saved = readPrefs().captionLanguage;
   const fromBrowser = navigator.languages ?? [navigator.language];

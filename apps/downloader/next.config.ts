@@ -20,11 +20,8 @@ const contentSecurityPolicy = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  // Dependencies are hoisted to the workspace root, so file tracing has to
-  // start there or the standalone bundle ships without them.
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
   poweredByHeader: false,
-  // The shared package is published as source, so the app's compiler owns it.
   transpilePackages: ["@phantom/ui"],
   serverExternalPackages: ["youtubei.js", "undici"],
   images: {
@@ -36,7 +33,6 @@ const nextConfig: NextConfig = {
     ],
   },
   async redirects() {
-    // /results?search_query= was the previous address of the search page.
     return [
       {
         source: "/results",

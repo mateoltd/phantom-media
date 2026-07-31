@@ -4,7 +4,6 @@ import { CinemaHero } from "@/components/cinema-hero";
 import { SiteFooter } from "@/components/site-footer";
 import { browseHome } from "@/lib/catalog";
 
-/** The listings move about as often as a day, and never per visitor. */
 export const revalidate = 3600;
 
 export default async function Page() {
@@ -13,8 +12,6 @@ export default async function Page() {
 
   return (
     <main className="workspace-canvas flex min-h-screen flex-col">
-      {/* Floating over the hero until the page moves: the artwork is the point
-          of the first screen, and a solid bar across it is a lid. */}
       <AppHeader floating={Boolean(featured)} />
 
       {featured && <CinemaHero media={featured} />}
@@ -25,7 +22,6 @@ export default async function Page() {
             key={row.id}
             row={{
               ...row,
-              // The featured title is already the size of the screen above.
               items: index === 0 ? row.items.slice(1) : row.items,
             }}
             priority={index === 0}
@@ -38,7 +34,7 @@ export default async function Page() {
               The catalog is not answering
             </h1>
             <p className="mx-auto mt-3 max-w-sm text-[13px] leading-6 text-text-secondary">
-              Browsing is unavailable right now. Search still works — type a
+              Browsing is unavailable right now. You can still search for a
               title, an IMDb link or a TMDB id above.
             </p>
           </div>

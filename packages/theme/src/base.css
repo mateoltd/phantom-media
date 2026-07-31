@@ -8,16 +8,11 @@
   --surface-shadow: rgba(57, 43, 28, 0.07);
   --scrollbar-thumb: #c9c1b4;
 
-  /* The height of the app chrome, as a number the page below it can subtract.
-     `AppHeader` sets its own height from this rather than letting its padding
-     decide, so the two cannot drift apart: a 44px field inside 6px of padding,
-     over a hairline. */
   --app-header-h: 3.5625rem;
 }
 
 @media (min-width: 640px) {
   :root {
-    /* The same field inside 8px of padding once the wordmark appears. */
     --app-header-h: 3.8125rem;
   }
 }
