@@ -2,7 +2,9 @@ import { debugEvent } from "../debug.mjs";
 import { failureDomainFor } from "../failure-domain.mjs";
 import { normalizeVariants } from "./normalize.mjs";
 import {
+  decodeVidfastProxyTarget,
   encodeVidfastProxyTarget,
+  primeVidfastMediaTarget,
   vidfastMediaHosts,
 } from "./vidfast-proxy.mjs";
 
@@ -364,12 +366,17 @@ async function firstWorkingServers(servers, context) {
   const signal = context.signal
     ? AbortSignal.any([context.signal, timeout, controller.signal])
     : AbortSignal.any([timeout, controller.signal]);
-  const tasks = servers.map((server) =>
-    resolveServer(server, { ...context, signal }).then(
-      (value) => ({ ok: true, value }),
+  const tasks = servers.map((server) => {
+    const startedAt = performance.now();
+    return resolveServer(server, { ...context, signal }).then(
+      (value) => ({
+        ok: true,
+        value,
+        resolvedInMs: performance.now() - startedAt,
+      }),
       (error) => ({ ok: false, error }),
-    ),
-  );
+    );
+  });
 
   let first;
   try {
@@ -395,6 +402,7 @@ async function firstWorkingServers(servers, context) {
   const settled = await Promise.all(tasks);
   const fulfilled = settled
     .filter((entry) => entry.ok)
+    .sort((left, right) => left.resolvedInMs - right.resolvedInMs)
     .map((entry) => entry.value);
   return fulfilled.length > 0 ? fulfilled : [first];
 }
@@ -551,8 +559,24 @@ export async function resolveVidfast(media, options = {}) {
 export function createVidfastResolver(id) {
   return async (media, options = {}) => {
     const result = await resolveVidfast(media, options);
+    const normalized = normalizeVariants(result.variants, id);
+    const preferred = normalized[0];
+    if (preferred && !options.fetchImpl) {
+      const timeout = AbortSignal.timeout(4_000);
+      const signal = options.signal
+        ? AbortSignal.any([options.signal, timeout])
+        : timeout;
+      try {
+        const upstream = decodeVidfastProxyTarget(
+          new URL(preferred.url).searchParams.get("target"),
+        );
+        await primeVidfastMediaTarget(upstream, { signal });
+      } catch {
+        // Probing can retry if this optional warm-up misses its budget.
+      }
+    }
     return {
-      candidates: normalizeVariants(result.variants, id),
+      candidates: normalized,
       subtitles: result.subtitles,
       latencyMs: result.latencyMs,
     };

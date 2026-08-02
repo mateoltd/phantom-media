@@ -18,6 +18,11 @@ const ALLOWED_PATHS = Object.freeze({
 
 const VIDEASY_BREACH_HOST = "peraspera.waltersamson74809.workers.dev";
 const VIDEASY_WORKER_VALUE = /^[A-Za-z0-9_.-]{8,4096}$/;
+const VIDEASY_YORU_HOST = "moon.ironwallnet.net";
+const VIDEASY_YORU_SITE =
+  /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.site$/;
+const VIDEASY_YORU_PATH =
+  /^\/vd\/[A-Za-z0-9_-]{32,}(?:\/[A-Za-z0-9._~-]{1,256})+$/;
 
 const DIRECT_CHILD_WRAPPERS = Object.freeze({
   "play.cinemaos.in": Object.freeze({
@@ -35,7 +40,8 @@ const MANIFEST_CACHE_TTL_MS = 45_000;
 const MANIFEST_CACHE = new Map();
 
 function allowedPath(url) {
-  if (url.hostname.toLowerCase() === VIDEASY_BREACH_HOST) {
+  const hostname = url.hostname.toLowerCase();
+  if (hostname === VIDEASY_BREACH_HOST) {
     const keys = [...url.searchParams.keys()];
     return (
       url.pathname === "/" &&
@@ -47,7 +53,14 @@ function allowedPath(url) {
         url.searchParams.get("type") === "m3u8")
     );
   }
-  const prefixes = ALLOWED_PATHS[url.hostname.toLowerCase()];
+  if (
+    (hostname === VIDEASY_YORU_HOST || VIDEASY_YORU_SITE.test(hostname)) &&
+    !url.search &&
+    VIDEASY_YORU_PATH.test(url.pathname)
+  ) {
+    return true;
+  }
+  const prefixes = ALLOWED_PATHS[hostname];
   return Boolean(prefixes?.some((prefix) => url.pathname.startsWith(prefix)));
 }
 
@@ -111,8 +124,11 @@ export function proxyWrapperCandidate(candidate, proxyOrigin) {
 }
 
 function upstreamHeaders(request, target) {
+  const hostname = target.hostname.toLowerCase();
   const videasy =
-    target.hostname.toLowerCase() === VIDEASY_BREACH_HOST;
+    hostname === VIDEASY_BREACH_HOST ||
+    hostname === VIDEASY_YORU_HOST ||
+    VIDEASY_YORU_SITE.test(hostname);
   const headers = new Headers({
     accept:
       request.headers.get("accept") ??

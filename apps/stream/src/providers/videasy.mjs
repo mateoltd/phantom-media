@@ -453,12 +453,12 @@ function variantsFrom(breach, yoru) {
     });
   }
 
-  const yoruSources =
-    typeof yoru?.playlist === "string"
+  const yoruSources = [
+    ...(Array.isArray(yoru?.sources) ? yoru.sources.slice(0, 20) : []),
+    ...(typeof yoru?.playlist === "string"
       ? [{ url: yoru.playlist, quality: "adaptive" }]
-      : Array.isArray(yoru?.sources)
-        ? yoru.sources.slice(0, 20)
-        : [];
+      : []),
+  ];
   for (const source of yoruSources) {
     if (!validYoruUrl(source?.url)) continue;
     variants.push({
@@ -467,7 +467,7 @@ function variantsFrom(breach, yoru) {
       quality: source.quality,
       failureDomain: YORU_DOMAIN,
       capacityDomains: [YORU_DOMAIN],
-      deliveryMode: "native-direct",
+      deliveryMode: "resolver-full-relay",
       audioLanguages: [],
     });
   }
@@ -555,25 +555,22 @@ export function createVideasyResolver(id) {
   return async (media, options = {}) => {
     const result = await resolveVideasy(media, options);
     const normalized = normalizeVariants(result.variants, id);
-    const breach = normalized.find(
-      (candidate) => candidate.failureDomain === BREACH_DOMAIN,
-    );
-    if (breach && options.proxyOrigin && !options.fetchImpl) {
+    const preferred = normalized[0];
+    if (preferred && options.proxyOrigin && !options.fetchImpl) {
       const timeout = AbortSignal.timeout(4_000);
       const signal = options.signal
         ? AbortSignal.any([options.signal, timeout])
         : timeout;
       try {
-        await primeWrapperMediaTarget(breach.url, { signal });
+        await primeWrapperMediaTarget(preferred.url, { signal });
       } catch {
         // The constrained relay can still retry during probing.
       }
     }
-    const candidates = normalized.map(
-      (candidate) =>
-        candidate.failureDomain === BREACH_DOMAIN && options.proxyOrigin
-          ? proxyWrapperCandidate(candidate, options.proxyOrigin)
-          : candidate,
+    const candidates = normalized.map((candidate) =>
+      options.proxyOrigin
+        ? proxyWrapperCandidate(candidate, options.proxyOrigin)
+        : candidate,
     );
     return {
       candidates,

@@ -56,6 +56,22 @@ test("the relay constrains Videasy Breach to its signed public worker contract",
   );
 });
 
+test("the relay accepts only Yoru's public HLS path contract", () => {
+  const token = "a".repeat(64);
+  const root = `https://moon.ironwallnet.net/vd/${token}/index-s1080p-v1-a1.m3u8`;
+  assert.equal(assertWrapperMediaUrl(root).hostname, "moon.ironwallnet.net");
+  assert.equal(
+    assertWrapperMediaUrl(
+      `https://future-rotation17.site/vd/${token}/1080p/chunk.jpg`,
+    ).hostname,
+    "future-rotation17.site",
+  );
+  assert.throws(
+    () => assertWrapperMediaUrl("https://future-rotation17.site/admin/chunk.jpg"),
+    /not allowed/,
+  );
+});
+
 test("wrapper candidates become full-relay candidates without leaking a remote URL", () => {
   const candidate = proxyWrapperCandidate(
     {
@@ -199,6 +215,26 @@ test("the relay supplies Videasy's public player headers to Breach", async () =>
     calls[0].options.headers.get("referer"),
     "https://player.videasy.to/",
   );
+});
+
+test("Yoru manifests and rotating children stay relayed with player headers", async () => {
+  const token = "b".repeat(64);
+  const root = `https://moon.ironwallnet.net/vd/${token}/index-s1080p-v1-a1.m3u8`;
+  const child = `https://future-rotation17.site/vd/${token}/1080p/chunk.jpg`;
+  const proxy = encodeWrapperMediaTarget(root, "https://phantom.example");
+  let seen;
+  const manifest = await proxyWrapperMediaRequest(new Request(proxy), {
+    fetchImpl: async (input, options) => {
+      seen = { input: new URL(input), options };
+      return response(`#EXTM3U\n${child}\n`);
+    },
+  });
+  const text = await manifest.text();
+  const encoded = text.match(/target=([A-Za-z0-9_-]+)/)?.[1];
+  assert.ok(encoded);
+  assert.equal(decodeWrapperMediaTarget(encoded).href, child);
+  assert.equal(seen.options.headers.get("origin"), "https://player.videasy.to");
+  assert.equal(seen.options.headers.get("referer"), "https://player.videasy.to/");
 });
 
 test("a primed Videasy manifest is reused for probe and attachment", async () => {

@@ -81,6 +81,7 @@ export interface AskContext {
   label(sourceId: string): string;
   signal: AbortSignal;
   preferredAudioLanguage: string;
+  fresh?: boolean;
   traceId?: string;
 }
 
@@ -100,6 +101,7 @@ export async function askSource(
     audioLanguage: normalizeAudioLanguage(context.preferredAudioLanguage),
   });
   if (context.media.imdbId) params.set("imdbId", context.media.imdbId);
+  if (context.fresh) params.set("fresh", "1");
   if (context.media.mediaType === "tv") {
     params.set("season", String(context.season));
     params.set("episode", String(context.episode));

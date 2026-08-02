@@ -135,7 +135,15 @@ The compatibility relay accepts only that exact worker hostname and its signed
 `payload`, `headers` and optional `type=m3u8` query shape. It rewrites child
 audio, quality and segment requests through the same constraint and briefly
 caches successful manifests so probing and attachment do not duplicate the
-slowest public request. Yoru stays browser-direct.
+slowest public request. Yoru now enforces the same public player headers, so
+its exact `moon.ironwallnet.net/vd/...` manifest paths and matching rotating
+`.site` segment paths use that relay too. Direct 1080p, 720p and 480p Yoru
+renditions are retained ahead of its slower adaptive master when advertised.
+
+Vidfast orders concurrently working internal servers by observed extraction
+latency, warms the preferred manifest, and reuses that manifest briefly during
+probe and attachment. Automatic playback recovery bypasses provider result
+caches so rotated signed routes are extracted again.
 
 ## Routing
 
@@ -261,6 +269,9 @@ has to reach into attachment and failure handling.
   and a double tap on either side seeks.
 - Adaptive HLS through `hls.js`, native HLS where the browser has it, and
   progressive MP4 as the fallback.
+- HLS fragment loads use the current bounded retry policy. If playback remains
+  stuck, the player nudges a buffered decoder stall or restarts a starved load
+  at the lowest automatic level, with a strict per-stall attempt limit.
 - The playhead, the buffer, the hover preview and the auto-hiding chrome are
   written to the DOM directly rather than held in React state. Sixty frames a
   second of scrubbing costs sixty style writes, not sixty renders.
@@ -330,7 +341,8 @@ catalogs or playback providers it talks to. Browser-ready streams play directly
 from third-party hosts. A narrowly allowlisted compatibility relay is used for
 the public VidSrc source because its media endpoints reject normal browser
 requests; relayed bytes are streamed through without persistent storage. The
-same constrained relay is used for Videasy's public Breach worker contract.
+same constrained relay pattern is used for Videasy's public Breach and Yoru
+contracts.
 
 `/disclaimer` states that in full: no stored media library, no affiliation,
 authorized use only, no warranty, and a limitation of liability. It is linked

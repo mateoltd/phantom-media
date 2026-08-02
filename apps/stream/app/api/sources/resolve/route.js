@@ -110,6 +110,7 @@ export async function GET(request) {
       const result = await provider.resolve(media, {
         signal: deadlineSignal(request),
         abandoned: request.signal,
+        fresh: params.get("fresh") === "1",
         proxyOrigin: new URL(request.url).origin,
       });
       const headers = { "cache-control": "no-store" };

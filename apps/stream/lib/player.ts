@@ -18,6 +18,12 @@ import {
   normalizeAudioLanguage,
 } from "../src/media-language.mjs";
 import { manifestVideoHeight } from "../src/media-quality.mjs";
+import {
+  HLS_FRAGMENT_LOAD_POLICY,
+  HLS_STALL_RECOVERY_DELAY_MS,
+  HLS_STALL_RECOVERY_LIMIT,
+  hlsStallRecoveryAction,
+} from "../src/hls-recovery.mjs";
 
 function hostOf(url: string): string {
   try {
@@ -508,6 +514,15 @@ function isBufferedAt(video: HTMLVideoElement, position: number): boolean {
   return false;
 }
 
+function bufferAheadAt(video: HTMLVideoElement, position: number): number {
+  for (let index = 0; index < video.buffered.length; index += 1) {
+    const start = video.buffered.start(index);
+    const end = video.buffered.end(index);
+    if (start <= position && position < end) return end - position;
+  }
+  return 0;
+}
+
 async function attachHls(
   video: HTMLVideoElement,
   url: string,
@@ -520,9 +535,13 @@ async function attachHls(
     backBufferLength: 60,
     maxBufferLength: 40,
     maxMaxBufferLength: 120,
-    fragLoadingMaxRetry: 4,
-    manifestLoadingMaxRetry: 2,
-    levelLoadingMaxRetry: 3,
+    fragLoadPolicy: {
+      default: {
+        ...HLS_FRAGMENT_LOAD_POLICY,
+        timeoutRetry: { ...HLS_FRAGMENT_LOAD_POLICY.timeoutRetry },
+        errorRetry: { ...HLS_FRAGMENT_LOAD_POLICY.errorRetry },
+      },
+    },
     abrEwmaDefaultEstimate: 3_000_000,
   });
 
@@ -590,6 +609,66 @@ async function attachHls(
     const state = audio();
     for (const listener of audioListeners) listener(state);
   };
+  let destroyed = false;
+  let stallRecoveryTimer: number | null = null;
+  let stallRecoveryAttempts = 0;
+  const clearStallRecovery = (resetAttempts = false) => {
+    if (stallRecoveryTimer !== null) {
+      window.clearTimeout(stallRecoveryTimer);
+      stallRecoveryTimer = null;
+    }
+    if (resetAttempts) stallRecoveryAttempts = 0;
+  };
+  const scheduleStallRecovery = () => {
+    if (
+      destroyed ||
+      stallRecoveryTimer !== null ||
+      stallRecoveryAttempts >= HLS_STALL_RECOVERY_LIMIT
+    ) {
+      return;
+    }
+    const stalledAt = video.currentTime;
+    stallRecoveryTimer = window.setTimeout(() => {
+      stallRecoveryTimer = null;
+      if (destroyed || Math.abs(video.currentTime - stalledAt) >= 0.25) {
+        stallRecoveryAttempts = 0;
+        return;
+      }
+      const bufferAheadSeconds = bufferAheadAt(video, video.currentTime);
+      const action = hlsStallRecoveryAction({
+        paused: video.paused,
+        seeking: video.seeking,
+        ended: video.ended,
+        playbackRate: video.playbackRate,
+        currentTime: video.currentTime,
+        readyState: video.readyState,
+        bufferAheadSeconds,
+      });
+      if (action === "none") return;
+
+      stallRecoveryAttempts += 1;
+      debug("attach", `hls.stall-${action}`, {
+        host: hostOf(url),
+        position: video.currentTime,
+        bufferAheadSeconds,
+        attempt: stallRecoveryAttempts,
+      });
+      if (action === "nudge") {
+        video.currentTime = Math.min(
+          video.currentTime + 0.05,
+          Number.isFinite(video.duration)
+            ? Math.max(0, video.duration - 0.05)
+            : video.currentTime + 0.05,
+        );
+      } else {
+        if (hls.autoLevelEnabled) hls.nextLoadLevel = hls.minAutoLevel;
+        hls.startLoad(video.currentTime, true);
+      }
+      scheduleStallRecovery();
+    }, HLS_STALL_RECOVERY_DELAY_MS);
+  };
+  const onWaiting = () => scheduleStallRecovery();
+  const onPlaying = () => clearStallRecovery(true);
   const onSeeking = () => {
     const position = video.currentTime;
     if (!Number.isFinite(position) || isBufferedAt(video, position)) return;
@@ -635,12 +714,20 @@ async function attachHls(
   hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, publishAudio);
   hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, publishAudio);
   video.addEventListener("seeking", onSeeking);
+  video.addEventListener("waiting", onWaiting);
+  video.addEventListener("stalled", onWaiting);
+  video.addEventListener("playing", onPlaying);
 
   return {
     destroy: () => {
+      destroyed = true;
+      clearStallRecovery();
       listeners.clear();
       audioListeners.clear();
       video.removeEventListener("seeking", onSeeking);
+      video.removeEventListener("waiting", onWaiting);
+      video.removeEventListener("stalled", onWaiting);
+      video.removeEventListener("playing", onPlaying);
       hls.destroy();
     },
     levels,

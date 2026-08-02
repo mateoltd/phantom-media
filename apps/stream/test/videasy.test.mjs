@@ -40,6 +40,8 @@ test("Videasy asks only Yoru and Breach and returns native HLS", async () => {
     "?payload=abcdefgh.ijklmnop&headers=qrstuvwx.yzABCDEF&type=m3u8";
   const yoru =
     `https://moon.ironwallnet.net/vd/${"A".repeat(40)}/master.m3u8`;
+  const yoru1080 =
+    `https://moon.ironwallnet.net/vd/${"A".repeat(40)}/index-s1080p-v1-a1.m3u8`;
   const fetchImpl = async (input, options = {}) => {
     const url = new URL(input);
     calls.push({ url, options });
@@ -68,7 +70,7 @@ test("Videasy asks only Yoru and Breach and returns native HLS", async () => {
             subtitles: [],
           })
         : JSON.stringify({
-            sources: [],
+            sources: [{ url: yoru1080, quality: "1080p" }],
             subtitles: [],
             playlist: yoru,
           }),
@@ -91,11 +93,12 @@ test("Videasy asks only Yoru and Breach and returns native HLS", async () => {
   assert.equal(sourceCall.url.searchParams.get("seasonId"), "7");
   assert.equal(sourceCall.url.searchParams.get("episodeId"), "6");
   assert.equal(sourceCall.url.searchParams.get("tmdbId"), "37680");
-  assert.equal(result.variants.length, 2);
+  assert.equal(result.variants.length, 3);
   assert.deepEqual(
     result.variants.map((variant) => new URL(variant.url).hostname),
     [
       "peraspera.waltersamson74809.workers.dev",
+      "moon.ironwallnet.net",
       "moon.ironwallnet.net",
     ],
   );
@@ -104,6 +107,51 @@ test("Videasy asks only Yoru and Breach and returns native HLS", async () => {
     result.variants[1].failureDomain,
   );
   assert.equal(result.variants[1].failureDomain, failureDomainFor("u9"));
+  assert.equal(result.variants[1].deliveryMode, "resolver-full-relay");
+});
+
+test("the registry relays every Yoru variant and keeps direct renditions", async () => {
+  const token = "Z".repeat(40);
+  const resolver = createVideasyResolver("b5");
+  const result = await resolver(media, {
+    decodeImpl: (cipher) =>
+      JSON.stringify(
+        cipher === "breach"
+          ? { sources: [] }
+          : {
+              sources: [
+                {
+                  url: `https://moon.ironwallnet.net/vd/${token}/index-s1080p-v1-a1.m3u8`,
+                  quality: "1080p",
+                },
+                {
+                  url: `https://moon.ironwallnet.net/vd/${token}/index-s720p-v1-a1.m3u8`,
+                  quality: "720p",
+                },
+              ],
+              playlist: `https://moon.ironwallnet.net/vd/${token}/master.m3u8`,
+            },
+      ),
+    fetchImpl: async (input) => {
+      const path = new URL(input).pathname;
+      if (path === "/seed") {
+        return new Response(JSON.stringify({ seed: FIXTURE_SEED }));
+      }
+      return new Response(path.startsWith("/m4uhd/") ? "breach" : "yoru");
+    },
+    fresh: true,
+    proxyOrigin: "https://phantom.example",
+  });
+
+  assert.equal(result.candidates.length, 3);
+  assert.equal(result.candidates[0].resolution, 1080);
+  assert.ok(
+    result.candidates.every(
+      (candidate) =>
+        new URL(candidate.url).origin === "https://phantom.example" &&
+        candidate.deliveryMode === "resolver-full-relay",
+    ),
+  );
 });
 
 test("the registry resolver keeps Videasy under opaque Source 04 identity", async () => {

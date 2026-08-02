@@ -10,6 +10,7 @@ import {
   assertVidfastMediaUrl,
   decodeVidfastProxyTarget,
   encodeVidfastProxyTarget,
+  primeVidfastMediaTarget,
   proxyVidfastRequest,
   rewriteVidfastHls,
   vidfastMediaHosts,
@@ -343,4 +344,31 @@ test("the media relay injects Vidfast headers, preserves ranges and rewrites HLS
   assert.equal(seen.options.headers.get("range"), "bytes=0-1");
   assert.equal(result.headers.get("access-control-allow-origin"), "*");
   assert.match(text, /https:\/\/phantom\.example\/api\/sources\/vidfast\/proxy/);
+});
+
+test("a primed Vidfast manifest is reused for probe and attachment", async () => {
+  const root = "https://media.example/title/primed-master.m3u8";
+  let calls = 0;
+  await primeVidfastMediaTarget(root, {
+    allowedHosts: MEDIA_HOSTS,
+    fetchImpl: async () => {
+      calls += 1;
+      return response("#EXTM3U\n#EXT-X-ENDLIST\n", {
+        contentType: "application/vnd.apple.mpegurl",
+      });
+    },
+    vidfastOrigin: ORIGIN,
+  });
+  const proxy = encodeVidfastProxyTarget(root, PROXY, MEDIA_HOSTS);
+  const result = await proxyVidfastRequest(new Request(proxy), {
+    allowedHosts: MEDIA_HOSTS,
+    fetchImpl: async () => {
+      calls += 1;
+      throw new Error("the primed manifest should be reused");
+    },
+    vidfastOrigin: ORIGIN,
+  });
+  assert.equal(result.status, 200);
+  assert.equal(calls, 1);
+  assert.match(await result.text(), /#EXTM3U/);
 });

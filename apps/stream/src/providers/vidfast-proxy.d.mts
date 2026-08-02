@@ -20,6 +20,17 @@ export declare function decodeVidfastProxyTarget(
   allowedHosts?: ReadonlySet<string>,
 ): URL;
 
+export declare function primeVidfastMediaTarget(
+  input: string | URL,
+  options?: {
+    fetchImpl?: typeof fetch;
+    allowedHosts?: ReadonlySet<string>;
+    extraHosts?: readonly string[];
+    vidfastOrigin?: string;
+    signal?: AbortSignal;
+  },
+): Promise<string>;
+
 export declare function rewriteVidfastHls(
   manifest: string,
   upstream: string | URL,

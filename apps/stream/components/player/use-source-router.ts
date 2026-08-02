@@ -601,6 +601,7 @@ export function useSourceRouter({
                 label: labelOf,
                 signal: fetchController.signal,
                 preferredAudioLanguage: normalizedAudioLanguage,
+                fresh: options.recovery,
                 traceId,
               });
             } finally {

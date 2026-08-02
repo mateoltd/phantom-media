@@ -9,6 +9,8 @@ const DEFAULT_MEDIA_HOSTS = Object.freeze([
   "sandstorm13.site",
 ]);
 const MAX_MANIFEST_BYTES = 2 * 1024 * 1024;
+const MANIFEST_CACHE_TTL_MS = 45_000;
+const MANIFEST_CACHE = new Map();
 
 function configuredHosts() {
   return String(process.env.VIDFAST_MEDIA_HOSTS ?? "")
@@ -192,6 +194,57 @@ async function limitedText(response) {
   }
 }
 
+function cachedManifest(target) {
+  const entry = MANIFEST_CACHE.get(target.href);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    MANIFEST_CACHE.delete(target.href);
+    return null;
+  }
+  return entry;
+}
+
+function storeManifest(target, upstream, body) {
+  MANIFEST_CACHE.set(target.href, {
+    body,
+    expiresAt: Date.now() + MANIFEST_CACHE_TTL_MS,
+    headers: [...upstream.headers],
+    status: upstream.status,
+  });
+}
+
+export async function primeVidfastMediaTarget(input, options = {}) {
+  const allowedHosts =
+    options.allowedHosts ?? vidfastMediaHosts(options.extraHosts);
+  const target = assertVidfastMediaUrl(input, allowedHosts);
+  const cached = cachedManifest(target);
+  if (cached) return cached.body;
+  const request = new Request("http://localhost", {
+    headers: {
+      accept: "application/vnd.apple.mpegurl,application/x-mpegURL,*/*",
+    },
+  });
+  const upstream = await (options.fetchImpl ?? globalThis.fetch)(target, {
+    method: "GET",
+    headers: upstreamHeaders(
+      request,
+      options.vidfastOrigin ?? VIDFAST_ORIGIN,
+    ),
+    redirect: "manual",
+    signal: options.signal,
+  });
+  if (!upstream.ok || !isManifest(target, upstream)) {
+    upstream.body?.cancel();
+    throw new TypeError("Vidfast media target did not return an HLS manifest");
+  }
+  const body = await limitedText(upstream);
+  if (!body.trimStart().startsWith("#EXTM3U")) {
+    throw new TypeError("Vidfast media target returned invalid HLS");
+  }
+  storeManifest(target, upstream, body);
+  return body;
+}
+
 function upstreamHeaders(request, origin) {
   const headers = new Headers({
     accept:
@@ -261,6 +314,33 @@ export async function proxyVidfastRequest(request, options = {}) {
     return new Response(error.message, { status: 400 });
   }
 
+  const cached =
+    request.method === "GET" && !request.headers.has("range")
+      ? cachedManifest(target)
+      : null;
+  if (cached) {
+    let body = cached.body;
+    try {
+      body = rewriteVidfastHls(
+        body,
+        target,
+        new URL(request.url).origin,
+        allowedHosts,
+      );
+    } catch {
+      return new Response("Vidfast manifest contained an unsafe URI", {
+        status: 502,
+      });
+    }
+    return new Response(body, {
+      status: cached.status,
+      headers: responseHeaders(
+        new Response(null, { headers: cached.headers }),
+        true,
+      ),
+    });
+  }
+
   let upstream;
   try {
     upstream = await (options.fetchImpl ?? globalThis.fetch)(target, {
@@ -297,6 +377,7 @@ export async function proxyVidfastRequest(request, options = {}) {
   }
   let rewritten = body;
   if (upstream.ok) {
+    storeManifest(target, upstream, body);
     try {
       rewritten = rewriteVidfastHls(
         body,
