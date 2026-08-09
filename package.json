@@ -1,8 +1,8 @@
 {
-  "name": "phantom",
+  "name": "phantom-media",
   "version": "1.0.0",
   "private": true,
-  "description": "The monorepo behind the Phantom services.",
+  "description": "The standalone monorepo for Phantom Downloader and Phantom Stream.",
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
@@ -10,6 +10,13 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "check": "turbo run typecheck lint test build",
+    "deployment:check": "pnpm run deployment:check:downloader && pnpm run deployment:check:stream",
+    "deployment:check:downloader": "pnpm --filter @phantom/downloader exec wrangler deploy --dry-run --containers-rollout=none",
+    "deployment:check:stream": "pnpm --filter @phantom/stream exec opennextjs-cloudflare build && pnpm --filter @phantom/stream exec wrangler deploy --dry-run",
+    "container:build:downloader": "docker build -f apps/downloader/Dockerfile -t phantom-media-downloader:local-check .",
+    "release:check": "pnpm check && pnpm deployment:check && pnpm container:build:downloader",
+    "deploy:downloader": "pnpm --filter @phantom/downloader deploy",
+    "deploy:stream": "pnpm --filter @phantom/stream deploy",
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {

@@ -321,6 +321,8 @@ Switched off, the log costs one `if` per call site and allocates nothing.
 
 ## Local commands
 
+Run these from the monorepo root:
+
 ```sh
 pnpm --filter @phantom/stream dev
 pnpm --filter @phantom/stream test        # scoring, routing policy, providers, subtitles, debug
@@ -330,9 +332,9 @@ pnpm --filter @phantom/stream build
 
 ## Configuration
 
-Copy `.env.example` to `.env`. Every value is optional. Stremio entries must be
-public, unauthenticated HTTPS addon manifests; authenticated or paid services
-are intentionally unsupported.
+Copy `apps/stream/.env.example` to `apps/stream/.env.local`. Every value is
+optional. Stremio entries must be public, unauthenticated HTTPS addon
+manifests; authenticated or paid services are intentionally unsupported.
 
 ## Legal
 

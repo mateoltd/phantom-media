@@ -256,19 +256,25 @@ boundary.
 - FFmpeg
 
 ```sh
-pnpm install
-cp .env.example .env.local
-pnpm dev
+corepack pnpm install
+cp apps/downloader/.env.example apps/downloader/.env.local
+pnpm --filter @phantom/downloader dev
 ```
 
-Open `http://localhost:3000`.
+Run those commands from the monorepo root, then open
+`http://localhost:3000`.
 
 ### Validate a production build
 
 ```sh
-pnpm check
-pnpm start
+pnpm --filter @phantom/downloader typecheck
+pnpm --filter @phantom/downloader lint
+pnpm --filter @phantom/downloader build
+pnpm --filter @phantom/downloader start
 ```
+
+`pnpm check` at the monorepo root validates both media applications and the
+shared packages together.
 
 ## Configuration
 
@@ -315,13 +321,20 @@ active jobs under `/tmp/ewyoutube-downloads`. The Dockerfile is the canonical
 production build.
 
 ```sh
-docker build -t phantom .
+docker build \
+  -f apps/downloader/Dockerfile \
+  -t phantom-media-downloader \
+  .
 docker run --rm \
-  --name phantom \
-  --env-file .env \
+  --name phantom-media-downloader \
+  --env-file apps/downloader/.env.local \
   -p 3000:3000 \
-  phantom
+  phantom-media-downloader
 ```
+
+Run the build from the monorepo root. The final `.` is intentionally the
+repository-root build context: the image compiles `packages/config`,
+`packages/theme`, and `packages/ui` together with the application.
 
 Use one replica and give the container enough ephemeral disk for the configured
 concurrency and file-size limits. A conservative upper bound is:
@@ -336,16 +349,19 @@ The multiplier accounts for source fragments plus merged/converted output.
 
 ### Recommended simple option: Railway
 
-Railway detects the root `Dockerfile`, builds it, and exposes the container as a
-web service.
+Railway can build the application from its non-root Dockerfile and expose the
+container as a web service.
 
 1. Push the repository to GitHub.
 2. Create a Railway project from the repository.
-3. Confirm Railway selected the root `Dockerfile`.
-4. Add the variables from `.env.example`.
-5. Set `NEXT_PUBLIC_BASE_URL` to the generated/custom HTTPS URL.
-6. Generate a public domain.
-7. Keep the service at one replica and set a spending limit.
+3. Keep the service root at the repository root so shared packages remain in
+   the build context.
+4. Set `RAILWAY_DOCKERFILE_PATH=apps/downloader/Dockerfile` on the service.
+5. Add the variables from `apps/downloader/.env.example`, keeping proxy values
+   in Railway's secret storage.
+6. Set `NEXT_PUBLIC_BASE_URL` to the generated/custom HTTPS URL.
+7. Generate a public domain.
+8. Keep the service at one replica and set a spending limit.
 
 Railway has a base plan plus usage-based CPU, memory, storage, and network
 egress. Media delivery makes egress the cost to watch most closely. See the
@@ -358,13 +374,15 @@ egress. Media delivery makes egress the cost to watch most closely. See the
 Fly Machines can build and run the included Dockerfile.
 
 ```sh
-fly launch --no-deploy
+fly launch --no-deploy --dockerfile apps/downloader/Dockerfile
 fly secrets set EWYOUTUBE_PROXY_URLS='...'
-fly deploy
+fly deploy --dockerfile apps/downloader/Dockerfile
 fly scale count 1
 ```
 
-Add the remaining non-secret limits to `fly.toml` or as secrets, set
+Run those commands from the monorepo root so Fly sends the complete repository
+as the Docker build context. Add the remaining non-secret limits to `fly.toml`
+or as secrets, set
 `NEXT_PUBLIC_BASE_URL`, and choose a machine with adequate RAM and ephemeral
 disk. A persistent volume is not required because prepared files are
 intentionally temporary.
@@ -400,18 +418,22 @@ this workload. Unlike ordinary Workers, Containers can run the existing Linux
 image with `yt-dlp`, FFmpeg, writable disk, and a normal Node.js process.
 
 The repository includes a production Worker entry point, Durable Object
-binding, Container configuration, and custom-domain route in `wrangler.jsonc`.
-Every request is routed to one named container so in-memory job state and its
-temporary file remain colocated. The container exposes port `3000`, sleeps
-after ten idle minutes, and is capped at one instance until job state moves to
-durable shared storage.
+binding, Container configuration, and custom-domain route in
+`apps/downloader/wrangler.jsonc`. Every request is routed to one named container
+so in-memory job state and its temporary file remain colocated. The container
+exposes port `3000`, sleeps after ten idle minutes, and is capped at one instance
+until job state moves to durable shared storage.
 
 Authenticate Wrangler, store the proxy pool as a secret, and deploy:
 
 ```sh
-pnpm wrangler secret put EWYOUTUBE_PROXY_URLS
-pnpm wrangler deploy --containers-rollout immediate
+pnpm --filter @phantom/downloader exec wrangler secret put EWYOUTUBE_PROXY_URLS
+pnpm deploy:downloader
 ```
+
+Run both commands from the monorepo root. The secret command prompts without
+putting the value in shell history. `pnpm deployment:check:downloader` performs
+a local Worker/configuration dry run without publishing a new container image.
 
 The checked-in configuration publishes the apex custom domain
 `https://ewyoutube.com`. Change the route before deploying another environment.
@@ -462,8 +484,8 @@ egress. Add provider billing alerts and a hard usage limit before sharing a
 public URL.
 
 For light, bursty use in Europe or North America, Cloudflare Containers are the
-strongest cost fit once the Worker/container routing adapter described above is
-added. Start with one `standard-2` instance, one explicit container ID, and
+strongest cost fit for the included Worker/container adapter. Start with one
+`standard-2` instance, one explicit container ID, and
 conservative concurrency and temporary-disk limits, then resize from measured
 CPU and memory use. For immediate deployment without a platform adapter,
 Railway is the simplest option for the included Dockerfile; Fly.io and a small

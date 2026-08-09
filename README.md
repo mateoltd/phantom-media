@@ -1,7 +1,8 @@
-# Phantom
+# Phantom Media
 
-The monorepo behind the Phantom services. Two apps, one design system, one
-install.
+The standalone monorepo for Phantom Downloader and Phantom Stream. Two apps,
+one design system, one install, and no build-time dependency on the Pervasivity
+intelligence repository from which this project was extracted.
 
 | Package                | What it is                                                              |
 | ---------------------- | ----------------------------------------------------------------------- |
@@ -26,6 +27,8 @@ Node 22 or newer, pnpm 10. Everything else comes from the lockfile.
 pnpm dev                              # both apps
 pnpm --filter @phantom/stream dev     # just one
 pnpm check                            # typecheck, lint, test and build everything
+pnpm deployment:check                 # Worker/OpenNext dry runs, no deployment
+pnpm container:build:downloader       # real Downloader image build
 ```
 
 Turborepo fans tasks out across the workspace and caches what has not changed,
@@ -95,8 +98,27 @@ directly through OpenNext.
 pnpm --filter @phantom/stream deploy
 ```
 
-Copy each app's `.env.example` to `.env` before deploying, and keep proxy
-credentials in the host secret manager rather than in a committed file.
+For local work, copy an app's `.env.example` to `.env.local` in that same app
+directory. For production, configure values through the target host. In
+particular, the Downloader's Cloudflare deployment requires
+`EWYOUTUBE_PROXY_URLS` to be provisioned with Wrangler as a Worker secret; do
+not commit proxy credentials in an environment file.
+
+The Downloader dry run uses `--containers-rollout=none`: it validates the
+Worker and container binding without requiring Docker or publishing an image.
+The separate container command validates the real image. Neither command
+authenticates, provisions resources, uploads secrets, or proves that the
+production account and custom domains are correctly configured. Those remain
+explicit operator checks before the first deployment from this repository.
+
+## Extraction provenance
+
+This repository retains the media products' Git history, including Downloader's
+pre-monorepo root history. The current shared `config`, `theme`, and `ui`
+packages are owned here as independent copies so the two repositories can
+evolve without a permanent cross-repository build dependency. See
+[`docs/EXTRACTION.md`](docs/EXTRACTION.md) for the exact source checkpoint,
+history method, dependency boundary, and deletion gate.
 
 ## Legal
 
