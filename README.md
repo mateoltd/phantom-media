@@ -86,7 +86,7 @@ rejects junk routes there, and wakes the container only for cache misses and
 the dynamic download APIs.
 
 ```sh
-pnpm --filter @phantom/downloader deploy
+pnpm deploy:downloader
 ```
 
 The image builds from the workspace root because the app compiles against

@@ -15,7 +15,7 @@
     "deployment:check:stream": "pnpm --filter @phantom/stream exec opennextjs-cloudflare build && pnpm --filter @phantom/stream exec wrangler deploy --dry-run",
     "container:build:downloader": "docker build -f apps/downloader/Dockerfile -t phantom-media-downloader:local-check .",
     "release:check": "pnpm check && pnpm deployment:check && pnpm container:build:downloader",
-    "deploy:downloader": "pnpm --filter @phantom/downloader deploy",
+    "deploy:downloader": "pnpm --filter @phantom/downloader run deploy",
     "deploy:stream": "pnpm --filter @phantom/stream deploy",
     "clean": "turbo run clean && rm -rf node_modules"
   },
