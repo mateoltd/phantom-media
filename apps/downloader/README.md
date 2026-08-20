@@ -32,7 +32,7 @@ flowchart LR
     Q -->|"bounded child process"| D["yt-dlp + FFmpeg"]
     D -->|"optional authorized proxy"| Y
     D -->|"ephemeral output"| T["Temporary disk"]
-    U -->|"poll status every 250 ms"| Q
+    U -->|"poll status every 1 second"| Q
     U -->|"native HTTP download"| F["File endpoint"]
     F --> T
     F -->|"stream with byte ranges"| U
@@ -293,8 +293,8 @@ shared packages together.
 | `DOWNLOAD_MAX_PENDING` | `20` | Global queued/active job cap |
 | `DOWNLOAD_MAX_JOBS_PER_IP` | `3` | Queued/active job cap per client address |
 | `DOWNLOAD_MAX_DURATION_SECONDS` | `14400` | Maximum accepted source duration |
-| `DOWNLOAD_MAX_FILESIZE` | `2G` | `yt-dlp` maximum file size |
-| `DOWNLOAD_MAX_TEMP_BYTES` | `8589934592` | Aggregate temporary storage reservation cap |
+| `DOWNLOAD_MAX_FILESIZE` | `1536M` | `yt-dlp` maximum file size |
+| `DOWNLOAD_MAX_TEMP_BYTES` | `5368709120` | Aggregate temporary storage reservation cap |
 | `DOWNLOAD_JOB_TIMEOUT_SECONDS` | `1800` | Hard wall-clock limit for one download process |
 | `DOWNLOAD_CLIENT_IP_HEADER` | unset | Trusted ingress header used for per-client controls; unset groups requests conservatively |
 | `RESOLVE_MAX_PLAYLIST_ITEMS` | `100` | Maximum playlist entries resolved by one request |
@@ -417,12 +417,15 @@ Cloudflare Containers are the Cloudflare-native compute product that matches
 this workload. Unlike ordinary Workers, Containers can run the existing Linux
 image with `yt-dlp`, FFmpeg, writable disk, and a normal Node.js process.
 
-The repository includes a production Worker entry point, Durable Object
-binding, Container configuration, and custom-domain route in
-`apps/downloader/wrangler.jsonc`. Every request is routed to one named container
-so in-memory job state and its temporary file remain colocated. The container
-exposes port `3000`, sleeps after ten idle minutes, and is capped at one instance
-until job state moves to durable shared storage.
+The repository includes a production Worker gateway, Durable Object binding,
+Container configuration, and custom-domain route in
+`apps/downloader/wrangler.jsonc`. The gateway caches page shells and static
+assets through a named Worker entrypoint, answers health checks itself, and
+rejects unknown paths before they can wake the container. Search, resolve, job,
+and file requests still go to one named container so in-memory job state and
+its temporary file remain colocated. The container exposes port `3000`, sleeps
+after two idle minutes, and is capped at one instance until job state moves to
+durable shared storage.
 
 Authenticate Wrangler, store the proxy pool as a secret, and deploy:
 
@@ -440,9 +443,11 @@ The checked-in configuration publishes the apex custom domain
 
 Containers are generally available, can scale to zero, and include an initial
 usage allowance in the Workers Paid plan. They also meter Workers, Durable
-Objects, compute, disk, logs, and network egress. Route every API and file
-request to one explicit container ID for this architecture; random routing
-would split in-memory job state from its temporary file.
+Objects, compute, disk, logs, and network egress. Route every dynamic API and
+file request to one explicit container ID for this architecture; random routing
+would split in-memory job state from its temporary file. Keep page and asset
+traffic in the cached frontend entrypoint so crawlers and cache-busting query
+strings do not extend container runtime.
 
 See the official [Containers overview](https://developers.cloudflare.com/containers/),
 [getting started guide](https://developers.cloudflare.com/containers/get-started/),
@@ -461,9 +466,9 @@ cannot run there unchanged:
 - the job needs process lifetime beyond a normal request.
 
 Pages Functions use the Workers runtime and therefore have the same backend
-constraint. Splitting only the static frontend onto Pages is possible, but it
-adds cross-origin configuration while leaving nearly all bandwidth cost on the
-container origin.
+constraint. A separate static frontend is still possible, but the current
+Worker gateway already caches frontend responses on the same origin while
+leaving the process-dependent API in the container.
 
 See Cloudflare's [Node.js compatibility table](https://developers.cloudflare.com/workers/runtime-apis/nodejs/)
 and [Workers filesystem documentation](https://developers.cloudflare.com/workers/runtime-apis/nodejs/fs/).
@@ -484,14 +489,14 @@ egress. Add provider billing alerts and a hard usage limit before sharing a
 public URL.
 
 For light, bursty use in Europe or North America, Cloudflare Containers are the
-strongest cost fit for the included Worker/container adapter. Start with one
-`standard-2` instance, one explicit container ID, and
-conservative concurrency and temporary-disk limits, then resize from measured
-CPU and memory use. For immediate deployment without a platform adapter,
-Railway is the simplest option for the included Dockerfile; Fly.io and a small
-VPS are also viable. A VPS offers the most predictable fixed compute price,
-while a usage-based container can be cheaper when idle. Media egress and any
-authorized ISP proxy can dominate either bill.
+strongest cost fit for the included Worker/container adapter. The checked-in
+configuration uses one `standard-1` instance, one explicit container ID, a
+five-GiB temporary-storage cap, and one concurrent job. Resize only from
+measured CPU, memory, and disk use. For immediate deployment without a platform
+adapter, Railway is the simplest option for the included Dockerfile; Fly.io and
+a small VPS are also viable. A VPS offers the most predictable fixed compute
+price, while a usage-based container can be cheaper when idle. Media egress and
+any authorized ISP proxy can dominate either bill.
 
 ## Operational checklist
 

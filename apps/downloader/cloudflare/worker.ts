@@ -1,11 +1,13 @@
 import { Container } from "@cloudflare/containers";
+import { WorkerEntrypoint } from "cloudflare:workers";
+import { routeRequest } from "./routing";
 
 const PRODUCTION_CONTAINER_ID = "phantom-production";
 
 export class PhantomContainer extends Container<Cloudflare.Env> {
   defaultPort = 3000;
   requiredPorts = [3000];
-  sleepAfter = "10m";
+  sleepAfter = "2m";
   enableInternet = true;
   pingEndpoint = "/api/health";
   envVars = {
@@ -19,8 +21,8 @@ export class PhantomContainer extends Container<Cloudflare.Env> {
     DOWNLOAD_MAX_PENDING: "12",
     DOWNLOAD_MAX_JOBS_PER_IP: "2",
     DOWNLOAD_MAX_DURATION_SECONDS: "14400",
-    DOWNLOAD_MAX_FILESIZE: "2G",
-    DOWNLOAD_MAX_TEMP_BYTES: "8589934592",
+    DOWNLOAD_MAX_FILESIZE: "1536M",
+    DOWNLOAD_MAX_TEMP_BYTES: "5368709120",
     DOWNLOAD_JOB_TIMEOUT_SECONDS: "1800",
     DOWNLOAD_TEMP_DIR: "/tmp/ewyoutube-downloads",
     RESOLVE_MAX_PLAYLIST_ITEMS: "100",
@@ -40,29 +42,92 @@ export class PhantomContainer extends Container<Cloudflare.Env> {
   };
 }
 
+export class CachedFrontend extends WorkerEntrypoint<Cloudflare.Env> {
+  async fetch(request: Request): Promise<Response> {
+    return forwardToContainer(request, this.env);
+  }
+}
+
 export default {
-  async fetch(request, env): Promise<Response> {
-    try {
-      const container =
-        env.PHANTOM_CONTAINER.getByName(PRODUCTION_CONTAINER_ID);
-      return await container.fetch(request);
-    } catch (error) {
-      console.error(
-        JSON.stringify({
-          message: "container request failed",
-          error:
-            error instanceof Error ? error.message : "Unknown container error",
-          path: new URL(request.url).pathname,
-        })
-      );
-      return new Response("Phantom is temporarily starting. Please retry.", {
-        status: 503,
-        headers: {
-          "Cache-Control": "no-store",
-          "Content-Type": "text/plain; charset=utf-8",
-          "Retry-After": "5",
-        },
-      });
+  async fetch(request, env, ctx): Promise<Response> {
+    const decision = routeRequest(request);
+
+    switch (decision.kind) {
+      case "container":
+        return forwardToContainer(request, env);
+      case "frontend":
+        return ctx.exports.CachedFrontend.fetch(decision.request);
+      case "health":
+        return jsonResponse(
+          { status: "ok", service: "edge", container: "on-demand" },
+          200,
+          "public, max-age=60"
+        );
+      case "redirect":
+        return new Response(null, {
+          status: 308,
+          headers: {
+            "Cache-Control": "public, max-age=86400",
+            Location: decision.location,
+          },
+        });
+      case "method_not_allowed":
+        return new Response("Method not allowed", {
+          status: 405,
+          headers: {
+            Allow: decision.allow,
+            "Cache-Control": "no-store",
+            "Content-Type": "text/plain; charset=utf-8",
+          },
+        });
+      case "not_found":
+        return new Response("Not found", {
+          status: 404,
+          headers: {
+            "Cache-Control": "public, max-age=300",
+            "Content-Type": "text/plain; charset=utf-8",
+          },
+        });
     }
   },
 } satisfies ExportedHandler<Cloudflare.Env>;
+
+async function forwardToContainer(
+  request: Request,
+  env: Cloudflare.Env
+): Promise<Response> {
+  try {
+    const container = env.PHANTOM_CONTAINER.getByName(PRODUCTION_CONTAINER_ID);
+    return await container.fetch(request);
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        message: "container request failed",
+        error: error instanceof Error ? error.message : "Unknown container error",
+        path: new URL(request.url).pathname,
+      })
+    );
+    return new Response("Phantom is temporarily starting. Please retry.", {
+      status: 503,
+      headers: {
+        "Cache-Control": "no-store",
+        "Content-Type": "text/plain; charset=utf-8",
+        "Retry-After": "5",
+      },
+    });
+  }
+}
+
+function jsonResponse(
+  value: unknown,
+  status: number,
+  cacheControl: string
+): Response {
+  return new Response(JSON.stringify(value), {
+    status,
+    headers: {
+      "Cache-Control": cacheControl,
+      "Content-Type": "application/json; charset=utf-8",
+    },
+  });
+}

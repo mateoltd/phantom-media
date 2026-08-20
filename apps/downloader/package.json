@@ -7,6 +7,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test cloudflare/routing.test.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit && tsc -p cloudflare/tsconfig.json --noEmit",
     "clean": "rm -rf .next .turbo",

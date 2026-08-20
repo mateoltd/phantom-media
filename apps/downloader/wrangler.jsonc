@@ -2,8 +2,21 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "ewyoutube",
   "main": "cloudflare/worker.ts",
-  "compatibility_date": "2026-07-25",
+  "compatibility_date": "2026-08-20",
   "compatibility_flags": ["nodejs_compat"],
+  // Keep the gateway uncached so it can reject junk paths and route APIs.
+  // Only the named frontend entrypoint receives Workers output caching.
+  "cache": {
+    "enabled": false
+  },
+  "exports": {
+    "CachedFrontend": {
+      "type": "worker",
+      "cache": {
+        "enabled": true
+      }
+    }
+  },
   "workers_dev": false,
   "routes": [
     {
@@ -21,7 +34,7 @@
       // The build needs the workspace root: this app is compiled against
       // packages/ui and packages/theme, which sit outside its folder.
       "image_build_context": "../..",
-      "instance_type": "standard-2",
+      "instance_type": "standard-1",
       "max_instances": 1
     }
   ],
@@ -43,8 +56,8 @@
     "enabled": true,
     "logs": {
       "enabled": true,
-      "head_sampling_rate": 1,
-      "invocation_logs": true
+      "head_sampling_rate": 0.1,
+      "invocation_logs": false
     },
     "traces": {
       "enabled": true,

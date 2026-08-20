@@ -97,7 +97,7 @@ export async function executeDownload(
         );
       }
 
-      await abortableDelay(250, signal);
+      await abortableDelay(1_000, signal);
     }
   } catch (error) {
     if (signal.aborted) return;
