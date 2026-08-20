@@ -42,7 +42,7 @@ export class PhantomContainer extends Container<Cloudflare.Env> {
   };
 }
 
-export class CachedFrontend extends WorkerEntrypoint<Cloudflare.Env> {
+export class CachedAssets extends WorkerEntrypoint<Cloudflare.Env> {
   async fetch(request: Request): Promise<Response> {
     return forwardToContainer(request, this.env);
   }
@@ -55,8 +55,8 @@ export default {
     switch (decision.kind) {
       case "container":
         return forwardToContainer(request, env);
-      case "frontend":
-        return ctx.exports.CachedFrontend.fetch(decision.request);
+      case "asset":
+        return ctx.exports.CachedAssets.fetch(decision.request);
       case "health":
         return jsonResponse(
           { status: "ok", service: "edge", container: "on-demand" },

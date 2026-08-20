@@ -5,12 +5,13 @@
   "compatibility_date": "2026-08-20",
   "compatibility_flags": ["nodejs_compat"],
   // Keep the gateway uncached so it can reject junk paths and route APIs.
-  // Only the named frontend entrypoint receives Workers output caching.
+  // Only immutable assets receive Workers output caching. HTML contains
+  // build-specific asset hashes and must move atomically with the container.
   "cache": {
     "enabled": false
   },
   "exports": {
-    "CachedFrontend": {
+    "CachedAssets": {
       "type": "worker",
       "cache": {
         "enabled": true

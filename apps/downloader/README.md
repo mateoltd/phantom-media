@@ -419,13 +419,14 @@ image with `yt-dlp`, FFmpeg, writable disk, and a normal Node.js process.
 
 The repository includes a production Worker gateway, Durable Object binding,
 Container configuration, and custom-domain route in
-`apps/downloader/wrangler.jsonc`. The gateway caches page shells and static
-assets through a named Worker entrypoint, answers health checks itself, and
-rejects unknown paths before they can wake the container. Search, resolve, job,
-and file requests still go to one named container so in-memory job state and
-its temporary file remain colocated. The container exposes port `3000`, sleeps
-after two idle minutes, and is capped at one instance until job state moves to
-durable shared storage.
+`apps/downloader/wrangler.jsonc`. The gateway caches immutable static assets
+through a named Worker entrypoint, answers health checks itself, and rejects
+unknown paths before they can wake the container. HTML stays coupled to the
+current container image because it contains build-specific asset hashes.
+Search, resolve, job, and file requests also go to one named container so
+in-memory job state and its temporary file remain colocated. The container
+exposes port `3000`, sleeps after two idle minutes, and is capped at one instance
+until job state moves to durable shared storage.
 
 Authenticate Wrangler, store the proxy pool as a secret, and deploy:
 
@@ -445,9 +446,9 @@ Containers are generally available, can scale to zero, and include an initial
 usage allowance in the Workers Paid plan. They also meter Workers, Durable
 Objects, compute, disk, logs, and network egress. Route every dynamic API and
 file request to one explicit container ID for this architecture; random routing
-would split in-memory job state from its temporary file. Keep page and asset
-traffic in the cached frontend entrypoint so crawlers and cache-busting query
-strings do not extend container runtime.
+would split in-memory job state from its temporary file. Keep immutable asset
+traffic in the cached entrypoint so cache-busting query strings do not extend
+container runtime.
 
 See the official [Containers overview](https://developers.cloudflare.com/containers/),
 [getting started guide](https://developers.cloudflare.com/containers/get-started/),
@@ -466,9 +467,9 @@ cannot run there unchanged:
 - the job needs process lifetime beyond a normal request.
 
 Pages Functions use the Workers runtime and therefore have the same backend
-constraint. A separate static frontend is still possible, but the current
-Worker gateway already caches frontend responses on the same origin while
-leaving the process-dependent API in the container.
+constraint. A separate static frontend is still possible. The current Worker
+gateway caches immutable frontend assets on the same origin while leaving HTML
+and the process-dependent API in the container.
 
 See Cloudflare's [Node.js compatibility table](https://developers.cloudflare.com/workers/runtime-apis/nodejs/)
 and [Workers filesystem documentation](https://developers.cloudflare.com/workers/runtime-apis/nodejs/fs/).

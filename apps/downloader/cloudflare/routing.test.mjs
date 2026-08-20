@@ -9,41 +9,36 @@ function route(path, init) {
   return routeRequest(new Request(`${origin}${path}`, init));
 }
 
-function assertFrontend(decision, expectedPath) {
-  assert.equal(decision.kind, "frontend");
+function assertAsset(decision, expectedPath) {
+  assert.equal(decision.kind, "asset");
   assert.equal(new URL(decision.request.url).pathname, expectedPath);
 }
 
-test("canonicalizes static page shells so tracking and app queries share a cache key", () => {
-  const home = route("/?utm_source=bot&fbclid=ignored");
-  assertFrontend(home, "/");
-  assert.equal(new URL(home.request.url).search, "");
-
-  const watch = route("/watch?v=video-id&_rsc=random");
-  assertFrontend(watch, "/watch");
-  assert.equal(new URL(watch.request.url).search, "");
-
-  assertFrontend(route("/es/search?q=hola"), "/es/search");
-  assertFrontend(route("/playlist?list=playlist-id"), "/playlist");
-});
-
-test("does not put router-state-dependent RSC responses in the shared cache", () => {
-  assert.deepEqual(route("/watch?v=video-id&_rsc=random", { headers: { RSC: "1" } }), {
+test("keeps HTML and RSC responses coupled to the current container image", () => {
+  assert.deepEqual(route("/?utm_source=bot&fbclid=ignored"), {
     kind: "container",
   });
+  assert.deepEqual(route("/watch?v=video-id&_rsc=random"), {
+    kind: "container",
+  });
+  assert.deepEqual(
+    route("/watch?v=video-id&_rsc=random", { headers: { RSC: "1" } }),
+    { kind: "container" }
+  );
+  assert.deepEqual(route("/es/search?q=hola"), { kind: "container" });
 });
 
 test("canonicalizes known static assets", () => {
   const chunk = route("/_next/static/chunks/app.js?v=deployment");
-  assertFrontend(chunk, "/_next/static/chunks/app.js");
+  assertAsset(chunk, "/_next/static/chunks/app.js");
   assert.equal(new URL(chunk.request.url).search, "");
 
-  assertFrontend(route("/phantom-mark-v2.png?cache=bust"), "/phantom-mark-v2.png");
+  assertAsset(route("/phantom-mark-v2.png?cache=bust"), "/phantom-mark-v2.png");
 });
 
 test("accepts only local Next image optimization inputs", () => {
   const image = route("/_next/image?q=75&w=640&url=%2Fbrush-stroke.png");
-  assert.equal(image.kind, "frontend");
+  assert.equal(image.kind, "asset");
   assert.equal(
     new URL(image.request.url).search,
     "?url=%2Fbrush-stroke.png&w=640&q=75"

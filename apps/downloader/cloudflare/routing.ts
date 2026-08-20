@@ -48,7 +48,7 @@ const DOWNLOAD_FILE_PATH = new RegExp(`^${DOWNLOAD_JOB_PATTERN}/file$`, "i");
 
 export type RouteDecision =
   | { kind: "container" }
-  | { kind: "frontend"; request: Request }
+  | { kind: "asset"; request: Request }
   | { kind: "health" }
   | { kind: "method_not_allowed"; allow: string }
   | { kind: "not_found" }
@@ -80,29 +80,23 @@ export function routeRequest(request: Request): RouteDecision {
   }
 
   if (PAGE_PATHS.has(pathname)) {
-    // RSC responses vary by router-state headers. Keep them out of the shared
-    // URL cache until the frontend is fully separated from the container.
-    if (
-      request.headers.has("RSC") ||
-      request.headers.has("Next-Router-State-Tree")
-    ) {
-      return { kind: "container" };
-    }
-
-    return { kind: "frontend", request: canonicalRequest(request, pathname) };
+    // HTML contains build-specific asset hashes. It must move atomically with
+    // the container image, so page shells and RSC payloads are never cached by
+    // the Worker independently of that image.
+    return { kind: "container" };
   }
 
   if (
     PUBLIC_ASSET_PATHS.has(pathname) ||
     pathname.startsWith("/_next/static/")
   ) {
-    return { kind: "frontend", request: canonicalRequest(request, pathname) };
+    return { kind: "asset", request: canonicalRequest(request, pathname) };
   }
 
   if (pathname === "/_next/image") {
     const canonicalImageUrl = canonicalizeNextImage(url);
     return canonicalImageUrl
-      ? { kind: "frontend", request: new Request(canonicalImageUrl, request) }
+      ? { kind: "asset", request: new Request(canonicalImageUrl, request) }
       : { kind: "not_found" };
   }
 

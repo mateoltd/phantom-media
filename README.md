@@ -81,9 +81,9 @@ things.
 
 **Downloader** runs in a Cloudflare Container. It shells out to `yt-dlp` and
 FFmpeg, so it needs a real filesystem and real binaries. The Worker in
-`apps/downloader/cloudflare/worker.ts` caches frontend responses at the edge,
-rejects junk routes there, and wakes the container only for cache misses and
-the dynamic download APIs.
+`apps/downloader/cloudflare/worker.ts` caches immutable assets at the edge,
+rejects junk routes there, and routes build-coupled HTML and dynamic download
+APIs to the container.
 
 ```sh
 pnpm deploy:downloader
