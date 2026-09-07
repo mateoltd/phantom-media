@@ -28,7 +28,17 @@ Part of the [Phantom monorepo](../../README.md). Install from the root.
 | ------------------ | --------------------------------------------------------------------------- |
 | `/`                | Browse: a featured title over rails of popular and highly rated films and series. |
 | `/search?q=`       | Results grid.                                                               |
+| `/watchlist`        | Locally saved films and series, newest saved first. |
 | `/watch/:type/:id` | Player and episode list. `:type` is `movie` or `tv`, `:id` is an IMDb id (a TMDB id still resolves). TV URLs accept `?season=5&episode=2` and keep the selection in browser history. |
+
+Watchlist bookmarks are available on posters, the featured title, and title details.
+The list stores display metadata in `localStorage` under `phantom-stream:watchlist:v1`,
+updates across tabs, and requires no account or backend. It belongs to the current
+browser and origin; clearing site data removes it. Storage failures are shown in
+the header without pretending a change was saved.
+
+On mobile, the header stays in one row with the brand, search, and watchlist.
+Opening search replaces that row with a search field and a back button.
 
 ## Type
 
@@ -222,10 +232,22 @@ allow voting from other sessions without a schema change.
 
 Whatever the playback source returned, merged with the keyless OpenSubtitles
 addon (`opensubtitles-v3.strem.io`, keyed on IMDb ids). OpenSubtitles' own REST
-API is not usable here because a free account allows five to twenty downloads a *day*.
+API is not used here.
+
+Set `SUBDL_API_KEY` as a server-only environment variable to enable the optional
+Spanish fallback. Keep local keys in `apps/stream/.env.local` (gitignored), and
+configure the same variable in the deployment's secret settings. No public key
+is needed. SubDL is queried only when the OpenSubtitles result lacks Spanish;
+searches use Next's four-hour data cache. Provider failures preserve existing
+tracks. Search matches IMDb and exact season/episode, and only individual raw
+subtitle files are offered (no archive extraction). Returned API-key query
+parameters are stripped before tracks reach the browser. Downloads happen when
+selected and converted responses have public cache headers. Actual shared cache
+behavior depends on the deployment adapter. Anonymous download quotas still apply.
 
 Catalogue subtitles are fetched through `/api/subtitles/file`, which converts
-SubRip to WebVTT, decodes legacy encodings, and serves same-origin. Same-origin
+SubRip and ASS/SSA dialogue to WebVTT, decodes legacy encodings, and serves same-origin.
+ASS positioning, drawings, and advanced styling are not preserved. Same-origin
 delivery matters: a `<track>` on
 a `crossOrigin="anonymous"` video fails
 silently against any host without CORS headers, which is most of them, and

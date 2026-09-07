@@ -34,7 +34,7 @@ export default function DisclaimerPage() {
 
       <div className="app-shell max-w-3xl flex-1 pb-16 pt-8">
         <header>
-          <p className="eyebrow text-phantom">Legal</p>
+          <p className="text-sm font-medium text-phantom">Legal</p>
           <h1 className="mt-3 text-[clamp(2rem,5vw,2.8rem)] font-extrabold leading-[0.95] tracking-[-0.03em] text-text">
             Legal disclaimer
           </h1>

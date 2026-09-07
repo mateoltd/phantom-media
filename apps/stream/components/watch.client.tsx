@@ -9,6 +9,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { AppHeader } from "@/components/app-header";
+import { WatchlistButton } from "@/components/watchlist-button";
 import { BrowseRail } from "@/components/browse-rail";
 import { EpisodeBrowser } from "@/components/episode-browser";
 import { TitleLogo } from "@/components/title-logo";
@@ -148,7 +149,8 @@ export default function WatchPageClient({
   const position = useMemo(
     () =>
       episodes.findIndex(
-        (item) => item.seasonNumber === season && item.episodeNumber === episode,
+        (item) =>
+          item.seasonNumber === season && item.episodeNumber === episode,
       ),
     [episode, episodes, season],
   );
@@ -156,11 +158,7 @@ export default function WatchPageClient({
   const nextEpisode = position >= 0 ? episodes[position + 1] : undefined;
 
   const changeEpisode = useCallback(
-    (
-      nextSeason: number,
-      next: number,
-      history: "push" | "none" = "push",
-    ) => {
+    (nextSeason: number, next: number, history: "push" | "none" = "push") => {
       if (nextSeason === season && next === episode) return;
 
       const video = videoRef.current;
@@ -229,8 +227,7 @@ export default function WatchPageClient({
       .then((body: { tracks?: SubtitleTrack[] }) => {
         setCatalogTracks(body.tracks ?? []);
       })
-      .catch(() => {
-      });
+      .catch(() => {});
 
     return () => controller.abort();
   }, [episode, media.imdbId, media.mediaType, season]);
@@ -279,7 +276,9 @@ export default function WatchPageClient({
   const qualityMenu = useMemo<StageMenuModel | undefined>(() => {
     const { levels, quality, candidates, activeCandidate } = state;
     if (levels.length > 1) {
-      const effective = levels.find((level) => level.index === quality.effective);
+      const effective = levels.find(
+        (level) => level.index === quality.effective,
+      );
       return {
         options: [
           {
@@ -304,8 +303,8 @@ export default function WatchPageClient({
         summary:
           quality.selected === -1
             ? (effective?.label ?? "Auto")
-            : (levels.find((level) => level.index === quality.selected)?.label ??
-              "Auto"),
+            : (levels.find((level) => level.index === quality.selected)
+                ?.label ?? "Auto"),
       };
     }
 
@@ -326,17 +325,18 @@ export default function WatchPageClient({
 
   const sourceMenu = useMemo<StageMenuModel>(() => {
     const byId = new Map(state.progress.map((entry) => [entry.id, entry]));
-    const ordinal = new Map(
-      sources.map((source, index) => [source.id, index]),
-    );
+    const ordinal = new Map(sources.map((source, index) => [source.id, index]));
     const playingLabel = state.activeSource
-      ? (sources.find((entry) => entry.id === state.activeSource)?.label ?? null)
+      ? (sources.find((entry) => entry.id === state.activeSource)?.label ??
+        null)
       : null;
     const ordered = [...sources].sort((left, right) => {
       const difference =
         sourceAvailabilityRank(byId.get(left.id)?.status) -
         sourceAvailabilityRank(byId.get(right.id)?.status);
-      return difference || (ordinal.get(left.id) ?? 0) - (ordinal.get(right.id) ?? 0);
+      return (
+        difference || (ordinal.get(left.id) ?? 0) - (ordinal.get(right.id) ?? 0)
+      );
     });
 
     return {
@@ -351,9 +351,7 @@ export default function WatchPageClient({
           return {
             value: source.id,
             label: source.label,
-            detail:
-              liveDetail(progress?.status) ??
-              progress?.reputation,
+            detail: liveDetail(progress?.status) ?? progress?.reputation,
             signal: {
               bars: sourceAvailabilityBars(progress?.status),
               tone: sourceAvailabilityTone(progress?.status),
@@ -441,7 +439,7 @@ export default function WatchPageClient({
   const hasListing = isSeries && episodes.length > 0;
 
   return (
-    <main className="workspace-canvas flex min-h-screen flex-col">
+    <main className="watch-page workspace-canvas flex min-h-screen flex-col">
       <AppHeader />
 
       <div className="stage-frame">
@@ -474,7 +472,9 @@ export default function WatchPageClient({
           toast={toast}
           onDismissToast={() => setToastDismissed(true)}
           chapters={chapters}
-          onNextEpisode={nextEpisode ? () => goToEpisode(nextEpisode) : undefined}
+          onNextEpisode={
+            nextEpisode ? () => goToEpisode(nextEpisode) : undefined
+          }
           episodesOpen={episodesOpen}
           onEpisodesOpenChange={setEpisodesOpen}
           episodePanel={
@@ -507,10 +507,7 @@ export default function WatchPageClient({
         />
       </div>
 
-      <div
-        className="app-shell pb-5 pt-5 lg:pb-0 lg:pt-7"
-        id="about"
-      >
+      <div className="app-shell pb-5 pt-5 lg:pb-0 lg:pt-7" id="about">
         <div className="max-w-3xl">
           <TitleLogo
             media={media}
@@ -521,7 +518,7 @@ export default function WatchPageClient({
 
           {currentEpisode && (
             <p className="mt-3.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className="eyebrow text-phantom">
+              <span className="text-sm font-medium text-phantom">
                 S{currentEpisode.seasonNumber} E{currentEpisode.episodeNumber}
               </span>
               <span className="text-[15px] font-bold text-text">
@@ -533,6 +530,7 @@ export default function WatchPageClient({
           <div className="mt-4">
             <TitleMeta media={media} />
           </div>
+          <div className="mt-5"><WatchlistButton media={media} /></div>
 
           {(currentEpisode?.overview || media.overview) && (
             <Synopsis text={currentEpisode?.overview || media.overview} />
@@ -549,7 +547,13 @@ export default function WatchPageClient({
             season={season}
             episode={episode}
             onSelect={goToEpisode}
-            onSeasonChange={(next) => changeEpisode(next, 1)}
+            onSeasonChange={(next) =>
+              changeEpisode(
+                next,
+                episodes.find((item) => item.seasonNumber === next)
+                  ?.episodeNumber ?? 1,
+              )
+            }
           />
         </div>
       )}
@@ -634,6 +638,8 @@ function Synopsis({ text }: { text: string }) {
 function preferredLanguages(): string[] {
   const saved = readPrefs().captionLanguage;
   const fromBrowser = navigator.languages ?? [navigator.language];
-  const languages = fromBrowser.map((tag) => tag.split("-")[0]!).filter(Boolean);
+  const languages = fromBrowser
+    .map((tag) => tag.split("-")[0]!)
+    .filter(Boolean);
   return saved ? [saved, ...languages] : languages;
 }

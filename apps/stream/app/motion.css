@@ -1,0 +1,198 @@
+/* Stream-only motion: no layout animation, persistent GPU layers or JS loops. */
+:root {
+  --motion-quick: 140ms;
+  --motion-control: 220ms;
+  --motion-enter: 420ms;
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-settle: cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+@keyframes stream-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes stream-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes stream-sheet {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes stream-bookmark {
+  0% { transform: scale(0.8); }
+  55% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+@keyframes stream-sheet-out {
+  to { opacity: 0; transform: translateY(8px) scale(0.985); }
+}
+.motion-presence { display: contents; }
+.motion-presence[data-closing="true"] :is(.stage-sheet, .stage-panel) {
+  animation: stream-sheet-out 160ms ease-in both;
+  pointer-events: none;
+}
+.motion-presence[data-closing="true"] .stage-sheet-backdrop {
+  animation: stream-fade 160ms ease-in reverse both;
+  pointer-events: none;
+}
+
+/* Keep the hero artwork and title immediately paintable for LCP. */
+@media (prefers-reduced-motion: no-preference) {
+  .cinema-hero-copy > :not(:first-child) {
+    animation: stream-rise var(--motion-enter) var(--motion-ease) backwards;
+  }
+  .cinema-hero-copy > :nth-child(3) { animation-delay: 55ms; }
+  .cinema-hero-copy > :nth-child(4) { animation-delay: 110ms; }
+
+  .motion-list > :nth-child(-n + 8),
+  .watchlist-grid > :nth-child(-n + 8) {
+    animation: stream-rise 360ms var(--motion-ease) backwards;
+  }
+  :is(.motion-list, .watchlist-grid) > :nth-child(2) { animation-delay: 30ms; }
+  :is(.motion-list, .watchlist-grid) > :nth-child(3) { animation-delay: 60ms; }
+  :is(.motion-list, .watchlist-grid) > :nth-child(4) { animation-delay: 90ms; }
+  :is(.motion-list, .watchlist-grid) > :nth-child(n + 5) { animation-delay: 120ms; }
+
+  .stage-sheet,
+  .stage-panel,
+  .stream-header .animate-panel-in {
+    transform-origin: bottom right;
+    animation: stream-sheet 260ms var(--motion-ease) backwards;
+  }
+  .stream-header .animate-panel-in { transform-origin: top center; }
+  .stage-sheet-body { animation: stream-rise 200ms var(--motion-ease); }
+  .stage-toast { animation: stream-rise 240ms var(--motion-ease); }
+  .stage-shortcuts,
+  .stage-sheet-backdrop,
+  .watchlist-empty { animation: stream-fade 200ms ease-out; }
+  .watchlist-action[aria-pressed="true"] svg,
+  .poster-save[aria-pressed="true"] svg {
+    animation: stream-bookmark 320ms var(--motion-settle);
+  }
+}
+
+:is(.cinema-button, .watchlist-action, .poster-save, .rail-arrow,
+  .stream-header-watchlist, .stream-header-search-trigger, .stream-header-search-back,
+  .search-pill button, .search-filters button, .season-rail button,
+  .stage-control, .stage-play, .stage-sheet-row, .stage-sheet-step,
+  .stage-panel-season, .stage-ep, .stage-upnext-card, .stage-upnext-cancel) {
+  transition:
+    transform var(--motion-control) var(--motion-ease),
+    opacity var(--motion-quick) ease-out,
+    color var(--motion-quick) ease-out,
+    background-color var(--motion-quick) ease-out,
+    border-color var(--motion-quick) ease-out;
+}
+
+:is(.cinema-button, .watchlist-action, .poster-save, .rail-arrow,
+  .stream-header-watchlist, .stream-header-search-trigger, .stream-header-search-back,
+  .search-pill button, .search-filters button, .season-rail button,
+  .stage-control, .stage-play, .stage-sheet-step, .stage-upnext-card):not(:disabled):active {
+  transform: scale(0.96);
+  transition-duration: 80ms;
+}
+
+.tile {
+  /* Keep the existing static shadow; lifting should not repaint a blur. */
+  transition: transform 360ms var(--motion-ease);
+}
+.tile-hit:hover .tile,
+.tile-hit:focus-visible .tile {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.tile-hit:active .tile { transform: translateY(-1px) scale(0.985); }
+.tile img,
+.episode-card-art img,
+.search-result-poster img {
+  transition: transform 500ms var(--motion-ease);
+}
+.tile-hit .tile > span[aria-hidden="true"] svg {
+  transform: translateY(5px) scale(0.86);
+  transition: transform 300ms var(--motion-ease);
+}
+.tile-hit:is(:hover, :focus-visible) .tile > span[aria-hidden="true"] svg {
+  transform: translateY(0) scale(1);
+}
+.poster-title,
+.stream-header-brand,
+.workspace-canvas footer a {
+  transition: color var(--motion-quick) ease-out, opacity var(--motion-quick) ease-out;
+}
+.search-result,
+.episode-card {
+  transition: transform 280ms var(--motion-ease), background-color var(--motion-quick) ease-out;
+}
+.search-result-open {
+  transition: transform 280ms var(--motion-ease), background-color var(--motion-quick) ease-out, color var(--motion-quick) ease-out;
+}
+.search-pill {
+  transition: border-color var(--motion-control) ease-out, background-color var(--motion-control) ease-out;
+}
+.stream-header [role="option"] {
+  transition: background-color var(--motion-quick) ease-out, color var(--motion-quick) ease-out;
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  :is(.cinema-button, .rail-arrow, .stage-play):not(:disabled):hover { transform: translateY(-2px); }
+  :is(.cinema-button, .rail-arrow, .stage-play):not(:disabled):active { transform: scale(0.96); }
+  .tile-hit:hover .tile img { transform: scale(1.045); }
+  .search-result:hover { transform: translateY(-2px); }
+  .search-result:hover .search-result-open { transform: rotate(-8deg); }
+  .episode-card:hover .episode-card-art img { transform: scale(1.04); }
+}
+@media (hover: none) {
+  .tile-hit:hover .tile { transform: none; }
+  .tile-hit:active .tile { transform: scale(0.985); }
+}
+
+/* Chrome glides a few pixels; the video and timeline values never interpolate. */
+.stage-chrome,
+.stage-top,
+.stage-transport {
+  transition: opacity 220ms ease-out, translate 280ms var(--motion-ease);
+}
+.stage-idle .stage-chrome { translate: 0 6px; }
+.stage-idle .stage-top { translate: 0 -6px; }
+.stage-idle:has(:focus-visible) :is(.stage-chrome, .stage-top) { translate: 0 0; }
+.scrub-head,
+.scrub-tooltip,
+.scrub-hover { transition: opacity 120ms ease-out; }
+.stage-upnext,
+.stage-skip {
+  translate: 0 8px;
+  transition: opacity 200ms ease-out, translate 260ms var(--motion-ease), visibility 200ms;
+}
+.stage-upnext-visible,
+.stage-skip-visible { translate: 0 0; }
+.stage-idle :is(.stage-upnext, .stage-skip) { translate: 0 8px; }
+
+@media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
+  .stream-header-search,
+  .stream-header-brand,
+  .stream-header-search-back,
+  .stream-header-search-trigger {
+    animation: stream-rise 220ms var(--motion-ease);
+  }
+  .stage-sheet,
+  .stage-panel {
+    animation-name: stream-rise;
+    animation-duration: 300ms;
+  }
+}
+
+::view-transition-old(root) { animation: stream-fade 160ms ease-in reverse both; }
+::view-transition-new(root) { animation: stream-fade 240ms var(--motion-ease) both; }
+
+/* Also cover native transition pseudo-elements and styles imported before us. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none !important; }
+  .tile-hit:is(:hover, :focus-visible, :active) .tile,
+  .tile-hit .tile > span[aria-hidden="true"] svg { transform: none; }
+  .stage-chrome, .stage-top, .stage-upnext, .stage-skip { translate: none !important; }
+}

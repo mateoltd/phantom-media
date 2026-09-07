@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { IconPlayerPlayFilled } from "@tabler/icons-react";
+import { IconPlayerPlay } from "@tabler/icons-react";
 import { Artwork } from "@phantom/ui";
 import type { EpisodeSummary } from "@/lib/types";
 import type { TimeListener } from "./use-video-state";
@@ -70,7 +70,7 @@ export function UpNext({
         <span className="stage-upnext-still">
           <Artwork src={episode.stillUrl} sizes="96px" />
           <span className="stage-upnext-play" aria-hidden="true">
-            <IconPlayerPlayFilled size={11} />
+            <IconPlayerPlay size={11} />
           </span>
         </span>
         <span className="stage-upnext-text">

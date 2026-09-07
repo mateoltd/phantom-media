@@ -1,59 +1,100 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import Link from "next/link";
-import { Logo, Wordmark } from "@phantom/ui";
+import { useEffect, useRef, useState } from "react";
+import { IconArrowLeft, IconBookmark, IconBookmarkFilled, IconSearch } from "@tabler/icons-react";
+import { Wordmark } from "@phantom/ui";
+import { usePathname } from "next/navigation";
+import { useWatchlist } from "@/lib/watchlist";
 import { MediaSearch } from "@/components/media-search";
 
-interface AppHeaderProps {
-  floating?: boolean;
+export function AppHeader({
+  initialQuery,
+  floating = false,
+}: {
   initialQuery?: string;
-}
+  floating?: boolean;
+}) {
+  const pathname = usePathname();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchTriggerRef = useRef<HTMLButtonElement>(null);
+  const { items, error } = useWatchlist();
+  const BookmarkIcon = items.length ? IconBookmarkFilled : IconBookmark;
 
-const LIFT_AFTER_PX = 24;
+  useEffect(() => {
+    function updateScrollSurface() {
+      if (headerRef.current) {
+        headerRef.current.dataset.scrolled = String(window.scrollY > 16);
+      }
+    }
+    updateScrollSurface();
+    window.addEventListener("scroll", updateScrollSurface, { passive: true });
+    return () => window.removeEventListener("scroll", updateScrollSurface);
+  }, [pathname]);
 
-function subscribeToScroll(listener: () => void): () => void {
-  window.addEventListener("scroll", listener, { passive: true });
-  return () => window.removeEventListener("scroll", listener);
-}
+  useEffect(() => {
+    if (searchOpen) searchRef.current?.querySelector("input")?.focus();
+  }, [searchOpen]);
 
-const scrolled = () => window.scrollY > LIFT_AFTER_PX;
-const atTopOnServer = () => false;
-
-export function AppHeader({ floating = false, initialQuery }: AppHeaderProps) {
-  const lifted = useSyncExternalStore(
-    subscribeToScroll,
-    scrolled,
-    atTopOnServer
-  );
-  const solid = !floating || lifted;
-
+  function closeSearch() {
+    setSearchOpen(false);
+    requestAnimationFrame(() => searchTriggerRef.current?.focus());
+  }
   return (
     <header
-      className={`z-40 h-[var(--app-header-h)] transition-colors duration-300 ${
-        floating ? "fixed inset-x-0 top-0" : "sticky top-0"
-      } ${
-        solid
-          ? "border-b border-border/70 bg-bg/85 backdrop-blur-xl"
-          : "header-scrim border-b border-transparent"
-      }`}
+      ref={headerRef}
+      className={`stream-header ${floating ? "stream-header-over-art" : ""}`}
+      data-search-open={searchOpen}
     >
-      <div className="app-shell flex h-full items-center gap-x-3 py-1.5 sm:gap-x-6 sm:py-2 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+      <div className="app-shell stream-header-inner">
         <Link
           href="/"
           aria-label="Phantom Stream home"
-          className="shrink-0 justify-self-start"
+          className="stream-header-brand shrink-0 justify-self-start"
         >
-          <Logo size={34} tone="chalk" className="h-6 w-auto sm:hidden" />
           <Wordmark service="Stream" tone="chalk" className="hidden sm:flex" />
+          <Wordmark tone="chalk" className="sm:hidden" />
         </Link>
-
-        <div className="min-w-0 flex-1 lg:w-[min(46vw,560px)] lg:flex-none">
-          <MediaSearch initialQuery={initialQuery} size="compact" />
+        <button
+          ref={searchTriggerRef}
+          type="button"
+          className="stream-header-search-trigger"
+          aria-label="Open search"
+          aria-expanded={searchOpen}
+          aria-controls="header-search"
+          onClick={() => setSearchOpen(true)}
+        >
+          <IconSearch size={21} stroke={1.7} aria-hidden="true" />
+        </button>
+        <button type="button" className="stream-header-search-back" aria-label="Close search" onClick={closeSearch}>
+          <IconArrowLeft size={21} stroke={1.7} aria-hidden="true" />
+        </button>
+        <div
+          ref={searchRef}
+          id="header-search"
+          className="stream-header-search"
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && searchOpen) closeSearch();
+          }}
+        >
+          <MediaSearch
+            key={initialQuery ?? ""}
+            initialQuery={initialQuery}
+            size="compact"
+          />
         </div>
-
-        <div className="hidden lg:block" />
+        <Link
+          href="/watchlist"
+          className="stream-header-watchlist"
+          aria-label={`Watchlist${items.length ? `, ${items.length} saved ${items.length === 1 ? "title" : "titles"}` : ""}`}
+          aria-current={pathname === "/watchlist" ? "page" : undefined}
+        >
+          <BookmarkIcon size={20} stroke={1.6} aria-hidden="true" />
+        </Link>
       </div>
+      {error && <p role="alert" className="watchlist-error">{error}</p>}
     </header>
   );
 }

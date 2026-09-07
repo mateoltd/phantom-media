@@ -24,6 +24,7 @@ export function ScrubBar({
   const railRef = useRef<HTMLButtonElement>(null);
   const tooltipRef = useRef<HTMLSpanElement>(null);
   const durationRef = useRef(0);
+  const currentTimeRef = useRef(0);
   const scrubbingRef = useRef(false);
   const pendingRatioRef = useRef<number | null>(null);
 
@@ -31,6 +32,7 @@ export function ScrubBar({
     () =>
       subscribe(({ currentTime, duration, bufferedTo }) => {
         durationRef.current = duration;
+        currentTimeRef.current = currentTime;
         const rail = railRef.current;
         const root = rootRef.current;
         if (!rail || !root) return;
@@ -43,10 +45,10 @@ export function ScrubBar({
         rail.setAttribute("aria-valuenow", String(Math.round(currentTime)));
         rail.setAttribute(
           "aria-valuetext",
-          `${formatTimecode(currentTime)} of ${formatTimecode(duration)}`
+          `${formatTimecode(currentTime)} of ${formatTimecode(duration)}`,
         );
       }),
-    [subscribe]
+    [subscribe],
   );
 
   const ratioAt = (clientX: number): number => {
@@ -62,7 +64,9 @@ export function ScrubBar({
     if (!root) return;
     root.style.setProperty("--hover", `${ratio * 100}%`);
     if (tooltipRef.current) {
-      tooltipRef.current.textContent = formatTimecode(ratio * durationRef.current);
+      tooltipRef.current.textContent = formatTimecode(
+        ratio * durationRef.current,
+      );
     }
   };
 
@@ -78,7 +82,7 @@ export function ScrubBar({
   };
 
   const handlePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
-    if (durationRef.current <= 0) return;
+    if (event.button !== 0 || durationRef.current <= 0) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     setScrubbing(true);
     previewSeek(ratioAt(event.clientX));
@@ -102,8 +106,14 @@ export function ScrubBar({
     const ratio = pendingRatioRef.current;
     pendingRatioRef.current = null;
     setScrubbing(false);
+    rootRef.current?.classList.remove("scrub-hovering");
     if (!cancelled && ratio !== null) {
       onSeek(ratio * durationRef.current);
+    } else {
+      rootRef.current?.style.setProperty(
+        "--played",
+        percent(currentTimeRef.current, durationRef.current),
+      );
     }
   };
 
@@ -118,11 +128,32 @@ export function ScrubBar({
         aria-valuemin={0}
         aria-valuemax={0}
         aria-valuenow={0}
+        onKeyDown={(event) => {
+          const time = currentTimeRef.current;
+          const duration = durationRef.current;
+          const targets: Record<string, number> = {
+            ArrowLeft: time - 5,
+            ArrowDown: time - 5,
+            ArrowRight: time + 5,
+            ArrowUp: time + 5,
+            Home: 0,
+            End: duration,
+            PageDown: time - duration / 10,
+            PageUp: time + duration / 10,
+          };
+          const target = targets[event.key];
+          if (target === undefined) return;
+          event.preventDefault();
+          event.stopPropagation();
+          if (duration > 0) onSeek(Math.max(0, Math.min(duration, target)));
+        }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={endScrub}
         onPointerCancel={(event) => endScrub(event, true)}
-        onPointerLeave={() => rootRef.current?.classList.remove("scrub-hovering")}
+        onPointerLeave={() =>
+          rootRef.current?.classList.remove("scrub-hovering")
+        }
       >
         <span className="scrub-track">
           <span className="scrub-buffered" />

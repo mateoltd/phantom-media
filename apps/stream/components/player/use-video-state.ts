@@ -1,6 +1,12 @@
 "use client";
 
-import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
+import {
+  type RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 export interface VideoState {
   playing: boolean;
@@ -58,7 +64,10 @@ const TIME_EVENTS = [
 function bufferedAhead(video: HTMLVideoElement): number {
   const { buffered, currentTime } = video;
   for (let index = 0; index < buffered.length; index += 1) {
-    if (buffered.start(index) <= currentTime && currentTime <= buffered.end(index)) {
+    if (
+      buffered.start(index) <= currentTime &&
+      currentTime <= buffered.end(index)
+    ) {
       return buffered.end(index);
     }
   }
@@ -75,7 +84,7 @@ function readTime(video: HTMLVideoElement): TimeSnapshot {
 
 export function useVideoState(
   videoRef: RefObject<HTMLVideoElement | null>,
-  containerRef: RefObject<HTMLElement | null>
+  containerRef: RefObject<HTMLElement | null>,
 ) {
   const [state, setState] = useState<VideoState>(INITIAL);
   const listenersRef = useRef(new Set<TimeListener>());
@@ -97,7 +106,7 @@ export function useVideoState(
         listeners.delete(listener);
       };
     },
-    [videoRef]
+    [videoRef],
   );
 
   useEffect(() => {
@@ -115,7 +124,8 @@ export function useVideoState(
         muted: video.muted,
       }));
     };
-    const onWaiting = () => setState((current) => ({ ...current, waiting: true }));
+    const onWaiting = () =>
+      setState((current) => ({ ...current, waiting: true }));
     const onPipChange = () =>
       setState((current) => ({
         ...current,
@@ -133,7 +143,8 @@ export function useVideoState(
 
     return () => {
       for (const event of STATE_EVENTS) video.removeEventListener(event, sync);
-      for (const event of TIME_EVENTS) video.removeEventListener(event, emitTime);
+      for (const event of TIME_EVENTS)
+        video.removeEventListener(event, emitTime);
       video.removeEventListener("waiting", onWaiting);
       video.removeEventListener("stalled", onWaiting);
       video.removeEventListener("enterpictureinpicture", onPipChange);
@@ -149,7 +160,8 @@ export function useVideoState(
     };
     frameRef.current = window.requestAnimationFrame(tick);
     return () => {
-      if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current);
+      if (frameRef.current !== null)
+        window.cancelAnimationFrame(frameRef.current);
       frameRef.current = null;
     };
   }, [emitTime, state.playing]);
@@ -180,7 +192,7 @@ export function useVideoState(
       video.currentTime = Math.max(0, Math.min(seconds, video.duration));
       emitTime();
     },
-    [emitTime, videoRef]
+    [emitTime, videoRef],
   );
 
   const seekBy = useCallback(
@@ -189,7 +201,7 @@ export function useVideoState(
       if (!video) return;
       seekTo(video.currentTime + delta);
     },
-    [seekTo, videoRef]
+    [seekTo, videoRef],
   );
 
   const setVolume = useCallback(
@@ -199,7 +211,7 @@ export function useVideoState(
       video.volume = Math.max(0, Math.min(1, level));
       if (video.volume > 0) video.muted = false;
     },
-    [videoRef]
+    [videoRef],
   );
 
   const nudgeVolume = useCallback(
@@ -208,7 +220,7 @@ export function useVideoState(
       if (!video) return;
       setVolume(video.volume + delta);
     },
-    [setVolume, videoRef]
+    [setVolume, videoRef],
   );
 
   const toggleMute = useCallback(() => {
@@ -220,9 +232,17 @@ export function useVideoState(
   const toggleFullscreen = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
-    if (document.fullscreenElement === container) void document.exitFullscreen();
-    else void container.requestFullscreen().catch(() => {});
-  }, [containerRef]);
+    if (document.fullscreenElement === container) {
+      void document.exitFullscreen?.().catch(() => {});
+    } else if (container.requestFullscreen) {
+      void container.requestFullscreen().catch(() => {});
+    } else {
+      const video = videoRef.current as
+        | (HTMLVideoElement & { webkitEnterFullscreen?: () => void })
+        | null;
+      video?.webkitEnterFullscreen?.();
+    }
+  }, [containerRef, videoRef]);
 
   const togglePictureInPicture = useCallback(() => {
     const video = videoRef.current;

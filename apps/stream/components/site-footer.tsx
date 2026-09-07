@@ -21,6 +21,7 @@ export function SiteFooter({ className = "" }: { className?: string }) {
           and <Credit href="https://www.wikidata.org">Wikidata</Credit>.
           Subtitles from{" "}
           <Credit href="https://www.opensubtitles.org">OpenSubtitles</Credit>
+          {" "}and <Credit href="https://subdl.com">SubDL</Credit>
         </p>
       </div>
     </footer>

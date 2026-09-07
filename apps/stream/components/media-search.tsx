@@ -49,32 +49,39 @@ export function MediaSearch({
 
     const cached = cacheRef.current.get(query);
     const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      if (cached) {
-        setResults(cached);
-        setLookingUp(false);
-        return;
-      }
-
-      setLookingUp(true);
-      try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
-          signal: controller.signal,
-        });
-        const payload = (await response.json()) as SearchPayload;
-        if (!response.ok) throw new Error(payload.error ?? "Search failed");
-
-        const found = payload.results ?? [];
-        cacheRef.current.set(query, found);
-        setResults(found);
-      } catch (error) {
-        if (!(error instanceof DOMException && error.name === "AbortError")) {
-          setResults([]);
+    const timer = window.setTimeout(
+      async () => {
+        if (cached) {
+          setResults(cached);
+          setLookingUp(false);
+          return;
         }
-      } finally {
-        if (!controller.signal.aborted) setLookingUp(false);
-      }
-    }, cached ? 0 : DEBOUNCE_MS);
+
+        setLookingUp(true);
+        try {
+          const response = await fetch(
+            `/api/search?q=${encodeURIComponent(query)}`,
+            {
+              signal: controller.signal,
+            },
+          );
+          const payload = (await response.json()) as SearchPayload;
+          if (!response.ok) throw new Error(payload.error ?? "Search failed");
+
+          if (controller.signal.aborted) return;
+          const found = payload.results ?? [];
+          cacheRef.current.set(query, found);
+          setResults(found);
+        } catch (error) {
+          if (!(error instanceof DOMException && error.name === "AbortError")) {
+            setResults([]);
+          }
+        } finally {
+          if (!controller.signal.aborted) setLookingUp(false);
+        }
+      },
+      cached ? 0 : DEBOUNCE_MS,
+    );
 
     return () => {
       window.clearTimeout(timer);
@@ -91,7 +98,7 @@ export function MediaSearch({
         meta: media.year,
         imageUrl: media.posterUrl,
       })),
-    [results]
+    [results],
   );
 
   const findMedia = (suggestionId: string) =>
@@ -105,7 +112,9 @@ export function MediaSearch({
       loading={navigating}
       onValueChange={(next) => {
         setValue(next);
-        setOpen(true);
+        setResults([]);
+        setLookingUp(isLookupWorthy(next.trim()));
+        setOpen(isLookupWorthy(next.trim()));
         if (!isLookupWorthy(next.trim())) {
           setResults([]);
           setLookingUp(false);
@@ -113,7 +122,9 @@ export function MediaSearch({
       }}
       onSubmit={(query) => {
         const only =
-          looksLikeIdentifier(query) && results.length === 1 ? results[0] : null;
+          looksLikeIdentifier(query) && results.length === 1
+            ? results[0]
+            : null;
         go(only ? mediaHref(only) : `/search?q=${encodeURIComponent(query)}`);
       }}
       onSuggestionSelect={(suggestion) => {
@@ -135,7 +146,7 @@ export function MediaSearch({
       size={size}
       autoFocus={autoFocus}
       labels={{
-        placeholder: "Search a title, or paste an IMDb link",
+        placeholder: size === "compact" ? "Title or IMDb link" : "Search a title, or paste an IMDb link",
         submit: "Search",
         working: "Opening",
         suggestions: "Matching titles",

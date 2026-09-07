@@ -8,7 +8,10 @@ export const revalidate = 3600;
 
 export default async function Page() {
   const rows = await browseHome();
-  const featured = rows[0]?.items[0];
+  // Lanterns' backdrop composition is unsuitable for the full-width hero.
+  const featured = rows[0]?.items.find(
+    (item) => item.imdbId !== "tt26545992" && item.id !== "tt26545992",
+  );
 
   return (
     <main className="workspace-canvas flex min-h-screen flex-col">
@@ -16,13 +19,16 @@ export default async function Page() {
 
       {featured && <CinemaHero media={featured} />}
 
-      <div className={featured ? "-mt-2 pb-12" : "flex-1 pb-12 pt-6"}>
+      <div className={featured ? "relative z-10 -mt-2 pb-12" : "flex-1 pb-12 pt-6"}>
         {rows.map((row, index) => (
           <BrowseRail
             key={row.id}
             row={{
               ...row,
-              items: index === 0 ? row.items.slice(1) : row.items,
+              items:
+                index === 0
+                  ? row.items.filter((item) => item.id !== featured?.id)
+                  : row.items,
             }}
             priority={index === 0}
           />

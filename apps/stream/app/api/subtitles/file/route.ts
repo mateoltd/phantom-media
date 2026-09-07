@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUBTITLE_FILE_HOST_SUFFIX } from "@/lib/subtitles";
 import { toWebVtt } from "@/src/subtitles.mjs";
+import { subdlFileUrl } from "@/src/subdl.mjs";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,8 @@ const CACHE_CONTROL = "public, max-age=3600, stale-while-revalidate=86400";
 
 function allowed(url: URL): boolean {
   if (url.protocol !== "https:") return false;
+  if (url.username || url.password) return false;
+  if (url.hostname === "dl.subdl.com") return subdlFileUrl(url.href) === url.href;
   // The leading dot prevents hosts such as notstrem.io from matching the suffix.
   return (
     url.hostname === SUBTITLE_FILE_HOST_SUFFIX.slice(1) ||
@@ -49,7 +52,7 @@ export async function GET(request: NextRequest) {
   try {
     const response = await fetch(target, {
       headers: { accept: "text/vtt, text/plain, */*" },
-      redirect: "follow",
+      redirect: "error",
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     if (!response.ok) {

@@ -9,7 +9,7 @@ export function TitleMeta({
   tone?: "default" | "over-art";
 }) {
   return (
-    <div className={`meta-row ${tone === "over-art" ? "text-text" : ""}`}>
+    <div className={`meta-row ${tone === "over-art" ? "meta-row-over-art" : ""}`}>
       {media.rating > 0 && <span className="meta-rating">{media.rating.toFixed(1)}</span>}
       <span>{kindLabel(media.mediaType)}</span>
       {media.year && <span>{media.year}</span>}

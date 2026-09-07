@@ -117,7 +117,7 @@ export interface SubtitleTrack {
   url?: string;
   lang?: string;
   language?: string;
-  origin?: "source" | "opensubtitles";
+  origin?: "source" | "opensubtitles" | "subdl";
   encoding?: string;
   hearingImpaired?: boolean;
 }

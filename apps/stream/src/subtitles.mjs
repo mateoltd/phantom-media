@@ -51,12 +51,41 @@ export function looksLikeWebVtt(text) {
 }
 
 export function toWebVtt(text) {
+  if (/^\s*\[Events\]/mi.test(String(text ?? ""))) return assToWebVtt(String(text));
   const tidied = tidy(String(text ?? ""));
   if (looksLikeWebVtt(tidied)) {
     return tidied.replace(TIMESTAMP, "$1.$2");
   }
   const body = tidied.replace(TIMESTAMP, "$1.$2").trim();
   return `WEBVTT\n\n${body}\n`;
+}
+
+function assToWebVtt(text) {
+  let events = false;
+  let fields = [];
+  const cues = [];
+  const timestamp = value => {
+    const match = /^(\d{1,2}):(\d{2}):(\d{2})\.(\d{1,3})$/.exec(value.trim());
+    if (!match || Number(match[2]) > 59 || Number(match[3]) > 59) return null;
+    return `${match[1].padStart(2, "0")}:${match[2]}:${match[3]}.${match[4].padEnd(3, "0")}`;
+  };
+  for (const line of text.replace(/\r/g, "").split("\n")) {
+    if (/^\s*\[/.test(line)) { events = line.trim() === "[Events]"; continue; }
+    if (!events) continue;
+    if (/^Format:/i.test(line)) {
+      fields = line.slice(line.indexOf(":") + 1).split(",").map(field => field.trim().toLowerCase());
+    }
+    if (!/^Dialogue:/i.test(line) || fields.at(-1) !== "text") continue;
+    const values = line.slice(line.indexOf(":") + 1).split(",");
+    const start = timestamp(values[fields.indexOf("start")] ?? "");
+    const end = timestamp(values[fields.indexOf("end")] ?? "");
+    if (!start || !end || end <= start) continue;
+    const content = values.slice(fields.length - 1).join(",");
+    if (/\{[^}]*\\p[1-9]/.test(content)) continue; // ASS drawing commands are not dialogue.
+    const caption = tidy(content).replace(/\\[Nn]/g, "\n").replace(/\\h/g, " ").trim();
+    if (caption) cues.push(`${start} --> ${end}\n${caption}`);
+  }
+  return `WEBVTT\n\n${cues.join("\n\n")}\n`;
 }
 
 export function compareTracks(left, right, preferred = []) {

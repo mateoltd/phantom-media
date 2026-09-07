@@ -10,6 +10,10 @@
   "workers_dev": false,
   "routes": [
     {
+      "pattern": "happy.streaming.gatites.com",
+      "custom_domain": true
+    },
+    {
       "pattern": "stream.her.mateorb.com",
       "custom_domain": true
     }

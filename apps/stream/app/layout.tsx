@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { RouteMotion } from "@/components/route-motion";
 import { JetBrains_Mono, Sora } from "next/font/google";
 import "./globals.css";
+import "./motion.css";
 import { getBaseUrl, siteConfig } from "@/lib/seo";
 
 const sora = Sora({
@@ -64,7 +67,10 @@ export default function RootLayout({
       <head>
         {localDebug ? <meta name="phantom-debug" content="1" /> : null}
       </head>
-      <body>{children}</body>
+      <body>
+        <Suspense fallback={null}><RouteMotion /></Suspense>
+        {children}
+      </body>
     </html>
   );
 }

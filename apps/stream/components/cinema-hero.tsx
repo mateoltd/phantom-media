@@ -1,28 +1,26 @@
 import Link from "next/link";
-import { IconInfoCircle, IconPlayerPlayFilled } from "@tabler/icons-react";
+import { IconInfoCircle, IconPlayerPlay } from "@tabler/icons-react";
 import { Artwork } from "@phantom/ui";
 import { TitleLogo } from "@/components/title-logo";
 import { TitleMeta } from "@/components/title-meta";
+import { WatchlistButton } from "@/components/watchlist-button";
 import { mediaHref } from "@/lib/media";
 import type { MediaResult } from "@/lib/types";
 
 export function CinemaHero({ media }: { media: MediaResult }) {
   return (
     <section className="cinema-hero">
-      <Artwork
-        src={media.backdropUrl}
-        sizes="100vw"
-        priority
-        className="cinema-hero-art"
-      />
-      <div className="cinema-hero-scrim" aria-hidden="true" />
+      <div className="cinema-hero-artwork" aria-hidden="true">
+        <Artwork src={media.backdropUrl} sizes="100vw" priority className="cinema-hero-art" />
+        <div className="cinema-hero-scrim" />
+      </div>
 
-      <div className="app-shell relative z-10 pb-12 pt-24 sm:pb-20 sm:pt-36">
-        <div className="max-w-xl">
+      <div className="app-shell relative z-10">
+        <div className="cinema-hero-copy max-w-xl">
           <TitleLogo
             media={media}
             priority
-            maxHeight="clamp(4rem, 16vw, 8.5rem)"
+            maxHeight="clamp(3.5rem, 11svh, 6.5rem)"
             maxWidth="25rem"
             headingClassName="text-[clamp(2rem,5vw,3.6rem)] font-extrabold leading-[0.95] tracking-[-0.03em] text-text"
           />
@@ -32,7 +30,7 @@ export function CinemaHero({ media }: { media: MediaResult }) {
           </div>
 
           {media.overview && (
-            <p className="mt-4 line-clamp-3 max-w-lg text-[13.5px] leading-6 text-text-secondary">
+            <p className="hero-overview mt-4 line-clamp-3 max-w-lg text-[13.5px] leading-6 text-text-secondary">
               {media.overview}
             </p>
           )}
@@ -40,18 +38,19 @@ export function CinemaHero({ media }: { media: MediaResult }) {
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <Link
               href={mediaHref(media)}
-              className="flex h-12 items-center gap-2 rounded-full bg-phantom px-6 text-sm font-extrabold text-white transition-colors hover:bg-phantom-dark"
+              className="cinema-button cinema-button-primary"
             >
-              <IconPlayerPlayFilled size={16} />
-              Play
+              <IconPlayerPlay size={20} stroke={1.5} />
+              Watch now
             </Link>
             <Link
               href={`${mediaHref(media)}#about`}
-              className="flex h-12 items-center gap-2 rounded-full border border-border bg-surface/70 px-5 text-sm font-bold text-text backdrop-blur-sm transition-colors hover:border-text/35"
+              className="cinema-button backdrop-blur-sm"
             >
               <IconInfoCircle size={17} stroke={2} />
               More info
             </Link>
+            <WatchlistButton media={media} />
           </div>
         </div>
       </div>

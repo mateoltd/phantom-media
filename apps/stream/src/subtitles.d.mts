@@ -1,6 +1,6 @@
 export interface ComparableTrack {
   lang?: string;
-  origin?: "source" | "opensubtitles";
+  origin?: "source" | "opensubtitles" | "subdl";
   /** Position in the catalogue's own ordering, used only to break ties. */
   rank?: number;
 }
