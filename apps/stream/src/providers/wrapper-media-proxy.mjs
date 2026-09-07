@@ -42,7 +42,7 @@ const VIDEASY_DISCOVERED_HOST =
 const VIDEASY_ROTATED_CHILD_HOST =
   /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.(?:site|top)$/;
 const VIDEASY_ROTATED_CHILD_PATH =
-  /^(?:\/r2\/cdn[12]\/[A-Za-z0-9_-]{64,}(?:\/[A-Za-z0-9._~-]{1,256}){1,8}|\/vd\/[A-Za-z0-9_-]{64,}\/(?:init|seg-[1-9]\d*)-s\d{3,4}p-v[1-9]\d*-a[1-9]\d*\.(?:mp4|m4s))$/;
+  /^(?:\/r2\/cdn[12]\/[A-Za-z0-9_-]{64,}(?:\/[A-Za-z0-9._~-]{1,256}){1,8}|\/vd\/[A-Za-z0-9_-]{32,}\/(?:init|seg-[1-9]\d*)-s\d{3,4}p-v[1-9]\d*-a[1-9]\d*\.(?:mp4|m4s))$/;
 const VIDEASY_DISCOVERED_PATH =
   /^\/(?:[A-Za-z0-9._~-]{1,128}\/){0,6}[A-Za-z0-9_-]{32,}(?:\/[A-Za-z0-9._~-]{1,256}){1,8}$/;
 const CINESRC_CAPABILITY_SOURCE = "cinesrc";

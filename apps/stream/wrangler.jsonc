@@ -19,8 +19,8 @@
     }
   ],
   "vars": {
-    "VIDEASY_RESOLVER_URL": "https://phantom-resolver.cerfq3.easypanel.host/v1/resolve",
-    "VIDEASY_RELAY_URL": "https://phantom-resolver.cerfq3.easypanel.host/v1/fetch"
+    "VIDEASY_RESOLVER_URL": "https://phantommedia-phantomresolver-bpfqlq-c45848-91-134-141-104.sslip.io/v1/resolve",
+    "VIDEASY_RELAY_URL": "https://phantommedia-phantomresolver-bpfqlq-c45848-91-134-141-104.sslip.io/v1/fetch"
   },
   "assets": {
     "directory": ".open-next/assets",

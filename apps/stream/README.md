@@ -391,6 +391,14 @@ The custom domains are `happy.streaming.gatites.com` and
 `stream.her.mateorb.com`. Runtime secrets, including `SUBDL_API_KEY`, are stored
 in the Worker secret settings and must never be committed to Git.
 
+The Videasy resolver runs in Dokploy's `phantom-media` project as
+`phantom-resolver`, built from `main` using `apps/stream/Dockerfile.resolver`
+and Docker context `apps/stream`. Its generated HTTPS hostname is configured
+in `wrangler.jsonc`. The container's `PHANTOM_RESOLVER_SECRET` must match the
+Worker's `VIDEASY_RESOLVER_SECRET`. `/health` is public; `/v1/resolve` and
+`/v1/fetch` require that bearer secret. Video still passes through the Worker
+and this constrained relay when upstream headers require it.
+
 ## Legal
 
 Phantom Stream stores no media library and is affiliated with none of the

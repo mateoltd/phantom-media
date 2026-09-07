@@ -344,7 +344,8 @@ test("a trusted rotated manifest can move fMP4 media to a vd child host", () => 
 });
 
 test("a rotated fMP4 manifest relays its map and media segments", () => {
-  const token = "m".repeat(96);
+  // Current upstream manifests use 60-character tokens, below the old 64 minimum.
+  const token = "m".repeat(60);
   const root =
     `https://moon.peakstorm.top/vd/${token}/index-s1080p-v1-a1.m3u8`;
   const init = `https://darkgate.top/vd/${token}/init-s1080p-v1-a1.mp4`;
