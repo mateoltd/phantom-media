@@ -376,6 +376,21 @@ Copy `apps/stream/.env.example` to `apps/stream/.env.local`. Every value is
 optional. Stremio entries must be public, unauthenticated HTTPS addon
 manifests; authenticated or paid services are intentionally unsupported.
 
+## Deployment
+
+Cloudflare Workers Builds connects the private `mateoltd/phantom-media` GitHub
+repository to `phantom-stream`. Pushes to `main` deploy production using the
+repository root, with these commands:
+
+```sh
+pnpm --filter @phantom/stream exec opennextjs-cloudflare build
+pnpm --filter @phantom/stream exec wrangler deploy
+```
+
+The custom domains are `happy.streaming.gatites.com` and
+`stream.her.mateorb.com`. Runtime secrets, including `SUBDL_API_KEY`, are stored
+in the Worker secret settings and must never be committed to Git.
+
 ## Legal
 
 Phantom Stream stores no media library and is affiliated with none of the
