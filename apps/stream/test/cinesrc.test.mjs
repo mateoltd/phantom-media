@@ -178,3 +178,43 @@ test("media validation accepts rotated public DNS names and rejects local target
     assert.throws(() => assertCineSrcMediaUrl(target));
   }
 });
+
+test("remote resolver authenticates and signs only validated CineSrc results", async () => {
+  const previous = process.env.SOURCE_PROXY_SECRET;
+  process.env.SOURCE_PROXY_SECRET = 'c'.repeat(40);
+  try {
+    const result = await resolveCineSrc({type: 'movie', tmdbId: 550}, {
+      resolverUrl: 'https://resolver.example/v1/cinesrc/resolve',
+      resolverSecret: 's'.repeat(40),
+      proxyOrigin: PROXY_ORIGIN,
+      fetchImpl: async (url, init) => {
+        assert.equal(String(url), 'https://resolver.example/v1/cinesrc/resolve');
+        assert.equal(init.headers.authorization, `Bearer ${'s'.repeat(40)}`);
+        assert.equal(init.redirect, 'manual');
+        assert.equal(JSON.parse(init.body).media.tmdbId, 550);
+        return Response.json({variants: [{url: MASTER, quality: '1080p'}, {url:'http://127.0.0.1/private'}], subtitles: []});
+      },
+    });
+    assert.equal(result.variants.length, 1);
+    const signed = new URL(result.variants[0].url);
+    assert.equal(signed.origin, PROXY_ORIGIN);
+    assert.equal(signed.searchParams.get('source'), 'cinesrc');
+    assert.equal(decodeDiscoveredCineSrcMediaTarget(
+      signed.searchParams.get('target'), signed.searchParams.get('expires'),
+      signed.searchParams.get('signature'),
+    ).href, MASTER);
+  } finally {
+    if (previous === undefined) delete process.env.SOURCE_PROXY_SECRET;
+    else process.env.SOURCE_PROXY_SECRET = previous;
+  }
+});
+
+test("remote resolver rejects malformed responses and preserves upstream failure stages", async () => {
+  const options = {resolverUrl:'https://resolver.example/v1/cinesrc/resolve', resolverSecret:'s'.repeat(40)};
+  await assert.rejects(resolveCineSrc({type:'movie',tmdbId:550}, {...options,
+    fetchImpl: async () => new Response('<html>Bad gateway</html>', {status:502}),
+  }), /invalid JSON/);
+  await assert.rejects(resolveCineSrc({type:'movie',tmdbId:550}, {...options,
+    fetchImpl: async () => Response.json({details:{stage:'provider-fallback'}}, {status:502}),
+  }), error => error.status === 502 && error.details.upstream.stage === 'provider-fallback');
+});

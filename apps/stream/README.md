@@ -417,3 +417,5 @@ Set `NEXT_PUBLIC_NOTICE_EMAIL` before deploying. Until it is set, the page
 omits its infringement-reporting section, because a takedown route with no
 address behind it is worse than none. A reachable takedown route is the
 most useful thing on a page like this.
+
+CineSrc resolution uses the same Dokploy Node service at `/v1/cinesrc/resolve`, configured with `CINESRC_RESOLVER_URL` and the existing `VIDEASY_RESOLVER_SECRET`. This keeps its `node:vm` runtime out of Workers execution. Returned stream URLs are validated and signed by the Worker; CineSrc media currently uses the existing constrained Worker relay with provider request headers.

@@ -591,8 +591,65 @@ function cacheKey(media, origin) {
   ]);
 }
 
+async function resolveCineSrcRemotely(media, options) {
+  const url = new URL(options.resolverUrl ?? process.env.CINESRC_RESOLVER_URL);
+  const local = ["localhost", "127.0.0.1"].includes(url.hostname);
+  const secret = options.resolverSecret ?? process.env.VIDEASY_RESOLVER_SECRET;
+  if ((url.protocol !== "https:" && !(local && url.protocol === "http:")) ||
+      url.username || url.password || url.hash ||
+      typeof secret !== "string" || Buffer.byteLength(secret) < 32) {
+    throw new CineSrcError("CineSrc resolver configuration is invalid", {
+      status: 503, details: { stage: "resolver-config" },
+    });
+  }
+  const response = await (options.fetchImpl ?? globalThis.fetch)(url, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${secret}`,
+      "content-type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify({ media, fresh: options.fresh === true }),
+    redirect: "manual",
+    signal: options.signal,
+  });
+  let payload;
+  try {
+    payload = JSON.parse(await limitedText(response, MAX_ACTION_BYTES, "resolver-response"));
+  } catch {
+    throw new CineSrcError("CineSrc resolver returned invalid JSON", {
+      retryable: true, details: { stage: "resolver-response" },
+    });
+  }
+  if (!response.ok) {
+    throw new CineSrcError("CineSrc remote resolution failed", {
+      status: response.status,
+      retryable: payload?.retryable !== false,
+      retryAfterMs: Number(payload?.retryAfterMs) || null,
+      details: { stage: "resolver-response", upstream: payload?.details ?? null },
+    });
+  }
+  const variants = variantsFromEnvelope({ url: (Array.isArray(payload?.variants)
+    ? payload.variants.slice(0, 50) : []).map(v => ({ url: v?.url, label: v?.quality })) }, "remote");
+  if (!variants.length) {
+    throw new CineSrcError("CineSrc resolver returned no valid streams", {
+      retryable: true, details: { stage: "resolver-response" },
+    });
+  }
+  return {
+    variants: options.proxyOrigin
+      ? variants.map(v => proxyDiscoveredCineSrcCandidate(v, options.proxyOrigin))
+      : variants,
+    subtitles: subtitlesFromEnvelope({ captions: Array.isArray(payload.subtitles) ? payload.subtitles : [] }),
+    latencyMs: Number.isFinite(payload.latencyMs) ? Math.max(0, payload.latencyMs) : 0,
+  };
+}
+
 export async function resolveCineSrc(media, options = {}) {
   assertMedia(media);
+  if (options.remote !== false && (options.resolverUrl ?? process.env.CINESRC_RESOLVER_URL)) {
+    return resolveCineSrcRemotely(media, options);
+  }
   const origin = originUrl(options.origin ?? DEFAULT_ORIGIN);
   const key = cacheKey(media, origin);
   const cached = CACHE.get(key);

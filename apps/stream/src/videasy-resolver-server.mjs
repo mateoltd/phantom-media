@@ -8,6 +8,8 @@ import {
   assertWrapperMediaUrl,
 } from "./providers/wrapper-media-proxy.mjs";
 
+import { resolveCineSrc, CineSrcError } from "./providers/cinesrc.mjs";
+
 const MAX_REQUEST_BYTES = 16 * 1024;
 const RESOLUTION_TIMEOUT_MS = 22_000;
 const MEDIA_TIMEOUT_MS = 60_000;
@@ -153,7 +155,7 @@ const server = createServer(async (request, response) => {
       return sendJson(response, status, { error: "Media relay failed" });
     }
   }
-  if (request.method !== "POST" || url.pathname !== "/v1/resolve") {
+  if (request.method !== "POST" || !["/v1/resolve", "/v1/cinesrc/resolve"].includes(url.pathname)) {
     return sendJson(response, 404, { error: "Not found" });
   }
   if (!authorized(request)) {
@@ -165,14 +167,15 @@ const server = createServer(async (request, response) => {
 
   try {
     const body = await readJson(request);
-    const result = await resolveVideasy(body?.media, {
+    const resolve = url.pathname === "/v1/cinesrc/resolve" ? resolveCineSrc : resolveVideasy;
+    const result = await resolve(body?.media, {
       fresh: body?.fresh === true,
       remote: false,
       signal: AbortSignal.timeout(RESOLUTION_TIMEOUT_MS),
     });
     return sendJson(response, 200, publicResult(result));
   } catch (error) {
-    const known = error instanceof VideasyError;
+    const known = error instanceof VideasyError || error instanceof CineSrcError;
     const timeout = error?.name === "TimeoutError";
     const status =
       error instanceof RangeError
@@ -188,6 +191,7 @@ const server = createServer(async (request, response) => {
       error: known ? error.message : timeout ? "Resolution timed out" : "Resolution failed",
       retryable: timeout || (known && error.retryable),
       retryAfterMs: known ? error.retryAfterMs : null,
+      details: known ? error.details : null,
     });
   }
 });
