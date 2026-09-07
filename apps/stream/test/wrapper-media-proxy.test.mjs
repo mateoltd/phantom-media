@@ -638,3 +638,36 @@ test("a primed Videasy manifest is reused for probe and attachment", async () =>
   assert.equal(calls, 1);
   assert.match(await result.text(), /#EXTM3U/);
 });
+
+test("CineSrc media uses its authenticated VPS hop and keeps child capabilities", async () => {
+  const root = 'https://nebula.example/media/test/master.m3u8';
+  const proxy = encodeDiscoveredCineSrcMediaTarget(root, 'https://phantom.example', {secret:CAPABILITY_SECRET,now:NOW});
+  const calls=[];
+  const options={now:NOW,secret:CAPABILITY_SECRET,relaySecret:CAPABILITY_SECRET,
+    cinesrcRelayUrl:'https://resolver.example/v1/cinesrc/fetch',
+    fetchImpl:async()=>{throw new Error('Must not fetch media from the Worker');},
+    relayFetchImpl:async(url,init)=>{
+      calls.push({url:String(url),init});
+      return calls.length === 1 ? response('#EXTM3U\n#EXTINF:6,\nseg.ts\n')
+        : new Response(new Uint8Array([1,2,3]),{status:206,headers:{'content-type':'video/mp2t','content-range':'bytes 0-2/3'}});
+    },
+  };
+  const manifest=await proxyWrapperMediaRequest(new Request(proxy),options);
+  assert.equal(manifest.status,200);
+  const child=(await manifest.text()).split('\n').find(line=>line.startsWith('https://'));
+  const media=await proxyWrapperMediaRequest(new Request(child,{headers:{range:'bytes=0-2'}}),options);
+  assert.equal(media.status,206);
+  assert.equal(media.headers.get('content-range'),'bytes 0-2/3');
+  assert.deepEqual([...new Uint8Array(await media.arrayBuffer())],[1,2,3]);
+  assert.equal(calls.length,2);
+  for(const call of calls){
+    assert.equal(call.url,options.cinesrcRelayUrl);
+    assert.equal(call.init.headers.get('authorization'),`Bearer ${CAPABILITY_SECRET}`);
+    assert.equal(call.init.redirect,'manual');
+  }
+  assert.equal(calls[1].init.headers.get('x-phantom-range'),'bytes=0-2');
+  assert.equal(Buffer.from(calls[1].init.headers.get('x-phantom-target'),'base64url').toString(),'https://nebula.example/media/test/seg.ts');
+  const invalid=new URL(child);invalid.searchParams.set('signature','invalid');
+  assert.equal((await proxyWrapperMediaRequest(new Request(invalid),options)).status,400);
+  assert.equal(calls.length,2);
+});

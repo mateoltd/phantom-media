@@ -5,6 +5,7 @@ import { Readable } from "node:stream";
 import { resolveVideasy, VideasyError } from "./providers/videasy.mjs";
 import {
   assertDiscoveredVideasyRelayUrl,
+  assertDiscoveredCineSrcMediaUrl,
   assertWrapperMediaUrl,
 } from "./providers/wrapper-media-proxy.mjs";
 
@@ -68,12 +69,13 @@ function publicResult(result) {
   };
 }
 
-function relayTarget(request) {
+function relayTarget(request, cinesrc) {
   const encoded = String(request.headers["x-phantom-target"] ?? "");
   if (!/^[A-Za-z0-9_-]{24,16000}$/.test(encoded)) {
     throw new TypeError("Media target is invalid");
   }
   const decoded = Buffer.from(encoded, "base64url").toString("utf8");
+  if (cinesrc) return assertDiscoveredCineSrcMediaUrl(decoded);
   try {
     return assertWrapperMediaUrl(decoded);
   } catch {
@@ -81,11 +83,11 @@ function relayTarget(request) {
   }
 }
 
-function mediaRequestHeaders(request) {
+function mediaRequestHeaders(request, cinesrc) {
   const headers = new Headers({
     accept: String(request.headers.accept ?? "*/*").slice(0, 512),
-    origin: "https://player.videasy.to",
-    referer: "https://player.videasy.to/",
+    origin: cinesrc ? "https://cinesrc.st" : "https://player.videasy.to",
+    referer: cinesrc ? "https://cinesrc.st/" : "https://player.videasy.to/",
     "user-agent":
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " +
       "AppleWebKit/537.36 (KHTML, like Gecko) " +
@@ -119,14 +121,14 @@ function mediaResponseHeaders(upstream) {
   return headers;
 }
 
-async function relayMedia(request, response) {
-  const target = relayTarget(request);
+async function relayMedia(request, response, cinesrc) {
+  const target = relayTarget(request, cinesrc);
   const method = request.headers["x-phantom-upstream-method"] === "HEAD"
     ? "HEAD"
     : "GET";
   const upstream = await fetch(target, {
     method,
-    headers: mediaRequestHeaders(request),
+    headers: mediaRequestHeaders(request, cinesrc),
     redirect: "manual",
     signal: AbortSignal.timeout(MEDIA_TIMEOUT_MS),
   });
@@ -144,12 +146,12 @@ const server = createServer(async (request, response) => {
   if (request.method === "GET" && url.pathname === "/health") {
     return sendJson(response, 200, { ok: true });
   }
-  if (request.method === "POST" && url.pathname === "/v1/fetch") {
+  if (request.method === "POST" && ["/v1/fetch", "/v1/cinesrc/fetch"].includes(url.pathname)) {
     if (!authorized(request)) {
       return sendJson(response, 401, { error: "Unauthorized" });
     }
     try {
-      return await relayMedia(request, response);
+      return await relayMedia(request, response, url.pathname === "/v1/cinesrc/fetch");
     } catch (error) {
       const status = error instanceof TypeError ? 400 : 502;
       return sendJson(response, status, { error: "Media relay failed" });

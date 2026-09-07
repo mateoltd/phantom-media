@@ -447,14 +447,15 @@ function videasyTarget(target) {
   );
 }
 
-function configuredVideasyRelayUrl(value) {
-  const configured = String(value ?? process.env.VIDEASY_RELAY_URL ?? "").trim();
+function configuredMediaRelayUrl(value, source) {
+  const configured = String(value ?? (source === CINESRC_CAPABILITY_SOURCE
+    ? process.env.CINESRC_RELAY_URL : process.env.VIDEASY_RELAY_URL) ?? "").trim();
   if (!configured) return null;
   let url;
   try {
     url = new URL(configured);
   } catch {
-    throw new ProxyCapabilityError("VIDEASY_RELAY_URL is invalid");
+    throw new ProxyCapabilityError("Media relay URL is invalid");
   }
   const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
   if (
@@ -463,7 +464,7 @@ function configuredVideasyRelayUrl(value) {
     url.password ||
     url.hash
   ) {
-    throw new ProxyCapabilityError("VIDEASY_RELAY_URL is not allowed");
+    throw new ProxyCapabilityError("Media relay URL is not allowed");
   }
   return url;
 }
@@ -480,8 +481,10 @@ function videasyRelaySecret(value) {
   return secret;
 }
 
-async function fetchVideasyViaRelay(target, requestOptions, options = {}) {
-  const relayUrl = configuredVideasyRelayUrl(options.relayUrl);
+async function fetchMediaViaRelay(target, requestOptions, options = {}, source = null) {
+  const relayUrl = configuredMediaRelayUrl(
+    source === CINESRC_CAPABILITY_SOURCE ? options.cinesrcRelayUrl : options.relayUrl, source,
+  );
   if (!relayUrl) return null;
   const headers = new Headers({
     accept: requestOptions.headers.get("accept") ?? "*/*",
@@ -502,7 +505,7 @@ async function fetchVideasyViaRelay(target, requestOptions, options = {}) {
   });
   if (response.status >= 300 && response.status < 400) {
     response.body?.cancel();
-    throw new TypeError("Videasy relay redirect was refused");
+    throw new TypeError("Media relay redirect was refused");
   }
   return response;
 }
@@ -887,8 +890,8 @@ export async function proxyWrapperMediaRequest(request, options = {}) {
       redirect: "manual",
       signal: request.signal,
     };
-    const relayed = videasyTarget(target)
-      ? await fetchVideasyViaRelay(target, requestOptions, options)
+    const relayed = source === CINESRC_CAPABILITY_SOURCE || videasyTarget(target)
+      ? await fetchMediaViaRelay(target, requestOptions, options, source)
       : null;
     upstream = relayed ??
       (discovered && !options.fetchImpl && process.env.NODE_ENV !== "production"
