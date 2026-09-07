@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  assertDiscoveredCineSrcMediaUrl,
+  assertDiscoveredVideasyMediaUrl,
   assertWrapperMediaUrl,
+  decodeDiscoveredCineSrcMediaTarget,
+  decodeDiscoveredVideasyMediaTarget,
   decodeWrapperMediaTarget,
+  encodeDiscoveredCineSrcMediaTarget,
+  encodeDiscoveredVideasyMediaTarget,
   encodeWrapperMediaTarget,
   primeWrapperMediaTarget,
   proxyWrapperCandidate,
@@ -12,6 +18,8 @@ import {
 
 const ROOT =
   "https://proxy.cinemaos.live/cors-m3u8-proxy?url=https%3A%2F%2Fmedia.example%2Fmaster.m3u8";
+const CAPABILITY_SECRET = "test-only-capability-secret-with-32-bytes";
+const NOW = 1_800_000_000_000;
 
 function response(body, init = {}) {
   return new Response(body, {
@@ -69,6 +77,376 @@ test("the relay accepts only Yoru's public HLS path contract", () => {
   assert.throws(
     () => assertWrapperMediaUrl("https://future-rotation17.site/admin/chunk.jpg"),
     /not allowed/,
+  );
+});
+
+test("rotated Videasy media is admitted by a signed, expiring capability", () => {
+  const token = "a".repeat(64);
+  const target =
+    `https://moon.peakstorm.top/r2/cdn1/${token}/playlist.m3u8`;
+  assert.equal(
+    assertDiscoveredVideasyMediaUrl(target).hostname,
+    "moon.peakstorm.top",
+  );
+  const proxy = encodeDiscoveredVideasyMediaTarget(
+    target,
+    "https://phantom.example",
+    { secret: CAPABILITY_SECRET, now: NOW, ttlMs: 60_000 },
+  );
+  const params = new URL(proxy).searchParams;
+  assert.equal(
+    decodeDiscoveredVideasyMediaTarget(
+      params.get("target"),
+      params.get("expires"),
+      params.get("signature"),
+      { secret: CAPABILITY_SECRET, now: NOW + 30_000 },
+    ).href,
+    target,
+  );
+  assert.throws(
+    () =>
+      decodeDiscoveredVideasyMediaTarget(
+        params.get("target"),
+        params.get("expires"),
+        params.get("signature"),
+        { secret: `${CAPABILITY_SECRET}-tampered`, now: NOW },
+      ),
+    /signature is invalid/,
+  );
+  assert.throws(
+    () => assertDiscoveredVideasyMediaUrl(
+      "https://moon.peakstorm.top/admin/status",
+    ),
+    /not allowed/,
+  );
+  assert.throws(
+    () => assertDiscoveredVideasyMediaUrl(
+      `https://peakstorm.top/r2/cdn1/${token}/playlist.m3u8`,
+    ),
+    /not allowed/,
+  );
+});
+
+test("local development can mint rotating media capabilities without setup", () => {
+  const token = "d".repeat(64);
+  const target =
+    `https://moon.localdevrotation.top/r2/cdn1/${token}/playlist.m3u8`;
+  const proxy = encodeDiscoveredVideasyMediaTarget(
+    target,
+    "http://localhost:3001",
+    { now: NOW, ttlMs: 60_000 },
+  );
+  const params = new URL(proxy).searchParams;
+  assert.equal(
+    decodeDiscoveredVideasyMediaTarget(
+      params.get("target"),
+      params.get("expires"),
+      params.get("signature"),
+      { now: NOW + 30_000 },
+    ).href,
+    target,
+  );
+});
+
+test("CineSrc capabilities follow discovered public media origins", () => {
+  const first = "https://nebula-rotation.example/hls/token-a/master.m3u8";
+  const next = "https://unknown-next.example/media/token-b/index.bin";
+  for (const target of [first, next]) {
+    assert.equal(assertDiscoveredCineSrcMediaUrl(target).href, target);
+    const proxy = encodeDiscoveredCineSrcMediaTarget(
+      target,
+      "https://phantom.example",
+      { secret: CAPABILITY_SECRET, now: NOW, ttlMs: 60_000 },
+    );
+    const params = new URL(proxy).searchParams;
+    assert.equal(params.get("source"), "cinesrc");
+    assert.equal(
+      decodeDiscoveredCineSrcMediaTarget(
+        params.get("target"),
+        params.get("expires"),
+        params.get("signature"),
+        { secret: CAPABILITY_SECRET, now: NOW + 30_000 },
+      ).href,
+      target,
+    );
+  }
+  for (const target of [
+    "http://media.example/master.m3u8",
+    "https://localhost/master.m3u8",
+    "https://127.0.0.1/master.m3u8",
+    "https://service.local/master.m3u8",
+  ]) {
+    assert.throws(() => assertDiscoveredCineSrcMediaUrl(target));
+  }
+});
+
+test("CineSrc relays disguised child manifests with its player origin", async () => {
+  const root = "https://rotating-media.example/hls/token/master.m3u8";
+  const child = "https://rotating-media.example/hls/token/1080p/playlist.jpg";
+  const segment = "https://rotating-media.example/hls/token/1080p/segment-1.ts";
+  const fetchImpl = async (input, init = {}) => {
+    const url = new URL(input);
+    const headers = new Headers(init.headers);
+    assert.equal(headers.get("origin"), "https://cinesrc.st");
+    assert.equal(headers.get("referer"), "https://cinesrc.st/");
+    if (url.href === root) {
+      return response("#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\n1080p/playlist.jpg\n");
+    }
+    if (url.href === child) {
+      return response("#EXTM3U\n#EXTINF:6,\nsegment-1.ts\n", {
+        headers: { "content-type": "image/jpeg" },
+      });
+    }
+    if (url.href === segment) {
+      assert.equal(headers.get("range"), "bytes=0-3");
+      return new Response(new Uint8Array([0x47, 1, 2, 3]), {
+        status: 206,
+        headers: { "content-type": "video/mp2t" },
+      });
+    }
+    throw new Error(`Unexpected target ${url}`);
+  };
+  const rootProxy = encodeDiscoveredCineSrcMediaTarget(
+    root,
+    "https://phantom.example",
+    { secret: CAPABILITY_SECRET, now: NOW },
+  );
+  const rootResponse = await proxyWrapperMediaRequest(new Request(rootProxy), {
+    fetchImpl,
+    secret: CAPABILITY_SECRET,
+    now: NOW,
+  });
+  assert.equal(rootResponse.status, 200);
+  const childProxy = (await rootResponse.text()).split("\n").find(
+    (line) => line.startsWith("https://phantom.example/"),
+  );
+  assert.ok(childProxy);
+
+  const childResponse = await proxyWrapperMediaRequest(new Request(childProxy), {
+    fetchImpl,
+    secret: CAPABILITY_SECRET,
+    now: NOW,
+  });
+  assert.equal(childResponse.status, 200);
+  assert.equal(
+    childResponse.headers.get("content-type"),
+    "application/vnd.apple.mpegurl; charset=utf-8",
+  );
+  const segmentProxy = (await childResponse.text()).split("\n").find(
+    (line) => line.startsWith("https://phantom.example/"),
+  );
+  assert.ok(segmentProxy);
+
+  const segmentResponse = await proxyWrapperMediaRequest(
+    new Request(segmentProxy, { headers: { range: "bytes=0-3" } }),
+    { fetchImpl, secret: CAPABILITY_SECRET, now: NOW },
+  );
+  assert.equal(segmentResponse.status, 206);
+  assert.deepEqual(
+    [...new Uint8Array(await segmentResponse.arrayBuffer())],
+    [0x47, 1, 2, 3],
+  );
+});
+
+test("CineSrc manifests cannot delegate their capability to another origin", async () => {
+  const root = "https://rotating-media.example/hls/other-token/master.m3u8";
+  const proxy = encodeDiscoveredCineSrcMediaTarget(
+    root,
+    "https://phantom.example",
+    { secret: CAPABILITY_SECRET, now: NOW },
+  );
+  const result = await proxyWrapperMediaRequest(new Request(proxy), {
+    fetchImpl: async () => response(
+      "#EXTM3U\nhttps://different-origin.example/private/segment.ts\n",
+    ),
+    secret: CAPABILITY_SECRET,
+    now: NOW,
+  });
+  assert.equal(result.status, 502);
+  assert.match(await result.text(), /unsafe URI/);
+});
+
+test("a trusted rotated manifest can move segments to its current public host", () => {
+  const token = "e".repeat(80);
+  const child =
+    `https://quietraven.top/r2/cdn2/${token}/1080p/xk.jpg`;
+  const proxy = encodeDiscoveredVideasyMediaTarget(
+    child,
+    "https://phantom.example",
+    {
+      allowRotatedChild: true,
+      now: NOW,
+      secret: CAPABILITY_SECRET,
+    },
+  );
+  const params = new URL(proxy).searchParams;
+  assert.equal(
+    decodeDiscoveredVideasyMediaTarget(
+      params.get("target"),
+      params.get("expires"),
+      params.get("signature"),
+      { now: NOW, secret: CAPABILITY_SECRET },
+    ).hostname,
+    "quietraven.top",
+  );
+  assert.throws(
+    () =>
+      encodeDiscoveredVideasyMediaTarget(
+        "https://quietraven.top/admin/xk.jpg",
+        "https://phantom.example",
+        { allowRotatedChild: true, secret: CAPABILITY_SECRET },
+      ),
+    /not allowed/,
+  );
+  assert.throws(
+    () =>
+      encodeDiscoveredVideasyMediaTarget(
+        `https://quietraven.example/r2/cdn2/${token}/1080p/xk.jpg`,
+        "https://phantom.example",
+        { allowRotatedChild: true, secret: CAPABILITY_SECRET },
+      ),
+    /not allowed/,
+  );
+});
+
+test("a trusted rotated manifest can move fMP4 media to a vd child host", () => {
+  const token = "v".repeat(96);
+  const init = `https://darkgate.top/vd/${token}/init-s1080p-v1-a1.mp4`;
+  const segment = `https://darkgate.top/vd/${token}/seg-17-s1080p-v1-a1.m4s`;
+
+  for (const child of [init, segment]) {
+    const capability = encodeDiscoveredVideasyMediaTarget(
+      child,
+      "https://phantom.example",
+      { allowRotatedChild: true, secret: CAPABILITY_SECRET },
+    );
+    const url = new URL(capability);
+    assert.equal(
+      decodeDiscoveredVideasyMediaTarget(
+        url.searchParams.get("target"),
+        url.searchParams.get("expires"),
+        url.searchParams.get("signature"),
+        { secret: CAPABILITY_SECRET },
+      ).href,
+      child,
+    );
+  }
+
+  assert.throws(
+    () =>
+      encodeDiscoveredVideasyMediaTarget(
+        `https://darkgate.top/vd/${token}/arbitrary-file.m4s`,
+        "https://phantom.example",
+        { allowRotatedChild: true, secret: CAPABILITY_SECRET },
+      ),
+    /not allowed/,
+  );
+});
+
+test("a rotated fMP4 manifest relays its map and media segments", () => {
+  const token = "m".repeat(96);
+  const root =
+    `https://moon.peakstorm.top/vd/${token}/index-s1080p-v1-a1.m3u8`;
+  const init = `https://darkgate.top/vd/${token}/init-s1080p-v1-a1.mp4`;
+  const segment = `https://darkgate.top/vd/${token}/seg-1-s1080p-v1-a1.m4s`;
+  const rewritten = rewriteWrapperHls(
+    `#EXTM3U\n#EXT-X-MAP:URI="${init}"\n#EXTINF:6.006,\n${segment}\n`,
+    root,
+    "https://phantom.example",
+    { now: NOW, secret: CAPABILITY_SECRET },
+  );
+  const relayed = rewritten.match(
+    /https:\/\/phantom\.example\/api\/sources\/relay-media\?[^\s"]+/g,
+  );
+
+  assert.equal(relayed?.length, 2);
+  assert.deepEqual(
+    relayed.map((value) => {
+      const url = new URL(value);
+      return decodeDiscoveredVideasyMediaTarget(
+        url.searchParams.get("target"),
+        url.searchParams.get("expires"),
+        url.searchParams.get("signature"),
+        { now: NOW, secret: CAPABILITY_SECRET },
+      ).href;
+    }),
+    [init, segment],
+  );
+});
+
+test("rotated Videasy manifests keep every child behind signed capabilities", async () => {
+  const token = "b".repeat(64);
+  const root = `https://moon.peakstorm.top/r2/cdn1/${token}/playlist.m3u8`;
+  const child = `https://moon.peakstorm.top/r2/cdn1/${token}/segment-1.ts`;
+  const proxy = encodeDiscoveredVideasyMediaTarget(
+    root,
+    "https://phantom.example",
+    { secret: CAPABILITY_SECRET, now: NOW },
+  );
+  const manifest = await proxyWrapperMediaRequest(new Request(proxy), {
+    fetchImpl: async (_input, options) => {
+      assert.equal(options.headers.get("origin"), "https://player.videasy.to");
+      return response(`#EXTM3U\n${child}\n`);
+    },
+    secret: CAPABILITY_SECRET,
+    now: NOW,
+  });
+  assert.equal(manifest.status, 200);
+  const encodedChild = (await manifest.text()).match(
+    /https:\/\/[^\s]+/,
+  )?.[0];
+  assert.ok(encodedChild);
+  const params = new URL(encodedChild).searchParams;
+  assert.equal(
+    decodeDiscoveredVideasyMediaTarget(
+      params.get("target"),
+      params.get("expires"),
+      params.get("signature"),
+      { secret: CAPABILITY_SECRET, now: NOW },
+    ).href,
+    child,
+  );
+});
+
+test("signed Videasy media can use an authenticated external egress hop", async () => {
+  const token = "q".repeat(96);
+  const root =
+    `https://moon.peakstorm.top/vd/${token}/index-s1080p-v1-a1.m3u8`;
+  const child = `https://darkgate.top/vd/${token}/seg-1-s1080p-v1-a1.m4s`;
+  const proxy = encodeDiscoveredVideasyMediaTarget(
+    root,
+    "https://phantom.example",
+    { secret: CAPABILITY_SECRET, now: NOW },
+  );
+  const calls = [];
+  const manifest = await proxyWrapperMediaRequest(new Request(proxy), {
+    now: NOW,
+    relayFetchImpl: async (input, options) => {
+      calls.push({ input: String(input), options });
+      return response(`#EXTM3U\n#EXTINF:6,\n${child}\n`);
+    },
+    relaySecret: CAPABILITY_SECRET,
+    relayUrl: "https://resolver.example/v1/fetch",
+    secret: CAPABILITY_SECRET,
+  });
+
+  assert.equal(manifest.status, 200);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].input, "https://resolver.example/v1/fetch");
+  assert.equal(
+    calls[0].options.headers.get("authorization"),
+    `Bearer ${CAPABILITY_SECRET}`,
+  );
+  assert.equal(
+    Buffer.from(
+      calls[0].options.headers.get("x-phantom-target"),
+      "base64url",
+    ).toString("utf8"),
+    root,
+  );
+  assert.match(
+    await manifest.text(),
+    /https:\/\/phantom\.example\/api\/sources\/relay-media/,
   );
 });
 

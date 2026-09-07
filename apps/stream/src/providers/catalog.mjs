@@ -1,10 +1,10 @@
 
 import {
   ACTIVE_SOURCE_IDS,
+  CINESRC_SOURCE_ID,
   RELAY_SOURCE_IDS,
   STREMIO_ADDON_URLS,
   VIDEASY_SOURCE_ID,
-  VIDFAST_SOURCE_ID,
   sourceAlias,
 } from "../source-ids.mjs";
 import {
@@ -51,11 +51,11 @@ const DECLARED = Object.freeze([
         }),
       ]
     : []),
-  ...(ACTIVE_SOURCE_IDS.includes(VIDFAST_SOURCE_ID)
+  ...(ACTIVE_SOURCE_IDS.includes(CINESRC_SOURCE_ID)
     ? [
         Object.freeze({
-          id: VIDFAST_SOURCE_ID,
-          kind: "vidfast",
+          id: CINESRC_SOURCE_ID,
+          kind: "cinesrc",
           deliveryMode: "resolver-full-relay",
           autoRace: true,
         }),

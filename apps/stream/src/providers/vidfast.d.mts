@@ -17,6 +17,21 @@ export declare function resolveVidfast(
     fetchImpl?: typeof fetch;
     origin?: string;
     codecOrigin?: string;
+    codecOrigins?: readonly string[];
+    codecStrategies?: ReadonlyArray<{
+      id: string;
+      bootstrap(
+        fetchImpl: typeof fetch,
+        encryptedBootstrap: string,
+        signal?: AbortSignal,
+      ): Promise<unknown>;
+      decode(
+        fetchImpl: typeof fetch,
+        cipher: string,
+        signal: AbortSignal | undefined,
+        stage: string,
+      ): Promise<unknown>;
+    }>;
     mediaHosts?: ReadonlySet<string>;
     extraMediaHosts?: readonly string[];
   },

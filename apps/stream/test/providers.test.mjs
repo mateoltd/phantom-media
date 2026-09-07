@@ -76,11 +76,11 @@ test("the evidenced Source 03/05 duplicate stays retired without shifting aliase
   assert.ok(!ACTIVE_SOURCE_IDS.includes("p6"));
 });
 
-test("the temporary production roster contains only native Vidfast and Videasy", () => {
+test("the temporary production roster contains only native CineSrc and Videasy", () => {
   assert.deepEqual(ACTIVE_SOURCE_IDS, ["u9", "b5"]);
   assert.equal(sourceAlias("u9"), "Source 28");
   assert.equal(sourceAlias("b5"), "Source 04");
-  assert.equal(providerDescriptor("u9")?.kind, "vidfast");
+  assert.equal(providerDescriptor("u9")?.kind, "cinesrc");
   assert.equal(providerDescriptor("b5")?.kind, "videasy");
 });
 

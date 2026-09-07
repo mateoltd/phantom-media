@@ -23,7 +23,9 @@ import {
   unverifiedFallbackPreference,
 } from "../src/source-observations.mjs";
 
-export const RESOLVE_TIMEOUT_MS = 11_000;
+// Keep the browser outside the longest provider-specific server deadline. A
+// cold Source 04 lookup commonly needs 12-20 seconds before it can offer HLS.
+export const RESOLVE_TIMEOUT_MS = 26_000;
 
 export const PROBE_TIMEOUT_MS = 4_000;
 

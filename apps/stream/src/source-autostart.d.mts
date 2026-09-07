@@ -7,3 +7,10 @@ export declare function scheduleSourceAutostart(
   callback: () => void,
   timers?: SourceAutostartTimers,
 ): () => void;
+
+export declare function scheduleSourceAutostartOnce(
+  started: { current: string },
+  key: string,
+  callback: () => void,
+  timers?: SourceAutostartTimers,
+): (() => void) | undefined;

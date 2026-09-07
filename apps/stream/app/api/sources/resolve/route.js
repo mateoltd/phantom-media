@@ -10,7 +10,9 @@ import {
 
 export const runtime = "nodejs";
 
-const DEADLINE_MS = 12_000;
+const DEFAULT_DEADLINE_MS = 12_000;
+const VIDEASY_DEADLINE_MS = 25_000;
+const CINESRC_DEADLINE_MS = 25_000;
 
 const DEBUG_HEADER = "x-phantom-debug";
 const TRACE_HEADER = "x-phantom-trace-id";
@@ -23,8 +25,16 @@ function timing(fields) {
     .join(";");
 }
 
-function deadlineSignal(request) {
-  const timeout = AbortSignal.timeout(DEADLINE_MS);
+function deadlineSignal(request, provider) {
+  const deadline =
+    provider.kind === "videasy"
+      ? VIDEASY_DEADLINE_MS
+      : provider.kind === "cinesrc"
+        ? CINESRC_DEADLINE_MS
+        : DEFAULT_DEADLINE_MS;
+  const timeout = AbortSignal.timeout(
+    deadline,
+  );
   return request.signal ? AbortSignal.any([request.signal, timeout]) : timeout;
 }
 
@@ -108,7 +118,7 @@ export async function GET(request) {
 
     try {
       const result = await provider.resolve(media, {
-        signal: deadlineSignal(request),
+        signal: deadlineSignal(request, provider),
         abandoned: request.signal,
         fresh: params.get("fresh") === "1",
         proxyOrigin: new URL(request.url).origin,
@@ -163,7 +173,14 @@ export async function GET(request) {
 
       const known =
         error instanceof RelayError ||
-        ["RelayError", "VidsrcError", "VidfastError"].includes(error?.name);
+        [
+          "ProxyCapabilityError",
+          "RelayError",
+          "VidsrcError",
+          "VideasyError",
+          "CineSrcError",
+          "VidfastError",
+        ].includes(error?.name);
       const aborted =
         error?.name === "AbortError" ||
         error?.name === "TimeoutError" ||

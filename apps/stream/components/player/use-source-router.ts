@@ -42,7 +42,7 @@ import {
 import { SourceRunGuard } from "@/src/source-run-guard.mjs";
 import { PlaybackRecoveryState } from "@/src/playback-recovery.mjs";
 import { collectAvailableAudioLanguages } from "@/src/audio-availability.mjs";
-import { scheduleSourceAutostart } from "@/src/source-autostart.mjs";
+import { scheduleSourceAutostartOnce } from "@/src/source-autostart.mjs";
 
 export interface SourceEntry {
   id: string;
@@ -113,6 +113,7 @@ const FLUSH_INTERVAL_MS = 150;
 const PLAY_TIMEOUT_MS = 2_000;
 const RECOVERY_DELAY_MS = 650;
 const MAX_AUTO_RECOVERIES = 2;
+const MAX_AUTOMATIC_RACE_RETRIES = 1;
 
 interface StartOptions {
   pin?: string | null;
@@ -205,6 +206,7 @@ export function useSourceRouter({
   const raceStartedAtRef = useRef(0);
   const languageMismatchRef = useRef(0);
   const sourceAudioLanguagesRef = useRef<Record<string, readonly string[]>>({});
+  const automaticRaceRetriesRef = useRef(MAX_AUTOMATIC_RACE_RETRIES);
   const dirtyRef = useRef(false);
 
   const normalizedAudioLanguage = initialAudioLanguage;
@@ -552,6 +554,8 @@ export function useSourceRouter({
         asking: 0,
         total: order.length,
         raceElapsedMs: 0,
+        retryAt: 0,
+        retrySeconds: 0,
         pinned,
         resumedFrom: resumeFrom,
       }));
@@ -776,6 +780,7 @@ export function useSourceRouter({
 
       if (outcome.ok) {
         runGuardRef.current.finish(runKey);
+        automaticRaceRetriesRef.current = MAX_AUTOMATIC_RACE_RETRIES;
         waveRef.current = nextWaveSize(waveRef.current, false);
         fetchController.abort();
         fetchControllerRef.current = null;
@@ -805,13 +810,17 @@ export function useSourceRouter({
         outcome.reason === "rateLimited",
       );
       const cooldownMs = outcome.cooldownMs;
+      const shouldRetryAutomatically =
+        !pinned && languageMismatchRef.current === 0 && cooldownMs > 0;
       setState((current) => ({
         ...current,
         phase: pinned ? "error" : "cooldown",
         activeSource: null,
         audioUnverified: false,
-        retryAt: cooldownMs > 0 ? Date.now() + cooldownMs : 0,
-        retrySeconds: Math.ceil(cooldownMs / 1_000),
+        retryAt: shouldRetryAutomatically ? Date.now() + cooldownMs : 0,
+        retrySeconds: shouldRetryAutomatically
+          ? Math.ceil(cooldownMs / 1_000)
+          : 0,
         progress: Object.values(progressRef.current),
         statusText: pinned
           ? `${labelOf(pinned)} has nothing for this. Pick another source, or switch back to automatic.`
@@ -855,12 +864,17 @@ export function useSourceRouter({
   const autoStartedRef = useRef("");
   useEffect(() => {
     const key = `${media.id}:${season}:${episode}:${normalizedAudioLanguage}`;
-    if (autoStartedRef.current === key || !playable) return;
-    autoStartedRef.current = key;
+    if (!playable) return;
+    automaticRaceRetriesRef.current = MAX_AUTOMATIC_RACE_RETRIES;
     pinnedRef.current = null;
-    return scheduleSourceAutostart(() => {
-      startRef.current({ pin: null });
-    }, window);
+    return scheduleSourceAutostartOnce(
+      autoStartedRef,
+      key,
+      () => {
+        startRef.current({ pin: null });
+      },
+      window,
+    );
   }, [episode, media.id, normalizedAudioLanguage, playable, season]);
 
   useEffect(() => {
@@ -869,10 +883,21 @@ export function useSourceRouter({
   }, [flush]);
 
   const retryAt = state.retryAt;
+  const retryPhase = state.phase;
   useEffect(() => {
     if (retryAt <= 0) return;
+    let triggered = false;
     const tick = () => {
       const left = Math.max(0, Math.ceil((retryAt - Date.now()) / 1_000));
+      const canRetry =
+        !triggered &&
+        left === 0 &&
+        retryPhase === "cooldown" &&
+        automaticRaceRetriesRef.current > 0;
+      if (canRetry) {
+        triggered = true;
+        automaticRaceRetriesRef.current -= 1;
+      }
       setState((current) =>
         current.retryAt !== retryAt
           ? current
@@ -880,15 +905,24 @@ export function useSourceRouter({
             ? { ...current, retrySeconds: left }
             : {
                 ...current,
+                phase: canRetry ? "racing" : "error",
                 retryAt: 0,
                 retrySeconds: 0,
-                statusText: "Ready to try again",
+                statusText: canRetry
+                  ? "Checking refreshed sources"
+                  : "Playback is unavailable. Try again.",
               },
       );
+      if (canRetry) {
+        window.queueMicrotask(() => {
+          startRef.current({ pin: null, recovery: true });
+        });
+      }
     };
+    tick();
     const timer = window.setInterval(tick, 1_000);
     return () => window.clearInterval(timer);
-  }, [retryAt]);
+  }, [retryAt, retryPhase]);
 
   useEffect(
     () => () => {
@@ -940,6 +974,7 @@ export function useSourceRouter({
   }, []);
 
   const retry = useCallback(() => {
+    automaticRaceRetriesRef.current = MAX_AUTOMATIC_RACE_RETRIES;
     startRef.current();
   }, []);
 

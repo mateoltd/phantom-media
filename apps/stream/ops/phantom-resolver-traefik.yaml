@@ -1,0 +1,22 @@
+http:
+  routers:
+    phantom-resolver-http:
+      entryPoints:
+        - http
+      middlewares:
+        - redirect-to-https
+      rule: Host(`phantom-resolver.cerfq3.easypanel.host`)
+      service: phantom-resolver
+    phantom-resolver-https:
+      entryPoints:
+        - https
+      rule: Host(`phantom-resolver.cerfq3.easypanel.host`)
+      service: phantom-resolver
+      tls:
+        certResolver: letsencrypt
+  services:
+    phantom-resolver:
+      loadBalancer:
+        passHostHeader: true
+        servers:
+          - url: http://phantom-resolver:8787

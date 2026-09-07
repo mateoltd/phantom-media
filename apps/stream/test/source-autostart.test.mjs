@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { scheduleSourceAutostart } from "../src/source-autostart.mjs";
+import {
+  scheduleSourceAutostart,
+  scheduleSourceAutostartOnce,
+} from "../src/source-autostart.mjs";
 
 function fakeTimers() {
   let scheduled;
@@ -40,4 +43,27 @@ test("the surviving mount starts exactly once", () => {
   }, fake.timers);
   fake.run();
   assert.equal(starts, 1);
+});
+
+test("Strict Mode's surviving setup starts after the discarded setup", () => {
+  const fake = fakeTimers();
+  const started = { current: "" };
+  let starts = 0;
+  const start = () => {
+    starts += 1;
+  };
+
+  const discard = scheduleSourceAutostartOnce(
+    started,
+    "episode-1",
+    start,
+    fake.timers,
+  );
+  discard();
+  scheduleSourceAutostartOnce(started, "episode-1", start, fake.timers);
+  fake.run();
+  fake.run();
+
+  assert.equal(starts, 1);
+  assert.equal(started.current, "episode-1");
 });

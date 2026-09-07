@@ -4,13 +4,16 @@ import {
 } from "../failure-domain.mjs";
 import { normalizeVariants } from "./normalize.mjs";
 import {
+  assertDiscoveredVideasyMediaUrl,
   primeWrapperMediaTarget,
+  proxyDiscoveredVideasyCandidate,
   proxyWrapperCandidate,
 } from "./wrapper-media-proxy.mjs";
 
 const DEFAULT_API_ORIGIN = "https://api.speedracelight.com";
 const DEFAULT_PLAYER_ORIGIN = "https://player.videasy.to";
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+const MIN_RESOLVER_SECRET_BYTES = 32;
 const CACHE_TTL_MS = 2 * 60 * 1_000;
 const CACHE = new Map();
 
@@ -244,7 +247,7 @@ function retryAfter(response) {
 async function fetchText(fetchImpl, url, options, stage) {
   let response;
   try {
-    response = await fetchImpl(url, { ...options, redirect: "error" });
+    response = await fetchImpl(url, { ...options, redirect: "manual" });
   } catch (error) {
     if (options.signal?.aborted) throw error;
     throw new VideasyError(`Videasy ${stage} request failed`, {
@@ -362,7 +365,7 @@ function validYoruUrl(input) {
   try {
     const url = new URL(input);
     const hostname = url.hostname.toLowerCase();
-    return (
+    const legacy =
       url.protocol === "https:" &&
       !url.username &&
       !url.password &&
@@ -370,8 +373,10 @@ function validYoruUrl(input) {
       !url.search &&
       !url.hash &&
       (hostname === YORU_HOST || ROTATING_SITE.test(hostname)) &&
-      YORU_PATH.test(url.pathname)
-    );
+      YORU_PATH.test(url.pathname);
+    if (legacy) return true;
+    assertDiscoveredVideasyMediaUrl(url);
+    return true;
   } catch {
     return false;
   }
@@ -461,17 +466,159 @@ function variantsFrom(breach, yoru) {
   ];
   for (const source of yoruSources) {
     if (!validYoruUrl(source?.url)) continue;
+    let failureDomain = YORU_DOMAIN;
+    try {
+      const discovered = assertDiscoveredVideasyMediaUrl(source.url);
+      failureDomain = fingerprintFailureLayer(
+        `videasy:yoru:${discovered.hostname.toLowerCase()}`,
+      );
+    } catch {
+    }
     variants.push({
       url: source.url,
       type: "hls",
       quality: source.quality,
-      failureDomain: YORU_DOMAIN,
-      capacityDomains: [YORU_DOMAIN],
+      failureDomain,
+      capacityDomains: [failureDomain],
       deliveryMode: "resolver-full-relay",
       audioLanguages: [],
     });
   }
   return variants;
+}
+
+function resolverSecret(value) {
+  const secret = String(value ?? process.env.VIDEASY_RESOLVER_SECRET ?? "");
+  if (Buffer.byteLength(secret, "utf8") < MIN_RESOLVER_SECRET_BYTES) {
+    throw new VideasyError("Videasy resolver authentication is unavailable", {
+      status: 503,
+      retryable: true,
+      retryAfterMs: 60_000,
+      details: { stage: "resolver-config" },
+    });
+  }
+  return secret;
+}
+
+function resolverUrl(value) {
+  const configured = String(value ?? process.env.VIDEASY_RESOLVER_URL ?? "").trim();
+  if (!configured) return null;
+  let url;
+  try {
+    url = new URL(configured);
+  } catch {
+    throw new VideasyError("Videasy resolver URL is invalid", {
+      status: 503,
+      retryable: true,
+      retryAfterMs: 60_000,
+      details: { stage: "resolver-config" },
+    });
+  }
+  const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+  if ((url.protocol !== "https:" && !(local && url.protocol === "http:")) ||
+      url.username || url.password || url.hash) {
+    throw new VideasyError("Videasy resolver URL is not allowed", {
+      status: 503,
+      retryable: true,
+      retryAfterMs: 60_000,
+      details: { stage: "resolver-config" },
+    });
+  }
+  return url;
+}
+
+function validatedRemoteResult(payload) {
+  if (!payload || !Array.isArray(payload.variants)) {
+    throw new VideasyError("Videasy relay returned invalid data", {
+      retryable: true,
+      details: { stage: "resolver-response" },
+    });
+  }
+  const breach = { sources: [] };
+  const yoru = { sources: [] };
+  for (const variant of payload.variants.slice(0, 50)) {
+    const source = {
+      url: typeof variant?.url === "string" ? variant.url : "",
+      quality:
+        typeof variant?.quality === "string" ||
+        Number.isFinite(Number(variant?.quality))
+          ? variant.quality
+          : undefined,
+    };
+    if (validBreachUrl(source.url)) breach.sources.push(source);
+    else if (validYoruUrl(source.url)) yoru.sources.push(source);
+  }
+  const subtitles = Array.isArray(payload.subtitles)
+    ? payload.subtitles.slice(0, 100)
+    : [];
+  return {
+    variants: variantsFrom(breach, yoru),
+    subtitles: normalizeSubtitles([{ subtitles }]),
+    latencyMs: Number.isFinite(Number(payload.latencyMs))
+      ? Math.max(0, Math.round(Number(payload.latencyMs)))
+      : 0,
+  };
+}
+
+export async function resolveVideasyRemotely(media, options = {}) {
+  assertMedia(media);
+  const url = resolverUrl(options.resolverUrl);
+  if (!url) {
+    throw new VideasyError("Videasy resolver URL is unavailable", {
+      status: 503,
+      retryable: true,
+      retryAfterMs: 60_000,
+      details: { stage: "resolver-config" },
+    });
+  }
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  const secret = resolverSecret(options.resolverSecret);
+  let response;
+  try {
+    response = await fetchImpl(url, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        authorization: `Bearer ${secret}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ media, fresh: options.fresh === true }),
+      redirect: "manual",
+      signal: options.signal,
+    });
+  } catch (error) {
+    if (options.signal?.aborted) throw error;
+    throw new VideasyError("Videasy resolver relay request failed", {
+      cause: error,
+      retryable: true,
+      details: { stage: "resolver-relay" },
+    });
+  }
+  const text = await limitedText(response);
+  let payload;
+  try {
+    payload = JSON.parse(text);
+  } catch (error) {
+    throw new VideasyError("Videasy relay returned invalid JSON", {
+      cause: error,
+      retryable: true,
+      details: { stage: "resolver-response" },
+    });
+  }
+  if (!response.ok) {
+    throw new VideasyError(
+      typeof payload?.error === "string"
+        ? payload.error
+        : `Videasy resolver relay returned HTTP ${response.status}`,
+      {
+        status: response.status,
+        retryable: payload?.retryable !== false,
+        retryAfterMs: Number(payload?.retryAfterMs) || retryAfter(response),
+        details: { stage: "resolver-relay" },
+      },
+    );
+  }
+  return validatedRemoteResult(payload);
 }
 
 async function resolveVideasyUncached(media, options = {}) {
@@ -535,6 +682,9 @@ function cacheKey(media) {
 
 export async function resolveVideasy(media, options = {}) {
   assertMedia(media);
+  if (options.remote !== false && resolverUrl(options.resolverUrl)) {
+    return resolveVideasyRemotely(media, options);
+  }
   const key = cacheKey(media);
   const cached = CACHE.get(key);
   if (!options.fresh && cached?.expiresAt > Date.now()) {
@@ -562,14 +712,22 @@ export function createVideasyResolver(id) {
         ? AbortSignal.any([options.signal, timeout])
         : timeout;
       try {
-        await primeWrapperMediaTarget(preferred.url, { signal });
+        let discovered = false;
+        try {
+          assertDiscoveredVideasyMediaUrl(preferred.url);
+          discovered = true;
+        } catch {
+        }
+        if (!discovered) {
+          await primeWrapperMediaTarget(preferred.url, { signal });
+        }
       } catch {
         // The constrained relay can still retry during probing.
       }
     }
     const candidates = normalized.map((candidate) =>
       options.proxyOrigin
-        ? proxyWrapperCandidate(candidate, options.proxyOrigin)
+        ? proxyVideasyCandidate(candidate, options)
         : candidate,
     );
     return {
@@ -578,4 +736,15 @@ export function createVideasyResolver(id) {
       latencyMs: result.latencyMs,
     };
   };
+}
+
+function proxyVideasyCandidate(candidate, options) {
+  try {
+    assertDiscoveredVideasyMediaUrl(candidate.url);
+  } catch {
+    return proxyWrapperCandidate(candidate, options.proxyOrigin);
+  }
+  return proxyDiscoveredVideasyCandidate(candidate, options.proxyOrigin, {
+    secret: options.proxySecret,
+  });
 }

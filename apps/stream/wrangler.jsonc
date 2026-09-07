@@ -8,6 +8,16 @@
   // being able to call back into itself over the public hostname.
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "stream.her.mateorb.com",
+      "custom_domain": true
+    }
+  ],
+  "vars": {
+    "VIDEASY_RESOLVER_URL": "https://phantom-resolver.cerfq3.easypanel.host/v1/resolve",
+    "VIDEASY_RELAY_URL": "https://phantom-resolver.cerfq3.easypanel.host/v1/fetch"
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -16,7 +26,7 @@
     "enabled": true,
     "logs": {
       "enabled": true,
-      "head_sampling_rate": 1,
+      "head_sampling_rate": 0.01,
       "invocation_logs": true
     }
   }

@@ -52,12 +52,15 @@ export const RESERVED_SOURCE_IDS = Object.freeze(new Set());
 
 export const STREMIO_SOURCE_IDS = Object.freeze(["t0", "t1", "t2"]);
 export const VIDEASY_SOURCE_ID = "b5";
-export const VIDFAST_SOURCE_ID = "u9";
+export const CINESRC_SOURCE_ID = "u9";
+// Kept as a compatibility alias for persisted code that imports Source 28 by
+// its previous implementation name.
+export const VIDFAST_SOURCE_ID = CINESRC_SOURCE_ID;
 export const NON_RELAY_SOURCE_IDS = Object.freeze([
   ...STREMIO_SOURCE_IDS,
   "n1",
   VIDEASY_SOURCE_ID,
-  VIDFAST_SOURCE_ID,
+  CINESRC_SOURCE_ID,
 ]);
 
 const STREMIO_ENV_KEYS = Object.freeze([
@@ -127,10 +130,10 @@ export const SOURCE_ALIASES = Object.freeze(
   ),
 );
 
-// Temporary two-provider roster while the native Vidfast and Videasy
+// Temporary two-provider roster while the native CineSrc and Videasy
 // integrations are validated. Append-only aliases stay intact for rollback.
 export const ACTIVE_SOURCE_IDS = Object.freeze([
-  VIDFAST_SOURCE_ID,
+  CINESRC_SOURCE_ID,
   VIDEASY_SOURCE_ID,
 ]);
 

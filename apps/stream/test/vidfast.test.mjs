@@ -155,6 +155,20 @@ test("Vidfast resolves public endpoints into one deduplicated native candidate",
   );
   assert.equal(target.href, MASTER);
 
+  const bootstrapCalls = calls.filter(
+    (call) => call.url.origin === CODEC && call.url.pathname === "/api/enc-vidfast",
+  );
+  const decodeCalls = calls.filter(
+    (call) => call.url.origin === CODEC && call.url.pathname === "/api/dec-vidfast",
+  );
+  assert.equal(bootstrapCalls.length, 1);
+  assert.equal(bootstrapCalls[0].url.searchParams.has("version"), false);
+  assert.ok(
+    decodeCalls.every(
+      (call) => !("version" in JSON.parse(String(call.options.body))),
+    ),
+  );
+
   const upstreamPosts = calls.filter((call) => call.url.origin === ORIGIN);
   assert.equal(upstreamPosts[0].url.searchParams.get("_rsc"), "phantom");
   assert.equal(upstreamPosts[0].options.headers.rsc, "1");
@@ -176,6 +190,181 @@ test("Vidfast resolves public endpoints into one deduplicated native candidate",
   );
   assert.equal(cached.latencyMs, 0);
   assert.equal(calls.length, callCount, "the cached result repeated extraction");
+});
+
+test("Vidfast rejects a stale decoded route and falls through codec generations", async () => {
+  const fixture = resolverFetch();
+  const codecOrigin = "https://codec-rotation.example";
+  const fetchImpl = async (input, options = {}) => {
+    const url = new URL(input);
+    fixture.calls.push({ url, options });
+    if (url.origin === codecOrigin && url.pathname === "/api/enc-vidfast") {
+      const legacy = url.searchParams.get("version") === "1";
+      return json({
+        status: 200,
+        result: {
+          servers: legacy
+            ? `${ORIGIN}/opaque/servers`
+            : `${ORIGIN}/stale/servers`,
+          stream: legacy ? `${ORIGIN}/opaque/stream` : `${ORIGIN}/stale/stream`,
+          token: "",
+        },
+      });
+    }
+    if (url.origin === ORIGIN && url.pathname === "/stale/servers") {
+      return response("gone", { status: 404 });
+    }
+    if (url.origin === codecOrigin && url.pathname === "/api/dec-vidfast") {
+      const request = JSON.parse(String(options.body));
+      assert.equal(request.version, "1");
+      const delegated = new URL(url);
+      delegated.host = new URL(CODEC).host;
+      return fixture.fetchImpl(delegated, options);
+    }
+    return fixture.fetchImpl(input, options);
+  };
+
+  const options = {
+    codecOrigin,
+    fetchImpl,
+    fresh: true,
+    mediaHosts: MEDIA_HOSTS,
+    origin: ORIGIN,
+    proxyOrigin: PROXY,
+  };
+  const result = await resolveVidfast(
+    { type: "tv", tmdbId: 37680, season: 7, episode: 5 },
+    options,
+  );
+  assert.equal(result.variants.length, 1);
+  const bootstrapVersions = fixture.calls
+    .filter(
+      (call) =>
+        call.url.origin === codecOrigin &&
+        call.url.pathname === "/api/enc-vidfast",
+    )
+    .map((call) => call.url.searchParams.get("version"));
+  assert.deepEqual(bootstrapVersions, [null, "1"]);
+  assert.equal(
+    fixture.calls.filter((call) => call.url.pathname === "/stale/servers").length,
+    1,
+  );
+
+  const callCount = fixture.calls.length;
+  await resolveVidfast(
+    { type: "tv", tmdbId: 37680, season: 7, episode: 5 },
+    { ...options, fresh: false },
+  );
+  assert.equal(
+    fixture.calls.length,
+    callCount,
+    "only a fully validated strategy result should be cached",
+  );
+});
+
+test("Vidfast reports every exhausted codec generation after route drift", async () => {
+  const fixture = resolverFetch();
+  const codecOrigin = "https://codec-exhausted.example";
+  const fetchImpl = async (input, options = {}) => {
+    const url = new URL(input);
+    if (url.origin === codecOrigin && url.pathname === "/api/enc-vidfast") {
+      return json({
+        status: 200,
+        result: {
+          servers: `${ORIGIN}/gone/servers`,
+          stream: `${ORIGIN}/gone/stream`,
+          token: "",
+        },
+      });
+    }
+    if (url.origin === ORIGIN && url.pathname === "/gone/servers") {
+      return response("gone", { status: 404 });
+    }
+    return fixture.fetchImpl(input, options);
+  };
+
+  await assert.rejects(
+    resolveVidfast(
+      { type: "tv", tmdbId: 37680, season: 7, episode: 5 },
+      {
+        codecOrigin,
+        fetchImpl,
+        fresh: true,
+        mediaHosts: MEDIA_HOSTS,
+        origin: ORIGIN,
+        proxyOrigin: PROXY,
+      },
+    ),
+    (error) => {
+      assert.equal(error.name, "VidfastError");
+      assert.equal(error.retryable, true);
+      assert.equal(error.details.stage, "codec-strategies");
+      assert.deepEqual(
+        error.details.attempts.map(({ strategy, stage, status }) => ({
+          strategy,
+          stage,
+          status,
+        })),
+        [
+          {
+            strategy: `remote-current:${codecOrigin}`,
+            stage: "servers",
+            status: 404,
+          },
+          {
+            strategy: `remote-v1:${codecOrigin}`,
+            stage: "servers",
+            status: 404,
+          },
+        ],
+      );
+      return true;
+    },
+  );
+});
+
+test("a local codec strategy admits a new CDN only through its constrained path", async () => {
+  const fixture = resolverFetch();
+  const rotatedMaster = `https://future-rotation17.site/vd/${"a".repeat(80)}/master.m3u8`;
+  const localCodec = {
+    id: "local-current-test",
+    async bootstrap() {
+      return {
+        status: 200,
+        result: {
+          servers: `${ORIGIN}/opaque/servers`,
+          stream: `${ORIGIN}/opaque/stream`,
+          token: "",
+        },
+      };
+    },
+    async decode(_fetchImpl, cipher) {
+      if (cipher === SERVERS_CIPHER) {
+        return { result: [{ name: "edge", data: "edge" }] };
+      }
+      if (cipher === STREAM_CIPHER_A) {
+        return { result: { url: rotatedMaster, tracks: [] } };
+      }
+      throw new Error("unexpected fixture cipher");
+    },
+  };
+
+  const result = await resolveVidfast(
+    { type: "tv", tmdbId: 37680, season: 7, episode: 5 },
+    {
+      codecStrategies: [localCodec],
+      fetchImpl: fixture.fetchImpl,
+      fresh: true,
+      mediaHosts: new Set(),
+      origin: ORIGIN,
+      proxyOrigin: PROXY,
+    },
+  );
+  const target = decodeVidfastProxyTarget(
+    new URL(result.variants[0].url).searchParams.get("target"),
+    new Set(),
+  );
+  assert.equal(target.href, rotatedMaster);
 });
 
 test("Vidfast falls back to HTML when the compact bootstrap is unavailable", async () => {

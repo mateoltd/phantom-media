@@ -4,8 +4,10 @@ import {
   createVideasyResolver,
   decodeVideasyPayload,
   resolveVideasy,
+  resolveVideasyRemotely,
 } from "../src/providers/videasy.mjs";
 import { failureDomainFor } from "../src/failure-domain.mjs";
+import { decodeDiscoveredVideasyMediaTarget } from "../src/providers/wrapper-media-proxy.mjs";
 
 const FIXTURE_SEED = "59515387.Yp6AKhi-9gCS4MlXglJ8Pw";
 const FIXTURE_CIPHER =
@@ -20,6 +22,7 @@ const media = {
   season: 7,
   episode: 6,
 };
+const CAPABILITY_SECRET = "test-only-capability-secret-with-32-bytes";
 
 test("the checked-in Videasy v2 fixture authenticates and decrypts", () => {
   const payload = JSON.parse(
@@ -86,6 +89,7 @@ test("Videasy asks only Yoru and Breach and returns native HLS", async () => {
   for (const call of calls) {
     assert.equal(call.options.headers.origin, "https://player.videasy.to");
     assert.equal(call.options.headers.referer, "https://player.videasy.to/");
+    assert.equal(call.options.redirect, "manual");
   }
   const sourceCall = calls.find(
     ({ url }) => url.pathname === "/cdn/sources-with-title",
@@ -190,5 +194,93 @@ test("the registry resolver keeps Videasy under opaque Source 04 identity", asyn
   assert.equal(
     new URL(result.candidates[0].url).origin,
     "https://phantom.example",
+  );
+});
+
+test("Videasy accepts a rotated Yoru contract without opening a general proxy", async () => {
+  const token = "R".repeat(64);
+  const rotated =
+    `https://moon.peakstorm.top/r2/cdn1/${token}/playlist.m3u8`;
+  const resolver = createVideasyResolver("b5");
+  const result = await resolver(media, {
+    decodeImpl: (cipher) =>
+      JSON.stringify(
+        cipher === "breach"
+          ? { sources: [] }
+          : { sources: [{ url: rotated, quality: "1080p" }] },
+      ),
+    fetchImpl: async (input) => {
+      const path = new URL(input).pathname;
+      if (path === "/seed") {
+        return new Response(JSON.stringify({ seed: FIXTURE_SEED }));
+      }
+      return new Response(path.startsWith("/m4uhd/") ? "breach" : "yoru");
+    },
+    fresh: true,
+    proxyOrigin: "https://phantom.example",
+    proxySecret: CAPABILITY_SECRET,
+  });
+
+  assert.equal(result.candidates.length, 1);
+  assert.equal(result.candidates[0].server, "b5");
+  assert.equal(result.candidates[0].deliveryMode, "resolver-full-relay");
+  const proxy = new URL(result.candidates[0].url);
+  assert.equal(proxy.origin, "https://phantom.example");
+  assert.equal(
+    decodeDiscoveredVideasyMediaTarget(
+      proxy.searchParams.get("target"),
+      proxy.searchParams.get("expires"),
+      proxy.searchParams.get("signature"),
+      { secret: CAPABILITY_SECRET },
+    ).href,
+    rotated,
+  );
+});
+
+test("the trusted resolver hop is authenticated and revalidates returned URLs", async () => {
+  const token = "S".repeat(64);
+  const rotated = `https://moon.peakstorm.top/r2/cdn1/${token}/playlist.m3u8`;
+  const calls = [];
+  const result = await resolveVideasyRemotely(media, {
+    resolverUrl: "https://resolver.example/v1/resolve",
+    resolverSecret: "test-only-resolver-secret-with-32-bytes",
+    fetchImpl: async (input, options) => {
+      calls.push({ input: String(input), options });
+      return new Response(JSON.stringify({
+        variants: [
+          { url: rotated, quality: "1080p" },
+          { url: "https://attacker.example/video.m3u8", quality: "2160p" },
+        ],
+        subtitles: [],
+        latencyMs: 123,
+      }));
+    },
+  });
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].input, "https://resolver.example/v1/resolve");
+  assert.equal(calls[0].options.method, "POST");
+  assert.equal(
+    calls[0].options.headers.authorization,
+    "Bearer test-only-resolver-secret-with-32-bytes",
+  );
+  assert.equal(result.variants.length, 1);
+  assert.equal(result.variants[0].url, rotated);
+  assert.equal(result.latencyMs, 123);
+});
+
+test("the trusted resolver hop fails closed without a strong secret", async () => {
+  await assert.rejects(
+    resolveVideasyRemotely(media, {
+      resolverUrl: "https://resolver.example/v1/resolve",
+      resolverSecret: "short",
+      fetchImpl: async () => {
+        throw new Error("fetch should not run");
+      },
+    }),
+    (error) =>
+      error instanceof Error &&
+      error.name === "VideasyError" &&
+      error.details?.stage === "resolver-config",
   );
 });

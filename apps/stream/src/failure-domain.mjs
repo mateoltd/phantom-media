@@ -4,7 +4,7 @@ const KNOWN_HEALTH_SEEDS = Object.freeze({
   b5: "resolver:speedracelight|provider:videasy",
   f8: "media:rotating-ncw|token-shape:auth-key-expire",
   n1: "vidsrc:vsembed:cloudorchestranova:verdantvagary",
-  u9: "vidfast:bootstrap:enc-dec:ironwallnet:segment-cdn",
+  u9: "cinesrc:index:challenge:media-origin",
 });
 
 const KNOWN_CAPACITY_SEEDS = Object.freeze({
@@ -13,7 +13,7 @@ const KNOWN_CAPACITY_SEEDS = Object.freeze({
   b5: ["resolver:speedracelight|provider:videasy"],
   f8: ["media:rotating-ncw|token-shape:auth-key-expire"],
   n1: ["vidsrc:vsembed:cloudorchestranova:verdantvagary"],
-  u9: ["vidfast:bootstrap:enc-dec:ironwallnet:segment-cdn"],
+  u9: ["cinesrc:index:challenge:media-origin"],
   vf: ["resolver:cinemaos|adapter:vf", "platform:vidfast-family"],
   vc: ["resolver:cinemaos|adapter:vc", "platform:vidfast-family"],
 });

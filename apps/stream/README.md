@@ -112,38 +112,57 @@ may work better for a particular title or region.
 
 Only Source 28 and Source 04 are active during the focused reliability trial;
 the old resolvers remain checked in but cannot be selected or raced. Source 28
-follows Vidfast's public, unauthenticated bootstrap and stream endpoints.
+follows CineSrc's public player bootstrap without embedding its player. It
+discovers the current Next action ids, challenge runtimes, and ranked provider
+index from the live application bundle on every cold resolution. Provider ids
+and media origins are data from that index, not an allowlist in Phantom. A
+decoded endpoint is cached only after it returns a valid HLS manifest with
+the source's current player headers; failed providers fall through in the
+index's advertised order.
 Source 04 follows Videasy's public seed contract and asks only its Breach and
 Yoru server families, decrypting the public response into native HLS instead of
 loading Videasy's player. Breach advertises its English alternate-audio track;
 Yoru remains an unverified-audio fallback.
 
-Vidfast's internal server list is treated as fallback capacity inside one
-source. Videasy's Breach worker has its own failure fingerprint, while Yoru
-shares Vidfast's Ironwall failure domain so those duplicate routes are not
-counted as independent capacity.
-
-The final CDN requires the public Vidfast Origin/Referer contract, so native
-playback uses `/api/sources/vidfast/proxy`. That relay accepts exact media
-hosts plus Vidfast's tightly constrained opaque segment-path shape on its
-rotating `.site` hosts, refuses redirects and DRM key formats, forwards byte
-ranges, and rewrites every HLS child URI back through itself. It is a media
-relay, not an embed and not a general-purpose URL proxy.
+CineSrc's provider index is fallback capacity inside one source and therefore
+shares one failure fingerprint. Source 28 mints a short-lived capability for
+the exact media root returned by the index, keeps every same-origin HLS child
+behind another signed capability, and preserves CineSrc's player headers across
+the full playlist chain. Manifest detection reads the HLS signature rather than
+trusting file extensions because child playlists may be disguised as images.
+The browser cannot select a target or delegate a manifest to another origin, so
+rotating hostnames do not turn the compatibility path into an open relay.
 
 Videasy's Breach worker also requires its public player Origin/Referer contract.
 The compatibility relay accepts only that exact worker hostname and its signed
 `payload`, `headers` and optional `type=m3u8` query shape. It rewrites child
 audio, quality and segment requests through the same constraint and briefly
 caches successful manifests so probing and attachment do not duplicate the
-slowest public request. Yoru now enforces the same public player headers, so
-its exact `moon.ironwallnet.net/vd/...` manifest paths and matching rotating
-`.site` segment paths use that relay too. Direct 1080p, 720p and 480p Yoru
-renditions are retained ahead of its slower adaptive master when advertised.
+slowest public request. Yoru now enforces the same public player headers. Its
+legacy paths remain explicitly allowlisted; newly discovered `moon.*` CDN
+contracts use short-lived HMAC capabilities bound to the exact media URL and
+its constrained HLS path. That lets the upstream rotate CDN hostnames and path
+families without a code change, while requests that did not come from the
+trusted resolver still cannot turn the relay into a general-purpose proxy.
+Set `SOURCE_PROXY_SECRET` to at least 32 random bytes in every deployment.
+Direct 1080p, 720p and 480p Yoru renditions are retained ahead of its slower
+adaptive master when advertised.
 
-Vidfast orders concurrently working internal servers by observed extraction
-latency, warms the preferred manifest, and reuses that manifest briefly during
-probe and attachment. Automatic playback recovery bypasses provider result
-caches so rotated signed routes are extracted again.
+When Videasy rate-limits Cloudflare Worker egress, `VIDEASY_RESOLVER_URL` can
+name a temporary trusted server-side resolver hop. Authenticate that endpoint
+with the `VIDEASY_RESOLVER_SECRET` deployment secret. The hop returns only
+validated resolution data; the Cloudflare Worker still mints the exact-URL
+media capability and remains the only video relay.
+
+If the provider also blocks Cloudflare on the final media hosts,
+`VIDEASY_RELAY_URL` can point at the same authenticated hop's `/v1/fetch`
+endpoint. Cloudflare validates each exact signed capability first; the VPS then
+streams only the constrained Videasy URL and never accepts a browser-selected
+target.
+
+CineSrc keeps successful results for only fifteen seconds. Automatic playback
+recovery bypasses that cache so a rotated provider index, challenge runtime, or
+signed media route is discovered again.
 
 ## Routing
 
@@ -206,9 +225,8 @@ addon (`opensubtitles-v3.strem.io`, keyed on IMDb ids). OpenSubtitles' own REST
 API is not usable here because a free account allows five to twenty downloads a *day*.
 
 Catalogue subtitles are fetched through `/api/subtitles/file`, which converts
-SubRip to WebVTT, decodes legacy encodings, and serves same-origin. Vidfast's
-WebVTT tracks use its restricted media relay because they live on the same
-header-protected CDN as the video. Same-origin delivery matters: a `<track>` on
+SubRip to WebVTT, decodes legacy encodings, and serves same-origin. Same-origin
+delivery matters: a `<track>` on
 a `crossOrigin="anonymous"` video fails
 silently against any host without CORS headers, which is most of them, and
 silently is the worst way for a subtitle to fail. The route is restricted to
