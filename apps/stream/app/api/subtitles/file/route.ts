@@ -52,7 +52,9 @@ export async function GET(request: NextRequest) {
   try {
     const response = await fetch(target, {
       headers: { accept: "text/vtt, text/plain, */*" },
-      redirect: "error",
+      // Workers supports manual/follow only. Non-2xx responses below also
+      // reject redirects, so a subtitle URL cannot redirect outside the allowlist.
+      redirect: "manual",
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     if (!response.ok) {
@@ -78,10 +80,11 @@ export async function GET(request: NextRequest) {
         "cache-control": CACHE_CONTROL,
       },
     });
-  } catch {
+  } catch (error) {
+    const timedOut = error instanceof Error && error.name === "TimeoutError";
     return NextResponse.json(
-      { error: "The subtitle host did not answer" },
-      { status: 504 },
+      { error: timedOut ? "The subtitle host did not answer" : "The subtitle download failed" },
+      { status: timedOut ? 504 : 502 },
     );
   }
 }
