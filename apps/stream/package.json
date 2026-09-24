@@ -19,7 +19,7 @@
   "dependencies": {
     "@phantom/theme": "workspace:*",
     "@phantom/ui": "workspace:*",
-    "@tabler/icons-react": "catalog:",
+    "lucide-react": "catalog:",
     "dashjs": "^5.2.0",
     "hls.js": "^1.6.13",
     "next": "catalog:",

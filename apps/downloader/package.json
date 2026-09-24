@@ -17,7 +17,7 @@
   "dependencies": {
     "@phantom/theme": "workspace:*",
     "@phantom/ui": "workspace:*",
-    "@tabler/icons-react": "catalog:",
+    "lucide-react": "catalog:",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",

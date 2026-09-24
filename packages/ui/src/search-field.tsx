@@ -10,11 +10,13 @@ import {
 } from "react";
 import { Artwork } from "./artwork";
 import {
-  IconArrowUpRight,
-  IconClipboard,
-  IconSearch,
-  IconX,
-} from "@tabler/icons-react";
+  ArrowUpRight,
+  Clipboard,
+  Search,
+  X,
+} from "lucide-react";
+
+type Thumbnail = "video" | "poster" | "avatar" | "none";
 
 export interface SearchSuggestion {
   id: string;
@@ -23,6 +25,8 @@ export interface SearchSuggestion {
   meta?: string;
   imageUrl?: string | null;
   badge?: string;
+  thumbnail?: Thumbnail;
+  status?: "live" | "offline";
 }
 
 export interface SearchFieldLabels {
@@ -36,6 +40,7 @@ export interface SearchFieldLabels {
 }
 
 export interface SearchFieldProps {
+  inputId?: string;
   value: string;
   onValueChange: (value: string) => void;
   onSubmit: (value: string) => void;
@@ -48,7 +53,7 @@ export interface SearchFieldProps {
   onSuggestionsOpenChange?: (open: boolean) => void;
   onSuggestionSelect?: (suggestion: SearchSuggestion) => void;
   onSuggestionPrefetch?: (suggestion: SearchSuggestion) => void;
-  thumbnail?: "video" | "poster" | "none";
+  thumbnail?: Thumbnail;
   size?: "default" | "compact";
   className?: string;
 }
@@ -79,6 +84,7 @@ const SIZES = {
 } as const;
 
 export function SearchField({
+  inputId,
   value,
   onValueChange,
   onSubmit,
@@ -96,6 +102,7 @@ export function SearchField({
   className = "",
 }: SearchFieldProps) {
   const metrics = SIZES[size];
+  const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
@@ -108,11 +115,25 @@ export function SearchField({
   const open = suggestionsOpen && (suggestionsLoading || suggestions.length > 0 || empty);
 
   useEffect(() => {
-    if (!activeId) return;
-    listRef.current
-      ?.querySelector(`[data-suggestion="${CSS.escape(activeId)}"]`)
-      ?.scrollIntoView({ block: "nearest" });
-  }, [activeId]);
+    const list = listRef.current;
+    if (!open || !activeId || !list) return;
+    const option = list.querySelector(`[data-suggestion="${CSS.escape(activeId)}"]`);
+    if (!option) return;
+    const bounds = list.getBoundingClientRect();
+    const row = option.getBoundingClientRect();
+    // Scroll only the results, never the page behind the sticky header.
+    if (row.top < bounds.top) list.scrollTop += row.top - bounds.top;
+    else if (row.bottom > bounds.bottom) list.scrollTop += row.bottom - bounds.bottom;
+  }, [activeId, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const dismiss = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) onSuggestionsOpenChange?.(false);
+    };
+    document.addEventListener("pointerdown", dismiss);
+    return () => document.removeEventListener("pointerdown", dismiss);
+  }, [open, onSuggestionsOpenChange]);
 
   const setOpen = (next: boolean) => onSuggestionsOpenChange?.(next);
 
@@ -163,6 +184,7 @@ export function SearchField({
       if (event.key === "ArrowDown") {
         event.preventDefault();
         setOpen(true);
+        moveHighlight(1);
       }
       return;
     }
@@ -188,6 +210,8 @@ export function SearchField({
         onValueChange(text.trim());
         setOpen(true);
       }
+    } catch {
+      // Clipboard permissions may be unavailable; ordinary paste still works.
     } finally {
       inputRef.current?.focus();
     }
@@ -203,29 +227,25 @@ export function SearchField({
     activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined;
 
   return (
-    <div className={`relative ${className}`}>
+    <div ref={rootRef} className={`relative ${className}`} onBlur={(event) => {
+      if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+    }}>
       <form
         onSubmit={handleSubmit}
-        onFocus={() => {
-          if (suggestions.length > 0) setOpen(true);
-        }}
-        onBlur={(event) => {
-          if (!event.currentTarget.parentElement?.contains(event.relatedTarget)) {
-            setOpen(false);
-          }
-        }}
         className={`search-pill flex items-center gap-1 ${metrics.form}`}
       >
-        <IconSearch
+        <Search
           size={metrics.icon}
-          stroke={2}
+          strokeWidth={2}
           className="shrink-0 text-text-secondary"
         />
         <input
+          id={inputId}
           ref={inputRef}
           type="text"
           value={value}
-          onChange={(event) => onValueChange(event.target.value)}
+          onFocus={() => setOpen(true)}
+          onChange={(event) => { setActiveId(null); onValueChange(event.target.value); }}
           onKeyDown={handleKeyDown}
           placeholder={labels.placeholder}
           disabled={loading}
@@ -235,7 +255,7 @@ export function SearchField({
           role="combobox"
           aria-expanded={open}
           aria-controls={listboxId}
-          aria-activedescendant={activeDescendant}
+          aria-activedescendant={open ? activeDescendant : undefined}
           aria-autocomplete="list"
           autoComplete="off"
           className={`min-w-0 flex-1 bg-transparent font-medium text-text outline-none placeholder:font-normal placeholder:text-text-tertiary disabled:opacity-50 ${metrics.input}`}
@@ -248,7 +268,7 @@ export function SearchField({
             className={`flex shrink-0 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-bg hover:text-text ${metrics.accessory}`}
             aria-label="Clear"
           >
-            <IconX size={metrics.accessoryIcon} stroke={2.2} />
+            <X size={metrics.accessoryIcon} strokeWidth={2.2} />
           </button>
         )}
 
@@ -260,7 +280,7 @@ export function SearchField({
             aria-label={labels.paste}
             title={labels.paste}
           >
-            <IconClipboard size={metrics.pasteIcon} stroke={1.9} />
+            <Clipboard size={metrics.pasteIcon} strokeWidth={1.9} />
           </button>
         )}
 
@@ -276,7 +296,7 @@ export function SearchField({
               className={`animate-spin rounded-full border-2 border-white/35 border-t-white ${metrics.spinner}`}
             />
           ) : (
-            <IconArrowUpRight size={metrics.submitIcon} stroke={2.4} />
+            <ArrowUpRight size={metrics.submitIcon} strokeWidth={2.4} />
           )}
         </button>
       </form>
@@ -288,7 +308,7 @@ export function SearchField({
             id={listboxId}
             role="listbox"
             aria-label={labels.suggestions}
-            className="inset-scroll max-h-[min(52svh,336px)] p-2.5"
+            className="max-h-[min(60dvh,420px)] overflow-y-auto overscroll-contain p-2.5"
           >
             {suggestionsLoading && suggestions.length === 0 && (
               <div className="flex h-12 items-center gap-3 px-3 text-xs text-text-tertiary">
@@ -303,64 +323,67 @@ export function SearchField({
               </div>
             )}
 
-            {suggestions.map((suggestion, index) => (
-              <button
-                type="button"
-                role="option"
-                id={`${listboxId}-option-${index}`}
-                data-suggestion={suggestion.id}
-                aria-selected={index === activeIndex}
-                key={suggestion.id}
-                onMouseDown={(event) => event.preventDefault()}
-                onPointerEnter={() => onSuggestionPrefetch?.(suggestion)}
-                onPointerDown={() => onSuggestionPrefetch?.(suggestion)}
-                onFocus={() => onSuggestionPrefetch?.(suggestion)}
-                onClick={() => choose(suggestion)}
-                className={`flex w-full items-center gap-3 rounded-2xl px-2 py-1.5 text-left transition-colors ${
-                  index === activeIndex ? "bg-bg" : "hover:bg-bg"
-                }`}
-              >
-                {thumbnail !== "none" && (
-                  <span
-                    className={`relative shrink-0 overflow-hidden rounded-lg bg-border ${
-                      thumbnail === "poster" ? "h-12 w-8" : "h-11 w-[76px]"
-                    }`}
-                  >
-                    <Artwork
-                      src={suggestion.imageUrl}
-                      sizes={thumbnail === "poster" ? "32px" : "76px"}
-                      fallback={
-                        <span className="flex h-full w-full items-center justify-center text-[13px] font-extrabold text-text-tertiary">
-                          {suggestion.title.slice(0, 1)}
+            {suggestions.map((suggestion, index) => {
+              const imageType = suggestion.thumbnail ?? thumbnail;
+              return (
+                <button
+                  type="button"
+                  role="option"
+                  id={`${listboxId}-option-${index}`}
+                  data-suggestion={suggestion.id}
+                  aria-selected={index === activeIndex}
+                  key={suggestion.id}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onPointerEnter={() => onSuggestionPrefetch?.(suggestion)}
+                  onPointerDown={() => onSuggestionPrefetch?.(suggestion)}
+                  onFocus={() => onSuggestionPrefetch?.(suggestion)}
+                  onClick={() => choose(suggestion)}
+                  className={`flex w-full items-center gap-3 rounded-2xl px-2 py-1.5 text-left transition-colors ${
+                    index === activeIndex ? "bg-bg" : "hover:bg-bg"
+                  }`}
+                >
+                  {imageType !== "none" && (
+                    <span
+                      className={`relative shrink-0 overflow-hidden bg-border ${
+                        imageType === "avatar" ? "h-11 w-11 rounded-full" : imageType === "poster" ? "h-12 w-8 rounded-lg" : "h-11 w-[76px] rounded-lg"
+                      }`}
+                    >
+                      <Artwork
+                        src={suggestion.imageUrl}
+                        sizes={imageType === "avatar" ? "44px" : imageType === "poster" ? "32px" : "76px"}
+                        fallback={
+                          <span className="flex h-full w-full items-center justify-center text-[13px] font-extrabold text-text-tertiary">
+                            {suggestion.title.slice(0, 1)}
+                          </span>
+                        }
+                      />
+                      {suggestion.badge && (
+                        <span className="absolute bottom-1 right-1 rounded bg-black/75 px-1 py-0.5 font-mono text-[8px] text-white">
+                          {suggestion.badge}
                         </span>
-                      }
-                    />
-                    {suggestion.badge && (
-                      <span className="absolute bottom-1 right-1 rounded bg-black/75 px-1 py-0.5 font-mono text-[8px] text-white">
-                        {suggestion.badge}
+                      )}
+                    </span>
+                  )}
+
+                  <span className="min-w-0 flex-1">
+                    <span className="line-clamp-1 text-[13px] font-bold text-text">
+                      {suggestion.title}
+                    </span>
+                    {suggestion.subtitle && (
+                      <span className="mt-0.5 block truncate text-[11px] text-text-tertiary">
+                        {suggestion.subtitle}
                       </span>
                     )}
                   </span>
-                )}
 
-                <span className="min-w-0 flex-1">
-                  <span className="line-clamp-1 text-[13px] font-bold text-text">
-                    {suggestion.title}
-                  </span>
-                  {suggestion.subtitle && (
-                    <span className="mt-0.5 block truncate text-[11px] text-text-tertiary">
-                      {suggestion.subtitle}
+                  {suggestion.meta && (
+                    <span className={`shrink-0 rounded-full px-2 py-1 text-[11px] ${suggestion.status === "live" ? "bg-red-500/15 text-red-300" : "text-text-tertiary"}`}>
+                      {suggestion.meta}
                     </span>
                   )}
-                </span>
-
-                {suggestion.meta && (
-                  <span className="shrink-0 pr-1 font-mono text-[11px] text-text-tertiary">
-                    {suggestion.meta}
-                  </span>
-                )}
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

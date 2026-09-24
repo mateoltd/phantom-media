@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import {
-  IconAlertTriangle,
-  IconArrowLeft,
-  IconDownload,
-  IconX,
-} from "@tabler/icons-react";
+  TriangleAlert,
+  ArrowLeft,
+  Download,
+  X,
+} from "lucide-react";
 import { Button, IconButton, Modal } from "@phantom/ui";
 import type { DownloadOption, VideoInfo } from "@/lib/types";
 import {
@@ -135,7 +135,7 @@ export function DownloadOptionsDialog({
           onClick={onClose}
           className="-mr-1 -mt-1"
         >
-          <IconX size={18} stroke={2} />
+          <X size={18} strokeWidth={2} />
         </IconButton>
       </div>
 
@@ -217,7 +217,7 @@ export function DownloadOptionsDialog({
                 onClick={() => backToFormats(job.id)}
                 className="mr-auto gap-1.5 pl-2 pr-3"
               >
-                <IconArrowLeft size={16} stroke={2.2} />
+                <ArrowLeft size={16} strokeWidth={2.2} />
                 {t.format.back}
               </Button>
             )}
@@ -242,7 +242,7 @@ export function DownloadOptionsDialog({
               onClick={startDownload}
               disabled={!selectedOption || loading || DOWNLOADS_RESTRICTED}
             >
-              <IconDownload size={16} stroke={2.1} />
+              <Download size={16} strokeWidth={2.1} />
               {t.format.prepare}
             </Button>
           </>
@@ -341,7 +341,7 @@ function MessageState({ title, body }: { title: string; body: string }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center">
       <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-error/10 text-error">
-        <IconAlertTriangle size={20} stroke={2} />
+        <TriangleAlert size={20} strokeWidth={2} />
       </span>
       <h3 className="mt-4 text-sm font-extrabold text-text">{title}</h3>
       <p className="mt-2 max-w-sm text-xs leading-5 text-text-secondary">

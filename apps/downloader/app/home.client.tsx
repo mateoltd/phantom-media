@@ -3,12 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  IconBolt,
-  IconCircleCheckFilled,
-  IconDownload,
-  IconLink,
-  IconArrowRight,
-} from "@tabler/icons-react";
+  Zap,
+  CircleCheck,
+  Download,
+  Link as LinkIcon,
+  ArrowRight,
+} from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { useI18n } from "@/components/locale-provider";
 import { Logo } from "@phantom/ui";
@@ -82,25 +82,25 @@ function Hero() {
             <div className="workflow-grid relative z-10 grid items-stretch gap-0 sm:grid-cols-[1fr_auto_1fr_auto_1fr]">
               <WorkflowStep
                 index="1"
-                icon={<IconLink size={40} stroke={2.35} />}
+                icon={<LinkIcon size={40} strokeWidth={2.35} />}
                 title={t.home.desktopSteps[0]}
                 tone="neutral"
               />
               <span className="poster-arrow" aria-hidden="true">
-                <IconArrowRight size={20} stroke={2.4} />
+                <ArrowRight size={20} strokeWidth={2.4} />
               </span>
               <WorkflowStep
                 index="2"
-                icon={<IconBolt size={44} fill="currentColor" stroke={1.4} />}
+                icon={<Zap size={44} fill="currentColor" strokeWidth={1.4} />}
                 title={t.home.desktopSteps[1]}
                 tone="active"
               />
               <span className="poster-arrow" aria-hidden="true">
-                <IconArrowRight size={20} stroke={2.4} />
+                <ArrowRight size={20} strokeWidth={2.4} />
               </span>
               <WorkflowStep
                 index="3"
-                icon={<IconDownload size={42} stroke={2.35} />}
+                icon={<Download size={42} strokeWidth={2.35} />}
                 title={t.home.desktopSteps[2]}
                 tone="complete"
               />
@@ -146,7 +146,7 @@ function WorkflowStep({
         </span>
       )}
       {tone === "complete" && (
-        <IconCircleCheckFilled size={35} className="mt-auto text-[#65ad4c]" />
+        <CircleCheck size={35} fill="currentColor" className="mt-auto text-[#65ad4c] [&_path]:stroke-white" />
       )}
       {tone === "neutral" && (
         <span className="mt-auto flex h-10 w-full items-center overflow-hidden rounded-xl border border-border bg-surface text-left">
@@ -154,7 +154,7 @@ function WorkflowStep({
             https://example.com/video
           </span>
           <span className="flex h-full w-10 shrink-0 items-center justify-center bg-phantom text-lg font-bold text-white">
-            <IconArrowRight size={18} stroke={2.4} />
+            <ArrowRight size={18} strokeWidth={2.4} />
           </span>
         </span>
       )}

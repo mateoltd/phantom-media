@@ -1,7 +1,5 @@
 "use client";
 
-import { MotionPresence } from "@/components/motion-presence";
-
 import {
   type ReactNode,
   type RefObject,
@@ -12,28 +10,21 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { Artwork } from "@phantom/ui";
+import { Artwork, MotionPresence, ScrubBar, StageChrome, StageControl, StageSettings, StageTransport } from "@phantom/ui";
+import type { SettingsSection, SignalStrength } from "@phantom/ui";
 import Link from "next/link";
 import {
-  IconArrowLeft,
-  IconBadgeCc,
-  IconChevronRight,
-  IconKeyboard,
-  IconLayoutList,
-  IconMaximize,
-  IconMinimize,
-  IconPictureInPicture,
-  IconPlayerTrackNext,
-  IconPlayerPause,
-  IconPlayerPlay,
-  IconRefresh,
-  IconRewindBackward10,
-  IconRewindForward10,
-  IconVolume,
-  IconVolume2,
-  IconVolumeOff,
-  IconX,
-} from "@tabler/icons-react";
+  ArrowLeft,
+  ClosedCaption,
+  ChevronRight,
+  Keyboard,
+  List,
+  PictureInPicture,
+  SkipForward,
+  Play,
+  RefreshCw,
+  X,
+} from "lucide-react";
 import { formatTimecode } from "@/lib/media";
 import {
   prefsOnServer,
@@ -45,12 +36,6 @@ import {
 } from "@/lib/player-prefs";
 import type { EpisodeSummary } from "@/lib/types";
 import type { RaceProgressModel } from "./race-progress";
-import { ScrubBar } from "./scrub-bar";
-import {
-  StageSettings,
-  type SettingsSection,
-  type SignalStrength,
-} from "./stage-settings";
 import { UpNext } from "./up-next";
 import { useCaptions } from "./use-captions";
 import type { Chapter } from "./use-chapters";
@@ -796,12 +781,6 @@ export function VideoStage({
   ]);
 
   const showPoster = Boolean(poster) && status !== "ready";
-  const VolumeIcon =
-    state.muted || state.volume === 0
-      ? IconVolumeOff
-      : state.volume < 0.5
-        ? IconVolume2
-        : IconVolume;
   const languageSections = settingsSections.filter((section) =>
     ["language", "audio", "subtitles", "text"].includes(section.id),
   );
@@ -868,11 +847,11 @@ export function VideoStage({
             aria-label="Leave fullscreen"
             className="stage-control"
           >
-            <IconArrowLeft size={20} stroke={1.5} />
+            <ArrowLeft size={20} strokeWidth={1.5} />
           </button>
         ) : (
           <Link href="/" aria-label="Back to browse" className="stage-control">
-            <IconArrowLeft size={20} stroke={1.5} />
+            <ArrowLeft size={20} strokeWidth={1.5} />
           </Link>
         )}
         <div className="min-w-0 flex-1">
@@ -896,9 +875,9 @@ export function VideoStage({
             className="stage-play"
           >
             {status === "error" ? (
-              <IconRefresh size={26} stroke={2.2} />
+              <RefreshCw size={26} strokeWidth={2.2} />
             ) : (
-              <IconPlayerPlay size={24} stroke={1.3} />
+              <Play size={24} strokeWidth={1.3} />
             )}
             {requestLabel}
           </button>
@@ -926,27 +905,12 @@ export function VideoStage({
       )}
 
       {status === "ready" && !state.waiting && (
-        <div className="stage-transport">
-          <div className="stage-transport-controls">
-            <StageButton label="Back 10 seconds" onClick={() => seekBy(-10)}>
-              <IconRewindBackward10 size={30} stroke={1.6} />
-            </StageButton>
-            <StageButton
-              label={state.playing ? "Pause" : "Play"}
-              className="stage-transport-play"
-              onClick={togglePlay}
-            >
-              {state.playing ? (
-                <IconPlayerPause size={46} stroke={1.6} />
-              ) : (
-                <IconPlayerPlay size={46} stroke={1.6} />
-              )}
-            </StageButton>
-            <StageButton label="Forward 10 seconds" onClick={() => seekBy(10)}>
-              <IconRewindForward10 size={30} stroke={1.6} />
-            </StageButton>
-          </div>
-        </div>
+        <StageTransport
+          playing={state.playing}
+          onTogglePlay={togglePlay}
+          onSeekBack={() => seekBy(-10)}
+          onSeekForward={() => seekBy(10)}
+        />
       )}
 
       {flash && (
@@ -976,7 +940,7 @@ export function VideoStage({
             aria-label="Dismiss"
             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-stage-muted transition-colors hover:bg-white/10 hover:text-stage-text"
           >
-            <IconX size={13} stroke={2.2} />
+            <X size={13} strokeWidth={2.2} />
           </button>
         </div>
       )}
@@ -992,7 +956,7 @@ export function VideoStage({
           }}
         >
           Skip {skippable?.label ?? ""}
-          <IconChevronRight size={15} stroke={2.4} />
+          <ChevronRight size={15} strokeWidth={2.4} />
         </button>
       )}
 
@@ -1028,78 +992,45 @@ export function VideoStage({
         </div>
       )}
 
-      <div className="stage-chrome">
-        {status === "ready" && (
+      <StageChrome
+        ready={status === "ready"}
+        title={title}
+        playing={state.playing}
+        muted={state.muted}
+        volume={state.volume}
+        fullscreen={state.fullscreen}
+        onTogglePlay={togglePlay}
+        onToggleMute={toggleMute}
+        onVolumeChange={setVolume}
+        onToggleFullscreen={toggleFullscreen}
+        timeline={status === "ready" ? (
           <ScrubBar
             subscribe={subscribeTime}
             onSeek={seekTo}
             onScrubbingChange={(held) => holdAwake(held, "scrubbing")}
           />
-        )}
-
-        <div className="stage-controls">
-          <div className="stage-controls-left">
-            {status === "ready" ? (
-              <>
-                <StageButton
-                  label={state.playing ? "Pause" : "Play"}
-                  onClick={togglePlay}
-                  className="stage-toolbar-play"
-                >
-                  {state.playing ? (
-                    <IconPlayerPause size={22} stroke={1.5} />
-                  ) : (
-                    <IconPlayerPlay size={22} stroke={1.5} />
-                  )}
-                </StageButton>
-                {onNextEpisode && (
-                  <StageButton label="Next episode" onClick={onNextEpisode}>
-                    <IconPlayerTrackNext size={22} stroke={1.5} />
-                  </StageButton>
-                )}
-                <div className="stage-volume-group">
-                  <StageButton
-                    label={state.muted ? "Unmute" : "Mute"}
-                    onClick={toggleMute}
-                  >
-                    <VolumeIcon size={22} stroke={1.5} />
-                  </StageButton>
-                  <input
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.05}
-                    value={state.muted ? 0 : state.volume}
-                    aria-label="Volume"
-                    onChange={(event) => setVolume(Number(event.target.value))}
-                    className="stage-volume"
-                    style={{
-                      ["--level" as string]: `${(state.muted ? 0 : state.volume) * 100}%`,
-                    }}
-                  />
-                </div>
-
-                <Timecode subscribe={subscribeTime} />
-              </>
-            ) : (
-              <span className="stage-ready-label">{title}</span>
-            )}
-          </div>
-
-          <div className="stage-controls-right">
+        ) : undefined}
+        timecode={<Timecode subscribe={subscribeTime} />}
+        leftExtra={onNextEpisode ? (
+          <StageControl label="Next episode" onClick={onNextEpisode}>
+            <SkipForward size={22} strokeWidth={1.5} />
+          </StageControl>
+        ) : undefined}
+        rightExtra={
+          <>
             {episodePanel && (
-              <StageButton
+              <StageControl
                 label="Episodes"
                 onClick={toggleEpisodes}
                 expanded={episodesOpen}
                 className={episodesOpen ? "stage-control-selected" : ""}
               >
-                <IconLayoutList size={22} stroke={1.5} />
-              </StageButton>
+                <List size={22} strokeWidth={1.5} />
+              </StageControl>
             )}
             <StageSettings
               label="Audio and subtitles"
-              icon={<IconBadgeCc size={22} stroke={1.5} />}
+              icon={<ClosedCaption size={22} strokeWidth={1.5} />}
               sections={languageSections}
               open={settingsPanel === "language"}
               onOpenChange={(open) => changeSettingsPanel("language", open)}
@@ -1111,29 +1042,19 @@ export function VideoStage({
               actions={[
                 ...(status === "ready" && canPictureInPicture ? [{
                   label: "Picture in picture",
-                  icon: <IconPictureInPicture size={20} stroke={1.5} />,
+                  icon: <PictureInPicture size={20} strokeWidth={1.5} />,
                   onClick: togglePictureInPicture,
                 }] : []),
                 ...(!coarsePointer ? [{
                   label: "Keyboard shortcuts",
-                  icon: <IconKeyboard size={20} stroke={1.5} />,
+                  icon: <Keyboard size={20} strokeWidth={1.5} />,
                   onClick: () => setShortcutsOpen(true),
                 }] : []),
               ]}
             />
-            <StageButton
-              label={state.fullscreen ? "Exit fullscreen" : "Fullscreen"}
-              onClick={toggleFullscreen}
-            >
-              {state.fullscreen ? (
-                <IconMinimize size={22} stroke={1.5} />
-              ) : (
-                <IconMaximize size={22} stroke={1.5} />
-              )}
-            </StageButton>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
     </div>
   );
 }
@@ -1169,32 +1090,5 @@ function Timecode({
         <span ref={totalRef}>0:00</span>
       </span>
     </p>
-  );
-}
-
-function StageButton({
-  label,
-  onClick,
-  className = "",
-  expanded,
-  children,
-}: {
-  label: string;
-  onClick: () => void;
-  className?: string;
-  expanded?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-      aria-expanded={expanded}
-      className={`stage-control ${className}`}
-    >
-      {children}
-    </button>
   );
 }

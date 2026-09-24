@@ -8,11 +8,11 @@ import {
   useSyncExternalStore,
 } from "react";
 import {
-  IconCheck,
-  IconChevronDown,
-  IconPlayerPlay,
-  IconX,
-} from "@tabler/icons-react";
+  Check,
+  ChevronDown,
+  Play,
+  X,
+} from "lucide-react";
 import { Artwork } from "@phantom/ui";
 import {
   parseProgress,
@@ -117,9 +117,9 @@ export function EpisodePanel({
               className="stage-panel-season"
             >
               <span className="truncate">{seasonLabel(view)}</span>
-              <IconChevronDown
+              <ChevronDown
                 size={14}
-                stroke={2.6}
+                strokeWidth={2.6}
                 className={`shrink-0 text-stage-muted transition-transform ${
                   pickingSeason ? "rotate-180" : ""
                 }`}
@@ -141,7 +141,7 @@ export function EpisodePanel({
             aria-label="Close episodes"
             className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-stage-muted transition-colors hover:bg-white/10 hover:text-stage-text"
           >
-            <IconX size={15} stroke={2.2} />
+            <X size={15} strokeWidth={2.2} />
           </button>
         </header>
 
@@ -172,9 +172,9 @@ export function EpisodePanel({
                   >
                     <span className="flex h-4 w-4 shrink-0 items-center justify-center">
                       {showing && (
-                        <IconCheck
+                        <Check
                           size={14}
-                          stroke={2.6}
+                          strokeWidth={2.6}
                           className="text-phantom"
                         />
                       )}
@@ -230,7 +230,7 @@ export function EpisodePanel({
                         }`}
                       >
                         <span className="flex h-6 w-6 items-center justify-center text-white">
-                          <IconPlayerPlay size={10} />
+                          <Play size={10} />
                         </span>
                       </span>
                       {watched > 0 && (

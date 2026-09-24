@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useSyncExternalStore } from "react";
-import { IconPlayerPlay } from "@tabler/icons-react";
+import { Play } from "lucide-react";
 import { Artwork } from "@phantom/ui";
 import {
   parseProgress,
@@ -145,7 +145,7 @@ export function EpisodeBrowser({
                     }`}
                   >
                     <span className="flex h-9 w-9 items-center justify-center text-white">
-                      <IconPlayerPlay size={23} stroke={1.5} />
+                      <Play size={23} strokeWidth={1.5} />
                     </span>
                   </span>
                   {watched > 0 && (

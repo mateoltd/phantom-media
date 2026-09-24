@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { IconDownload } from "@tabler/icons-react";
+import { Download } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { DownloadOptionsDialog } from "@/components/download-options-dialog";
 import { useI18n } from "@/components/locale-provider";
@@ -95,7 +95,7 @@ function WatchPageContent() {
                 onClick={() => setDialogOpen(true)}
                 className="mt-6 flex h-11 items-center gap-2 rounded-xl bg-phantom px-5 text-[13px] font-bold text-white transition-colors hover:bg-phantom-dark"
               >
-                <IconDownload size={16} stroke={2.1} />
+                <Download size={16} strokeWidth={2.1} />
                 {t.watch.download}
               </button>
             </div>

@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { IconCheck, IconChevronDown } from "@tabler/icons-react";
+import { Check, ChevronDown } from "lucide-react";
 
 export interface StyledSelectOption {
   value: string;
@@ -203,7 +203,7 @@ export function StyledSelect({
                         : "border-border bg-surface"
                     }`}
                   >
-                    {selected && <IconCheck size={12} stroke={3} />}
+                    {selected && <Check size={12} strokeWidth={3} />}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px] font-bold">
@@ -273,7 +273,7 @@ export function StyledSelect({
             open ? "rotate-180" : ""
           }`}
         >
-          <IconChevronDown size={16} stroke={2} />
+          <ChevronDown size={16} strokeWidth={2} />
         </span>
       </button>
       {menu}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { IconInfoCircle, IconPlayerPlay } from "@tabler/icons-react";
+import { Info, Play } from "lucide-react";
 import { Artwork } from "@phantom/ui";
 import { TitleLogo } from "@/components/title-logo";
 import { TitleMeta } from "@/components/title-meta";
@@ -40,14 +40,14 @@ export function CinemaHero({ media }: { media: MediaResult }) {
               href={mediaHref(media)}
               className="cinema-button cinema-button-primary"
             >
-              <IconPlayerPlay size={20} stroke={1.5} />
+              <Play size={20} strokeWidth={1.5} />
               Watch now
             </Link>
             <Link
               href={`${mediaHref(media)}#about`}
               className="cinema-button backdrop-blur-sm"
             >
-              <IconInfoCircle size={17} stroke={2} />
+              <Info size={17} strokeWidth={2} />
               More info
             </Link>
             <WatchlistButton media={media} />

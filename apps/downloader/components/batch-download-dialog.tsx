@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { IconArrowLeft, IconCheck, IconDownload, IconX } from "@tabler/icons-react";
+import { ArrowLeft, Check, Download, X } from "lucide-react";
 import {
   Button,
   IconButton,
@@ -148,7 +148,7 @@ export function BatchDownloadDialog({
           onClick={onClose}
           className="-mr-1 -mt-1"
         >
-          <IconX size={17} stroke={2} />
+          <X size={17} strokeWidth={2} />
         </IconButton>
       </div>
 
@@ -222,7 +222,7 @@ export function BatchDownloadDialog({
                     : "border-border bg-surface"
                 }`}
               >
-                {allSelected && <IconCheck size={12} stroke={3} />}
+                {allSelected && <Check size={12} strokeWidth={3} />}
               </span>
               {allSelected ? t.batch.deselectAll : t.batch.selectAll}
             </button>
@@ -242,7 +242,7 @@ export function BatchDownloadDialog({
       <div className="flex items-center justify-between gap-3 border-t border-border/70 p-3 sm:px-5 sm:py-4">
         {settled ? (
           <Button variant="ghost" onClick={backToSelection} className="pl-2 pr-3">
-            <IconArrowLeft size={16} stroke={2.2} />
+            <ArrowLeft size={16} strokeWidth={2.2} />
             {t.batch.back}
           </Button>
         ) : (
@@ -263,7 +263,7 @@ export function BatchDownloadDialog({
                 {t.batch.cancel}
               </Button>
               <Button onClick={start} disabled={selectedVideos.length === 0}>
-                <IconDownload size={16} stroke={2.1} />
+                <Download size={16} strokeWidth={2.1} />
                 {t.batch.add}
               </Button>
             </>

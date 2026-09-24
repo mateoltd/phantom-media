@@ -6,9 +6,11 @@ type NativeButton = ButtonHTMLAttributes<HTMLButtonElement>;
 
 const VARIANTS = {
   primary:
-    "bg-phantom px-5 text-white hover:bg-phantom-dark disabled:cursor-not-allowed disabled:bg-transparent disabled:text-text-tertiary disabled:shadow-[inset_0_0_0_1px_var(--color-border)]",
+    "bg-phantom px-5 text-[var(--button-primary-text,#fff)] hover:bg-phantom-dark disabled:cursor-not-allowed disabled:bg-transparent disabled:text-text-tertiary disabled:shadow-[inset_0_0_0_1px_var(--color-border)]",
   ghost:
     "px-4 text-text-secondary hover:bg-surface-hover hover:text-text disabled:cursor-not-allowed disabled:opacity-50",
+  secondary:
+    "bg-surface-light px-4 text-text hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50",
   outline:
     "border border-border bg-surface px-4 text-text hover:border-text/30 disabled:cursor-not-allowed disabled:opacity-50",
 } as const;
@@ -28,6 +30,7 @@ export function Button({
   return (
     <button
       type={type}
+      data-phantom-button={variant}
       className={`flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl text-[13px] font-bold transition-colors ${VARIANTS[variant]} ${className}`}
       {...props}
     >

@@ -12,6 +12,7 @@
     "./base.css": "./src/base.css",
     "./primitives.css": "./src/primitives.css",
     "./player.css": "./src/player.css",
+    "./media.css": "./src/media.css",
     "./cinema.css": "./src/cinema.css"
   },
   "files": [

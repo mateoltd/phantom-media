@@ -5,7 +5,7 @@ packages:
 # Both apps ship the same React, Next and Tailwind majors on purpose: the shared
 # UI package is compiled by each app's bundler, so a split would break it.
 catalog:
-  "@tabler/icons-react": ^3.40.0
+  lucide-react: ^1.14.0
   next: ^16.1.7
   react: ^19.2.4
   react-dom: ^19.2.4

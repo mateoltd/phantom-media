@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  IconAlertTriangle,
-  IconArrowUpRight,
-  IconSearch,
-  IconStar,
-} from "@tabler/icons-react";
+  TriangleAlert,
+  ArrowUpRight,
+  Search,
+  Star,
+} from "lucide-react";
 import { Artwork } from "@phantom/ui";
 import { AppHeader } from "@/components/app-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -187,9 +187,9 @@ export default function SearchPageClient() {
                         {media.year && <span>{media.year}</span>}
                         {media.rating > 0 && (
                           <span className="search-result-rating">
-                            <IconStar
+                            <Star
                               size={14}
-                              stroke={1.6}
+                              strokeWidth={1.6}
                               aria-hidden="true"
                             />
                             <span
@@ -210,7 +210,7 @@ export default function SearchPageClient() {
                           {media.genres.slice(0, 2).join(", ")}
                         </span>
                         <span className="search-result-open" aria-hidden="true">
-                          <IconArrowUpRight size={19} stroke={1.7} />
+                          <ArrowUpRight size={19} strokeWidth={1.7} />
                         </span>
                       </span>
                     </span>
@@ -241,9 +241,9 @@ function EmptyState({
   return (
     <div className="search-empty">
       {error ? (
-        <IconAlertTriangle size={30} stroke={1.4} />
+        <TriangleAlert size={30} strokeWidth={1.4} />
       ) : (
-        <IconSearch size={30} stroke={1.4} />
+        <Search size={30} strokeWidth={1.4} />
       )}
       <h2>{title}</h2>
       <p>{body}</p>

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { IconCheck, IconDownload } from "@tabler/icons-react";
+import { Check, Download } from "lucide-react";
 import type { VideoInfo } from "@/lib/types";
 import { formatDuration } from "@/lib/types";
 import { useI18n } from "@/components/locale-provider";
@@ -46,7 +46,7 @@ export function VideoCard({
               : "border-border bg-surface"
           }`}
         >
-          {selected && <IconCheck size={12} stroke={3} />}
+          {selected && <Check size={12} strokeWidth={3} />}
         </span>
         <span className="relative h-12 w-[84px] shrink-0 overflow-hidden rounded-lg bg-[#ded9cf]">
           <Image
@@ -95,7 +95,7 @@ export function VideoCard({
           />
           <span className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/20" />
           <span className="absolute right-2.5 top-2.5 flex h-9 w-9 translate-y-1 items-center justify-center rounded-xl bg-phantom text-white opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
-            <IconDownload size={16} stroke={2.2} />
+            <Download size={16} strokeWidth={2.2} />
           </span>
           {video.duration > 0 && (
             <span className="absolute bottom-2 right-2 rounded-md bg-black/75 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-white">

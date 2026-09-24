@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { IconCheck, IconRefresh, IconTrash, IconX } from "@tabler/icons-react";
+import { Check, RefreshCw, Trash2, X } from "lucide-react";
 import { IconButton, ProgressRail } from "@phantom/ui";
 import type { DownloadItem as DownloadItemType } from "@/lib/types";
 import { containerDisplayName, formatFileSize } from "@/lib/types";
@@ -48,7 +48,7 @@ export function DownloadItemRow({
           />
           {completed && (
             <span className="absolute inset-0 flex items-center justify-center bg-success/85 text-white">
-              <IconCheck size={18} stroke={2.6} />
+              <Check size={18} strokeWidth={2.6} />
             </span>
           )}
         </div>
@@ -63,7 +63,7 @@ export function DownloadItemRow({
                 (item.status === "started" &&
                   item.phase !== "transferring")) && (
                 <RowAction label={t.queue.cancel} onClick={() => onCancel(item.id)}>
-                  <IconX size={14} stroke={2.2} />
+                  <X size={14} strokeWidth={2.2} />
                 </RowAction>
               )}
               {(failed || item.status === "canceled") && (
@@ -71,12 +71,12 @@ export function DownloadItemRow({
                   label={t.queue.restart}
                   onClick={() => onRestart(item.id)}
                 >
-                  <IconRefresh size={14} stroke={2.2} />
+                  <RefreshCw size={14} strokeWidth={2.2} />
                 </RowAction>
               )}
               {(completed || failed || item.status === "canceled") && (
                 <RowAction label={t.queue.remove} onClick={() => onRemove(item.id)}>
-                  <IconTrash size={14} stroke={2} />
+                  <Trash2 size={14} strokeWidth={2} />
                 </RowAction>
               )}
             </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { IconBookmark } from "@tabler/icons-react";
+import { Bookmark } from "lucide-react";
 import { PosterTile } from "@/components/poster-tile";
 import { useWatchlist } from "@/lib/watchlist";
 
@@ -22,7 +22,7 @@ export function WatchlistContent() {
         </>
       ) : !error ? (
         <div className="watchlist-empty">
-          <IconBookmark size={36} stroke={1.3} aria-hidden="true" />
+          <Bookmark size={36} strokeWidth={1.3} aria-hidden="true" />
           <h2 className="mt-5 text-xl font-semibold">Keep something for later</h2>
           <p className="mt-3 max-w-sm text-sm leading-6 text-text-secondary">Tap the bookmark on a film or series to save it here.</p>
           <Link href="/" className="cinema-button mt-6">Find something to watch</Link>

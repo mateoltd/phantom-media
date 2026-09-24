@@ -24,19 +24,6 @@
   55% { transform: scale(1.18); }
   100% { transform: scale(1); }
 }
-@keyframes stream-sheet-out {
-  to { opacity: 0; transform: translateY(8px) scale(0.985); }
-}
-.motion-presence { display: contents; }
-.motion-presence[data-closing="true"] :is(.stage-sheet, .stage-panel) {
-  animation: stream-sheet-out 160ms ease-in both;
-  pointer-events: none;
-}
-.motion-presence[data-closing="true"] .stage-sheet-backdrop {
-  animation: stream-fade 160ms ease-in reverse both;
-  pointer-events: none;
-}
-
 /* Keep the hero artwork and title immediately paintable for LCP. */
 @media (prefers-reduced-motion: no-preference) {
   .cinema-hero-copy > :not(:first-child) {
@@ -56,11 +43,11 @@
 
   .stage-sheet,
   .stage-panel,
-  .stream-header .animate-panel-in {
+  .media-header .animate-panel-in {
     transform-origin: bottom right;
     animation: stream-sheet 260ms var(--motion-ease) backwards;
   }
-  .stream-header .animate-panel-in { transform-origin: top center; }
+  .media-header .animate-panel-in { transform-origin: top center; }
   .stage-sheet-body { animation: stream-rise 200ms var(--motion-ease); }
   .stage-toast { animation: stream-rise 240ms var(--motion-ease); }
   .stage-shortcuts,
@@ -73,7 +60,7 @@
 }
 
 :is(.cinema-button, .watchlist-action, .poster-save, .rail-arrow,
-  .stream-header-watchlist, .stream-header-search-trigger, .stream-header-search-back,
+  .media-header-action, .media-header-search-trigger, .media-header-search-back,
   .search-pill button, .search-filters button, .season-rail button,
   .stage-control, .stage-play, .stage-sheet-row, .stage-sheet-step,
   .stage-panel-season, .stage-ep, .stage-upnext-card, .stage-upnext-cancel) {
@@ -86,7 +73,7 @@
 }
 
 :is(.cinema-button, .watchlist-action, .poster-save, .rail-arrow,
-  .stream-header-watchlist, .stream-header-search-trigger, .stream-header-search-back,
+  .media-header-action, .media-header-search-trigger, .media-header-search-back,
   .search-pill button, .search-filters button, .season-rail button,
   .stage-control, .stage-play, .stage-sheet-step, .stage-upnext-card):not(:disabled):active {
   transform: scale(0.96);
@@ -115,7 +102,7 @@
   transform: translateY(0) scale(1);
 }
 .poster-title,
-.stream-header-brand,
+.media-header-brand,
 .workspace-canvas footer a {
   transition: color var(--motion-quick) ease-out, opacity var(--motion-quick) ease-out;
 }
@@ -129,7 +116,7 @@
 .search-pill {
   transition: border-color var(--motion-control) ease-out, background-color var(--motion-control) ease-out;
 }
-.stream-header [role="option"] {
+.media-header [role="option"] {
   transition: background-color var(--motion-quick) ease-out, color var(--motion-quick) ease-out;
 }
 
@@ -168,10 +155,10 @@
 .stage-idle :is(.stage-upnext, .stage-skip) { translate: 0 8px; }
 
 @media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
-  .stream-header-search,
-  .stream-header-brand,
-  .stream-header-search-back,
-  .stream-header-search-trigger {
+  .media-header-search,
+  .media-header-brand,
+  .media-header-search-back,
+  .media-header-search-trigger {
     animation: stream-rise 220ms var(--motion-ease);
   }
   .stage-sheet,

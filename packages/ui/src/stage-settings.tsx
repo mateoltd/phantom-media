@@ -1,22 +1,16 @@
 "use client";
 
-import { MotionPresence } from "@/components/motion-presence";
+import { MotionPresence } from "./motion-presence";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
-  IconAntennaBars1,
-  IconAntennaBars2,
-  IconAntennaBars3,
-  IconAntennaBars4,
-  IconAntennaBars5,
-  IconAntennaBarsOff,
-  IconCheck,
-  IconChevronLeft,
-  IconChevronRight,
-  IconSettings,
-  IconX,
-} from "@tabler/icons-react";
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Settings,
+  X,
+} from "lucide-react";
 
 export interface SignalStrength {
   /** 1 to 5 bars, or 0 for a struck-through meter. */
@@ -58,15 +52,6 @@ interface StageSettingsProps {
   actions?: readonly { label: string; icon: ReactNode; onClick: () => void }[];
 }
 
-const SIGNAL_ICON = [
-  IconAntennaBarsOff,
-  IconAntennaBars1,
-  IconAntennaBars2,
-  IconAntennaBars3,
-  IconAntennaBars4,
-  IconAntennaBars5,
-] as const;
-
 const SIGNAL_TONE = {
   green: "text-success",
   orange: "text-amber-400",
@@ -76,15 +61,21 @@ const SIGNAL_TONE = {
 
 function SignalMeter({ signal }: { signal: SignalStrength }) {
   const bars = Math.min(Math.max(Math.round(signal.bars), 0), 5);
-  const Icon = SIGNAL_ICON[bars] ?? IconAntennaBars1;
   return (
-    <Icon
-      size={17}
-      stroke={2.1}
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 17 17"
+      fill="currentColor"
       // The row's detail line already names the state in words.
       aria-hidden="true"
       className={`shrink-0 ${SIGNAL_TONE[signal.tone]}`}
-    />
+    >
+      {[0, 1, 2, 3, 4].map((index) => (
+        <rect key={index} x={1 + index * 3.1} y={13 - index * 2.25} width="2" height={2 + index * 2.25} rx="0.6" opacity={bars > index ? 1 : 0.3} />
+      ))}
+      {bars === 0 && <path d="M2 3 15 15" fill="none" stroke="currentColor" strokeWidth="1.7" />}
+    </svg>
   );
 }
 
@@ -93,7 +84,7 @@ export function StageSettings({
   onOpenChange,
   open,
   label = "Settings",
-  icon = <IconSettings size={22} stroke={1.5} />,
+  icon = <Settings size={22} strokeWidth={1.5} />,
   actions = [],
 }: StageSettingsProps) {
   const [availableHeight, setAvailableHeight] = useState<number | undefined>();
@@ -115,7 +106,7 @@ export function StageSettings({
         rootRef.current?.getBoundingClientRect().top ?? window.innerHeight;
       const header = document.fullscreenElement
         ? 0
-        : (document.querySelector(".stream-header")?.getBoundingClientRect()
+        : (document.querySelector("header")?.getBoundingClientRect()
             .bottom ?? 0);
       setAvailableHeight(Math.max(160, triggerTop - header - 40));
     } else {
@@ -184,7 +175,7 @@ export function StageSettings({
                 aria-label={`Back to ${label.toLowerCase()}`}
                 onClick={() => setActive(null)}
               >
-                <IconChevronLeft size={18} />
+                <ChevronLeft size={18} />
               </button>
             )}
             <span>{section?.title ?? label}</span>
@@ -200,7 +191,7 @@ export function StageSettings({
                 ?.focus({ preventScroll: true });
             }}
           >
-            <IconX size={18} />
+            <X size={18} />
           </button>
         </div>
         <div key={active ?? "root"} className="stage-sheet-body">
@@ -219,7 +210,7 @@ export function StageSettings({
                       (option) => option.value === entry.value,
                     )?.label}
                   </span>
-                  <IconChevronRight size={16} className="shrink-0 text-stage-muted" />
+                  <ChevronRight size={16} className="shrink-0 text-stage-muted" />
                 </button>
               ))}
               {actions.length > 0 && (
@@ -264,9 +255,9 @@ export function StageSettings({
               >
                 <span className="flex h-4 w-4 shrink-0 items-center justify-center">
                   {selected && (
-                    <IconCheck
+                    <Check
                       size={14}
-                      stroke={2.6}
+                      strokeWidth={2.6}
                       className="text-phantom"
                     />
                   )}
@@ -303,7 +294,7 @@ export function StageSettings({
                     aria-label={`Previous ${option.label} version`}
                     className="stage-sheet-step"
                   >
-                    <IconChevronLeft size={13} stroke={2.6} />
+                    <ChevronLeft size={13} strokeWidth={2.6} />
                   </button>
                   <span className="stage-sheet-count">
                     {variant.index + 1}/{variant.count}
@@ -314,7 +305,7 @@ export function StageSettings({
                     aria-label={`Next ${option.label} version`}
                     className="stage-sheet-step"
                   >
-                    <IconChevronRight size={13} stroke={2.6} />
+                    <ChevronRight size={13} strokeWidth={2.6} />
                   </button>
                 </span>
               </div>

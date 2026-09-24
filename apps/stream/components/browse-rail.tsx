@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { PosterTile } from "@/components/poster-tile";
 import { MotionReveal } from "@/components/motion-reveal";
 import type { BrowseRow } from "@/lib/catalog";
@@ -59,7 +59,7 @@ export function BrowseRail({
             disabled={edges.start}
             onClick={() => scroll(-1)}
           >
-            <IconChevronLeft size={17} />
+            <ChevronLeft size={17} />
           </button>
           <button
             className="rail-arrow"
@@ -68,7 +68,7 @@ export function BrowseRail({
             disabled={edges.end}
             onClick={() => scroll(1)}
           >
-            <IconChevronRight size={17} />
+            <ChevronRight size={17} />
           </button>
         </div>
       </div>

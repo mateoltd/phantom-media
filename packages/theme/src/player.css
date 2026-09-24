@@ -1,4 +1,19 @@
 /* Cinema canvas and a separate, quiet control layer. */
+.motion-presence { display: contents; }
+.motion-presence[data-closing="true"] :is(.stage-sheet, .stage-panel) {
+  animation: stage-sheet-out 160ms ease-in both;
+  pointer-events: none;
+}
+.motion-presence[data-closing="true"] .stage-sheet-backdrop {
+  animation: stage-backdrop-out 160ms ease-in both;
+  pointer-events: none;
+}
+@keyframes stage-sheet-out {
+  to { opacity: 0; transform: translateY(8px) scale(0.985); }
+}
+@keyframes stage-backdrop-out {
+  to { opacity: 0; }
+}
 .stage-frame {
   width: calc(100% - var(--page-gutter) * 2);
   margin: 1.25rem auto 0;
@@ -46,7 +61,7 @@
 }
 .stage :focus-visible {
   outline: 2px solid #fff;
-  outline-offset: 4px;
+  outline-offset: -2px;
 }
 .stage:focus-visible {
   outline: none;
@@ -166,7 +181,7 @@
   z-index: 2;
   inset: auto 0 0;
   padding: 5rem clamp(1rem, 2.5vw, 2.5rem) 1.4rem;
-  background: linear-gradient(transparent, #0008 35%, #000c);
+  background: linear-gradient(transparent, #0009 35%, #000e);
   transition: opacity 0.2s;
   pointer-events: none;
 }
@@ -457,6 +472,100 @@
 }
 .stage-sheet-backdrop {
   display: none;
+}
+.stage-sleep-backdrop {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: #0008;
+  cursor: default;
+}
+.stage-sleep-sheet {
+  position: absolute;
+  z-index: 6;
+  right: var(--page-gutter);
+  bottom: 6.8rem;
+  width: min(340px, calc(100% - 1.5rem));
+  padding: 0.65rem 0.75rem 1rem;
+  border-radius: 18px;
+  background: #202225;
+  color: #f4f4f4;
+  box-shadow: 0 16px 60px #0006;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity 180ms ease, transform 180ms ease, visibility 0s linear 180ms;
+}
+.stage-sleep-sheet[data-open="true"] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+.stage-sleep-header,
+.stage-sleep-title {
+  display: flex;
+  align-items: center;
+}
+.stage-sleep-header {
+  min-height: 40px;
+  gap: 0.5rem;
+  padding-left: 0.5rem;
+}
+.stage-sleep-title {
+  gap: 0.55rem;
+  font-size: 15px;
+  font-weight: 600;
+}
+.stage-sleep-remaining {
+  margin-left: auto;
+  white-space: nowrap;
+  color: #b4b7bd;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.stage-sleep-header .stage-control {
+  width: 36px;
+  height: 36px;
+}
+.stage-sleep-liquid {
+  width: 280px;
+  height: 136px;
+  margin: 0.7rem auto 0;
+}
+.stage-sleep-liquid-item {
+  position: absolute;
+  left: calc(50% - 29px);
+  top: calc(50% - 29px);
+}
+.stage-sleep-choice {
+  display: flex;
+  width: 58px;
+  height: 58px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #d0d3d7;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.stage-sleep-choice:hover,
+.stage-sleep-choice[aria-pressed="true"] {
+  color: #fff;
+  box-shadow: inset 0 0 0 1px #e9c79380;
+}
+.stage-sleep-choice[aria-pressed="true"] svg {
+  color: #e9c793;
 }
 .stage-panel {
   position: absolute;
@@ -830,11 +939,11 @@
     font-size: 13px;
     min-height: 48px;
   }
-  .stage-frame:has(.stage-sheet, .stage-panel) {
+  .stage-frame:has(.stage-sheet, .stage-panel, .stage-sleep-sheet[data-open="true"]) {
     position: relative;
     z-index: 50;
   }
-  .stage:has(.stage-sheet, .stage-panel) {
+  .stage:has(.stage-sheet, .stage-panel, .stage-sleep-sheet[data-open="true"]) {
     overflow: visible;
   }
   .stage-sheet-backdrop {
@@ -845,6 +954,21 @@
     width: 100%;
     height: 100%;
     background: #0009;
+  }
+  .stage-sleep-backdrop {
+    position: fixed;
+    z-index: 55;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .stage-sleep-sheet {
+    position: fixed;
+    z-index: 60;
+    inset: auto 0 0;
+    width: 100%;
+    padding: 0.75rem 1rem calc(1rem + env(safe-area-inset-bottom));
+    border-radius: 22px 22px 0 0;
   }
   .stage-sheet,
   .stage-panel {
@@ -921,6 +1045,13 @@
   min-width: 44px;
   gap: 0.4rem;
 }
+.stage-sleep-trigger {
+  width: 44px;
+  height: 44px;
+}
+.stage-sleep-trigger-active {
+  color: #e9c793;
+}
 @media (max-width: 640px) {
   .stage-settings-trigger {
     min-width: 40px;
@@ -935,10 +1066,8 @@
     display: none;
   }
   .stage-timecode {
-    position: absolute;
-    right: 0.75rem;
-    bottom: 5rem;
-    font-size: 12px;
+    margin-left: 0.2rem;
+    font-size: 10px;
   }
   .stage-duration {
     display: inline;

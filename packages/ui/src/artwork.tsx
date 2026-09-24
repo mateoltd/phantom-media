@@ -20,9 +20,9 @@ export function Artwork({
   className = "",
   fallback = null,
 }: ArtworkProps) {
-  const [failed, setFailed] = useState(false);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
-  if (!src || failed) return <>{fallback}</>;
+  if (!src || failedSrc === src) return <>{fallback}</>;
 
   return (
     <Image
@@ -32,7 +32,7 @@ export function Artwork({
       sizes={sizes}
       unoptimized
       priority={priority}
-      onError={() => setFailed(true)}
+      onError={() => setFailedSrc(src)}
       className={`h-full w-full object-cover ${className}`}
     />
   );

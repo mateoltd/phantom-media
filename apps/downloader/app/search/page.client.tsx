@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { IconAlertTriangle, IconLayersLinked } from "@tabler/icons-react";
+import { TriangleAlert, Layers2 } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { BatchDownloadDialog } from "@/components/batch-download-dialog";
 import { DownloadOptionsDialog } from "@/components/download-options-dialog";
@@ -134,7 +134,7 @@ function SearchPageContent() {
                   onClick={() => setBatchOpen(true)}
                   className="flex h-10 shrink-0 items-center gap-2 rounded-xl bg-text px-4 text-xs font-bold text-white transition-colors hover:bg-text/85"
                 >
-                  <IconLayersLinked size={15} stroke={2} />
+                  <Layers2 size={15} strokeWidth={2} />
                   {t.home.batch}
                 </button>
               )}
@@ -181,9 +181,9 @@ function RestrictedNotice() {
 
   return (
     <div className="mb-8 flex items-start gap-3 border-l-2 border-phantom py-1 pl-3">
-      <IconAlertTriangle
+      <TriangleAlert
         size={17}
-        stroke={2}
+        strokeWidth={2}
         className="mt-0.5 shrink-0 text-phantom-deep"
       />
       <div>

@@ -1,8 +1,8 @@
 "use client";
 
 import { type PointerEvent, useEffect, useRef } from "react";
-import { formatTimecode } from "@/lib/media";
-import type { TimeListener } from "./use-video-state";
+import { formatTimecode } from "./timecode";
+import type { TimeListener } from "./timecode";
 
 interface ScrubBarProps {
   subscribe: (listener: TimeListener) => () => void;

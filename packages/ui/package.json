@@ -13,21 +13,24 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@tabler/icons-react": "*",
+    "lucide-react": "*",
     "next": "*",
     "react": "*",
     "react-dom": "*"
   },
   "devDependencies": {
     "@phantom/config": "workspace:*",
-    "@tabler/icons-react": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "eslint": "catalog:",
     "eslint-config-next": "catalog:",
+    "lucide-react": "catalog:",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "typescript": "catalog:"
+  },
+  "dependencies": {
+    "liquid-gooey": "^0.2.2"
   }
 }

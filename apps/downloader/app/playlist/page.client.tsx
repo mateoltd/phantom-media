@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { IconLayersLinked } from "@tabler/icons-react";
+import { Layers2 } from "lucide-react";
 import { BatchDownloadDialog } from "@/components/batch-download-dialog";
 import { DownloadOptionsDialog } from "@/components/download-options-dialog";
 import { useI18n } from "@/components/locale-provider";
@@ -114,7 +114,7 @@ function PlaylistPageContent() {
                     onClick={() => setBatchOpen(true)}
                     className="flex h-10 shrink-0 items-center gap-2 rounded-xl bg-text px-4 text-xs font-bold text-white transition-colors hover:bg-text/85"
                   >
-                    <IconLayersLinked size={15} stroke={2} />
+                    <Layers2 size={15} strokeWidth={2} />
                     {t.playlist.downloadAll}
                   </button>
                 </div>
