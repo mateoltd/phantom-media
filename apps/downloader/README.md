@@ -519,6 +519,5 @@ Before launch:
 
 ## License and legal status
 
-No license file is currently included. Until one is added, normal copyright
-rules apply to the source code. Third-party software and services retain their
-own licenses and terms.
+The source code is covered by the repository's [MIT License](../../LICENSE).
+Third-party software and services retain their own licenses and terms.

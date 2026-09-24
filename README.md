@@ -137,6 +137,9 @@ history method, dependency boundary, and deletion gate.
 
 ## Legal
 
-Both apps are independent projects, affiliated with none of the services they
+This repository is licensed under the [MIT License](LICENSE). Third-party
+software, assets, and services retain their own licenses and terms.
+
+The apps are independent projects, affiliated with none of the services they
 talk to, and neither hosts any media. Use them only for media you own, control,
 or are legally authorized to access.
