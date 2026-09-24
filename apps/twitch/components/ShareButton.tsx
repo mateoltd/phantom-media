@@ -1,16 +1,17 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Check, Share2 } from "lucide-react";
+import { Check, ShareNetwork } from "@phosphor-icons/react/ssr";
 import { Button } from "@phantom/ui";
 import { buildVodPath } from "@/lib/validation";
 
 interface ShareButtonProps {
   vodId: string;
   currentTime?: number;
+  iconOnly?: boolean;
 }
 
-export function ShareButton({ vodId, currentTime }: ShareButtonProps) {
+export function ShareButton({ vodId, currentTime, iconOnly = false }: ShareButtonProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
@@ -27,14 +28,18 @@ export function ShareButton({ vodId, currentTime }: ShareButtonProps) {
     <Button
       variant="secondary"
       onClick={handleCopy}
-      className={`h-9 px-3 text-[11px] ${copied ? "text-success" : ""}`}
+      aria-label={copied ? "Link copied" : "Share video"}
+      data-copied={copied}
+      className={`twitch-share-button ${iconOnly ? "twitch-rail-action" : "h-9 px-3 text-[11px]"} ${copied ? "text-success" : ""}`}
     >
-      {copied ? (
-        <Check size={12} strokeWidth={2.2} />
-      ) : (
-        <Share2 size={12} strokeWidth={2} />
-      )}
-      {copied ? "Copied" : "Share"}
+      <span className="twitch-share-icon" data-copied={copied} aria-hidden="true">
+        {copied ? (
+          <Check weight="regular" size={iconOnly ? 21 : 12} />
+        ) : (
+          <ShareNetwork weight="regular" size={iconOnly ? 21 : 12} />
+        )}
+      </span>
+      <span className={iconOnly ? "sr-only" : ""} role="status">{copied ? "Copied" : "Share"}</span>
     </Button>
   );
 }

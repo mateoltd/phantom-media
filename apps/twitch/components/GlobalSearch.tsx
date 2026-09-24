@@ -21,7 +21,7 @@ export function GlobalSearch() {
   return <MediaHeader
     key={pathname}
     routeKey={pathname}
-    floating={pathname === "/"}
+    floating={false}
     brand={<Link href="/" aria-label="Phantom Twitch home">
       <Wordmark service="Twitch" tone="chalk" className="hidden sm:flex" />
       <Wordmark tone="chalk" className="sm:hidden" />

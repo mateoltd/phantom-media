@@ -1,6 +1,7 @@
 {
   "extends": "@phantom/config/tsconfig/next.json",
   "compilerOptions": {
+    "allowImportingTsExtensions": true,
     "paths": {
       "@/*": ["./*"]
     }

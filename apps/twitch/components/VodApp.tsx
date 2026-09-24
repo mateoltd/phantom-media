@@ -9,12 +9,14 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { MessageCircle, Video, ArrowRight } from "lucide-react";
-import { Artwork, MediaTile, Button, ProgressRail } from "@phantom/ui";
+import { ChatCircle, VideoCamera } from "@phosphor-icons/react/ssr";
+import { MediaTile, Button, ProgressRail } from "@phantom/ui";
 import { ErrorDisplay } from "@/components/ErrorDisplay";
-import { History, addToHistory, useHistory } from "@/components/History";
+import { addToHistory, useHistory } from "@/components/History";
+import { ChannelDiscovery } from "@/components/ChannelDiscovery";
 import { Player } from "@/components/Player";
 import { ChatPanel } from "@/components/ChatPanel";
+import { WatchRail } from "@/components/WatchRail";
 import { WatchLayout } from "@/components/WatchLayout";
 import { DownloadButton } from "@/components/DownloadButton";
 import { ShareButton } from "@/components/ShareButton";
@@ -233,7 +235,6 @@ export function VodApp() {
     <main className="workspace-canvas twitch-main relative">
       {state === "home" && (
         <HomeView
-          onChannel={(channel) => router.push(buildChannelPath(channel))}
           onVideo={(vodId) => router.push(buildVodPath(vodId))}
         />
       )}
@@ -268,63 +269,19 @@ export function VodApp() {
 }
 
 function HomeView({
-  onChannel,
   onVideo,
 }: {
-  onChannel: (channel: string) => void;
   onVideo: (vodId: string) => void;
 }) {
   const history = useHistory();
-  const featured = history.find((entry) => entry.previewThumbnailURL);
 
   return (
     <div className="twitch-home" data-has-history={history.length > 0}>
-      <section className="twitch-home-hero">
-        <div className="twitch-home-artwork" aria-hidden="true">
-          {featured?.previewThumbnailURL ? (
-            <Artwork src={featured.previewThumbnailURL} alt="" sizes="100vw" priority className="twitch-home-backdrop" />
-          ) : null}
-          <div className="twitch-home-scrim" />
-        </div>
-        <div className="app-shell relative z-10">
-          <div className="max-w-2xl animate-fade-in">
-            <h1 className="line-clamp-2 text-[clamp(1.9rem,3.2vw,2.8rem)] font-semibold leading-[1.12] tracking-tight text-text">
-              {featured?.title || "Find it. Press play."}
-            </h1>
-            <p className="mt-5 max-w-lg text-[15px] leading-7 text-text-secondary">
-              {featured
-                ? `Pick up ${featured.channel}'s ${featured.broadcastType.toLowerCase() === "highlight" ? "highlight" : "video"}, or find something new to watch.`
-                : "Search for a Twitch channel to watch live, or paste a VOD link to jump right in."}
-            </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              {featured ? (
-                <button type="button" onClick={() => onVideo(featured.vodId)} className="cinema-button cinema-button-primary">
-                  <Video size={18} strokeWidth={1.7} /> Continue watching
-                </button>
-              ) : (
-                <button type="button" onClick={focusGlobalSearch} className="cinema-button cinema-button-primary">
-                  <ArrowRight size={18} strokeWidth={1.7} /> Find a stream
-                </button>
-              )}
-              <button type="button" onClick={() => onChannel(featured?.channel || "twitch")} className="cinema-button">
-                {featured ? `Open ${featured.channel}` : "Explore a channel"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-      <div className="app-shell relative z-10 twitch-home-bottom">
-        <History entries={history} onSelect={onVideo} />
-        <Footer />
+      <div className="twitch-home-bottom">
+        <ChannelDiscovery entries={history} onVideo={onVideo} footer={<Footer />} />
       </div>
     </div>
   );
-}
-
-function focusGlobalSearch() {
-  const input = document.getElementById("global-search-input");
-  if (input?.getClientRects().length) input.focus();
-  else document.querySelector<HTMLButtonElement>("[data-open-search]")?.click();
 }
 
 function LoadingView() {
@@ -345,6 +302,12 @@ function VideoView({ vodData, masterUrl, startTime, playerTime, onTimeUpdate }: 
 }) {
   const [chatOpen, setChatOpen] = useState(false);
   const toggleChat = () => setChatOpen((open) => !open);
+  const closeChat = () => {
+    setChatOpen(false);
+    requestAnimationFrame(() => {
+      document.querySelector<HTMLButtonElement>(".twitch-watch-rail [aria-controls='watch-chat']")?.focus();
+    });
+  };
   return (
     <div className="app-shell twitch-watch relative pb-8">
       <div className="pt-2">
@@ -352,16 +315,18 @@ function VideoView({ vodData, masterUrl, startTime, playerTime, onTimeUpdate }: 
           video={<Player src={masterUrl} title={vodData.title || `Video ${vodData.vodId}`} subtitle={vodData.channelDisplayName || vodData.channel}
             qualities={vodData.qualities} startTime={startTime} isLive={Boolean(vodData.isLiveArchive)} dvrMode={Boolean(vodData.isLiveArchive)}
             onTimeUpdate={onTimeUpdate} chatOpen={chatOpen} onChatToggle={toggleChat} />}
-          chat={<ChatPanel channel={vodData.channel} vodId={vodData.vodId} time={playerTime} onClose={() => setChatOpen(false)} />}
+          rail={<WatchRail channel={vodData.channel} displayName={vodData.channelDisplayName} image={vodData.channelProfileImageURL}
+            broadcastType={vodData.isLiveArchive ? "Live" : vodData.broadcastType.toLowerCase() === "highlight" ? "Highlight" : vodData.broadcastType.toLowerCase() === "upload" ? "Upload" : "Past broadcast"}
+            actions={[
+              <button key="chat" type="button" className="twitch-rail-action" onClick={toggleChat} aria-label={chatOpen ? "Hide chat" : "Show chat"} aria-expanded={chatOpen} aria-controls="watch-chat"><ChatCircle size={21} /></button>,
+              <DownloadButton key="download" iconOnly qualities={vodData.qualities} channel={vodData.channel} vodId={vodData.vodId} />,
+              <ShareButton key="share" iconOnly vodId={vodData.vodId} currentTime={playerTime} />,
+            ]} />}
+          chat={<ChatPanel channel={vodData.channel} vodId={vodData.vodId} time={playerTime} onClose={closeChat} />}
         >
         <div className="twitch-watch-details">
           <VodInfo channel={vodData.channel} channelDisplayName={vodData.channelDisplayName} channelProfileImageURL={vodData.channelProfileImageURL}
-            broadcastType={vodData.broadcastType} title={vodData.title} />
-          <div className="twitch-watch-actions">
-            <Button variant="secondary" onClick={toggleChat} aria-expanded={chatOpen}><MessageCircle size={17} />{chatOpen ? "Hide chat" : "Show chat"}</Button>
-            <DownloadButton qualities={vodData.qualities} channel={vodData.channel} vodId={vodData.vodId} />
-            <ShareButton vodId={vodData.vodId} currentTime={playerTime} />
-          </div>
+            broadcastType={vodData.broadcastType} title={vodData.title} titleOnly />
         </div>
         </WatchLayout>
       </div>
@@ -381,18 +346,23 @@ function ChannelView({ channel, masterUrl, onVideo }: {
     ? channel.videos.find((video) => isLikelyLiveArchive(video, stream)) ?? channel.videos.find((video) => video.broadcastType.toLowerCase() === "archive")
     : null;
   const toggleChat = () => setChatOpen((open) => !open);
-  const chat = <ChatPanel channel={channel.login} onClose={() => setChatOpen(false)} />;
+  const closeChat = () => {
+    setChatOpen(false);
+    requestAnimationFrame(() => {
+      document.querySelector<HTMLButtonElement>(".twitch-watch-rail [aria-controls='watch-chat'], [aria-controls='channel-chat']")?.focus();
+    });
+  };
+  const chat = <ChatPanel channel={channel.login} onClose={closeChat} />;
 
   const details = (
-        <div className="twitch-watch-details">
-          {stream ? <VodInfo channel={channel.login} channelDisplayName={channel.displayName} channelProfileImageURL={channel.profileImageURL} title={stream.title} broadcastType="live" isLive />
-            : <div><div className="flex items-center gap-4"><ChannelHeader channel={channel} /><span className="twitch-broadcast-type">Offline</span></div>
-              <p className="mt-4 text-sm leading-6 text-text-secondary">Watch recent broadcasts from {channel.displayName} while the channel is offline.</p></div>}
-          <div className="twitch-watch-actions">
-            <Button variant="secondary" onClick={toggleChat} aria-expanded={chatOpen}><MessageCircle size={17} />{chatOpen ? "Hide chat" : "Show chat"}</Button>
-            {liveArchive && <Button variant="secondary" onClick={() => onVideo(liveArchive.id)}>Open archive</Button>}
-          </div>
-        </div>
+    <div className="twitch-watch-details">
+      {stream ? <VodInfo channel={channel.login} channelDisplayName={channel.displayName} channelProfileImageURL={channel.profileImageURL} title={stream.title} broadcastType="live" isLive titleOnly />
+        : <div><div className="flex items-center gap-4"><ChannelHeader channel={channel} /><span className="twitch-broadcast-type">Offline</span></div>
+          <p className="mt-4 text-sm leading-6 text-text-secondary">Watch recent broadcasts from {channel.displayName} while the channel is offline.</p></div>}
+      {!stream && <div className="twitch-watch-actions">
+        <Button variant="secondary" onClick={toggleChat} aria-expanded={chatOpen} aria-controls="channel-chat"><ChatCircle weight="regular" size={17} />{chatOpen ? "Hide chat" : "Show chat"}</Button>
+      </div>}
+    </div>
   );
 
   return (
@@ -400,11 +370,14 @@ function ChannelView({ channel, masterUrl, onVideo }: {
       <section className="pt-2">
         {stream && masterUrl && <WatchLayout chatOpen={chatOpen}
           video={<Player src={masterUrl} qualities={LIVE_QUALITIES} isLive title={stream.title} subtitle={channel.displayName} chatOpen={chatOpen} onChatToggle={toggleChat} />}
+          rail={<WatchRail channel={channel.login} displayName={channel.displayName} image={channel.profileImageURL} broadcastType="Live" actions={[
+            <button key="chat" type="button" className="twitch-rail-action" onClick={toggleChat} aria-label={chatOpen ? "Hide chat" : "Show chat"} aria-expanded={chatOpen} aria-controls="watch-chat"><ChatCircle size={21} /></button>,
+            ...(liveArchive ? [<button key="archive" type="button" className="twitch-rail-action" onClick={() => onVideo(liveArchive.id)} aria-label="Open archive"><VideoCamera size={21} /></button>] : []),
+          ]} />}
           chat={chat}
         >{details}</WatchLayout>}
         {!stream && details}
-
-        {!stream && chatOpen && <div className="twitch-standalone-chat">{chat}</div>}
+        {!stream && chatOpen && <div id="channel-chat" className="twitch-standalone-chat">{chat}</div>}
       </section>
       {channel.videos.length > 0 && <section className="mt-8">
         <h2 className="mb-4 text-2xl font-semibold tracking-tight text-text">Recent broadcasts</h2>

@@ -1,4 +1,4 @@
-import { TriangleAlert, ArrowRight } from "lucide-react";
+import { ArrowRight, Warning } from "@phosphor-icons/react/ssr";
 import { Button } from "@phantom/ui";
 
 interface ErrorDisplayProps {
@@ -12,7 +12,7 @@ export function ErrorDisplay({ message, onRetry }: ErrorDisplayProps) {
   return (
     <div className="mx-auto mt-16 max-w-md animate-slide-up text-center sm:mt-20">
       <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-error/10 text-error">
-        <TriangleAlert size={20} strokeWidth={1.8} />
+        <Warning weight="regular" size={20} />
       </div>
 
       <p className="text-[15px] font-semibold tracking-tight text-text">
@@ -28,7 +28,7 @@ export function ErrorDisplay({ message, onRetry }: ErrorDisplayProps) {
 
       <Button onClick={onRetry} className="mx-auto mt-5">
         Try again
-        <ArrowRight size={14} strokeWidth={2.5} />
+        <ArrowRight weight="regular" size={14} />
       </Button>
     </div>
   );

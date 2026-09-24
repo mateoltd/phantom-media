@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, RefreshCw, X } from "lucide-react";
+import { ArrowDown, ArrowsClockwise, X } from "@phosphor-icons/react/ssr";
 import { IconButton } from "@phantom/ui";
 import type { ChatMessage } from "@/lib/chat";
 import { formatTime } from "@/lib/format";
@@ -15,13 +15,19 @@ export function ChatPanel({ channel, vodId, time = 0, onClose }: {
 }) {
   const [mode, setMode] = useState<"replay" | "live">(vodId ? "replay" : "live");
   return (
-    <section className="twitch-chat" aria-label={mode === "replay" ? "Chat replay" : "Live chat"}>
+    <section className="twitch-chat" aria-label={mode === "replay" ? "Chat replay" : "Live chat"}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.stopPropagation();
+          onClose();
+        }
+      }}>
       <div className="twitch-chat-heading">
         {vodId ? <div className="twitch-chat-modes" aria-label="Chat source">
           <button type="button" aria-pressed={mode === "replay"} onClick={() => setMode("replay")}>Replay</button>
           <button type="button" aria-pressed={mode === "live"} onClick={() => setMode("live")}>Live chat</button>
         </div> : <h2 className="text-sm font-medium">Live chat</h2>}
-        <IconButton label="Close chat" onClick={onClose} size="sm"><X size={18} /></IconButton>
+        <IconButton label="Close chat" onClick={onClose} size="sm"><X weight="regular" size={18} /></IconButton>
       </div>
       {mode === "replay" && vodId
         ? <ReplayChat key={vodId} vodId={vodId} time={time} />
@@ -34,7 +40,7 @@ function LiveChat({ channel }: { channel: string }) {
   const { messages, status, retry } = useLiveChat(channel);
   return <>
     <ChatMessages messages={messages} empty={status === "Connected" ? "No messages yet. New messages will appear here." : status} />
-    <div className="twitch-chat-footer"><span>{status === "Connected" ? `Live in ${channel}` : status}</span><IconButton label="Reconnect chat" onClick={retry} size="sm"><RefreshCw size={15} /></IconButton></div>
+    <div className="twitch-chat-footer"><span>{status === "Connected" ? `Live in ${channel}` : status}</span><IconButton label="Reconnect chat" onClick={retry} size="sm"><ArrowsClockwise weight="regular" size={15} /></IconButton></div>
   </>;
 }
 
@@ -84,6 +90,6 @@ function ChatMessages({ messages, empty, error, onRetry, resetKey = 0 }: {
       setFollowing(true);
       const list = listRef.current;
       if (list) list.scrollTop = list.scrollHeight;
-    }}><ArrowDown size={14} /> Jump to latest</button>}
+    }}><ArrowDown weight="regular" size={14} /> Jump to latest</button>}
   </div>;
 }

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
-import { Tv, MessageCircle, Timer } from "lucide-react";
-import { ScrubBar, SleepTimerPicker, StageChrome, StageControl, StageSettings, StageTransport, useSleepTimer } from "@phantom/ui";
+import { ChatCircle, Monitor, Timer } from "@phosphor-icons/react/ssr";
+import { ScrubBar, SleepTimerPicker, StageChrome, StageControl, StageSettings, StageTransport, useStagePlayback, useSleepTimer } from "@phantom/ui";
 import type { SettingsSection, TimeListener, TimeSnapshot } from "@phantom/ui";
 import { formatTime } from "@/lib/format";
 
@@ -30,6 +30,7 @@ interface PlayerProps {
 }
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] as const;
+const FILLED_ICON = { weight: "fill" as const };
 
 type FullscreenDocument = Document & {
   webkitFullscreenElement?: Element | null;
@@ -523,13 +524,6 @@ export function Player({
     if (!open) showControls();
   }, [showControls]);
 
-  const togglePlay = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (video.paused) video.play().catch(() => {});
-    else video.pause();
-  }, []);
-
   const seekBy = useCallback(
     (delta: number) => {
       const base = pendingSeekRef.current ?? videoRef.current?.currentTime ?? currentTime;
@@ -538,6 +532,8 @@ export function Player({
     },
     [commitSeek, currentTime, showControls]
   );
+
+  const { feedback, togglePlayback: togglePlay, seekWithFeedback, handlePlaybackKey } = useStagePlayback(videoRef, seekBy);
 
   const seekToLive = useCallback(() => {
     if (seekableEnd <= seekableStart) return;
@@ -644,12 +640,18 @@ export function Player({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target;
       if (
         target instanceof HTMLInputElement ||
         target instanceof HTMLTextAreaElement ||
         target instanceof HTMLSelectElement ||
-        (target instanceof HTMLElement && (target.isContentEditable || target.closest("button, a, [role='slider'], [role='dialog']")))
+        (target instanceof HTMLElement && (
+          target.isContentEditable || target.closest("a, [role='slider'], [role='dialog']") ||
+          (target.closest("button") && (
+            !target.closest(".stage-transport, .stage-toolbar-play") || event.key === " " || event.key === "Enter"
+          ))
+        ))
       ) {
         return;
       }
@@ -657,23 +659,11 @@ export function Player({
       const video = videoRef.current;
       if (!video) return;
 
+      if (handlePlaybackKey(event)) {
+        showControls();
+        return;
+      }
       switch (event.key) {
-        case " ":
-        case "k":
-          if (event.repeat) return;
-          event.preventDefault();
-          togglePlay();
-          break;
-        case "ArrowLeft":
-        case "j":
-          event.preventDefault();
-          seekBy(-10);
-          break;
-        case "ArrowRight":
-        case "l":
-          event.preventDefault();
-          seekBy(10);
-          break;
         case "ArrowUp":
           event.preventDefault();
           changeVolume(video.volume + 0.1);
@@ -720,7 +710,7 @@ export function Player({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [changeSpeed, changeVolume, seekBy, showControls, speed, toggleFullscreen, toggleMute, togglePip, togglePlay]);
+  }, [changeSpeed, changeVolume, handlePlaybackKey, showControls, speed, toggleFullscreen, toggleMute, togglePip]);
 
   const dvrWindow = Math.max(0, seekableEnd - seekableStart);
   const liveWindow = dvrWindow;
@@ -808,19 +798,14 @@ export function Player({
             {subtitle && <p className="mt-1 truncate text-[13px] text-stage-muted">{subtitle}</p>}
           </div>
         </div>
-        {loading && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <span className="stage-spinner h-8 w-8" aria-label="Buffering" />
-          </div>
-        )}
-        {!loading && (
-          <StageTransport
-            playing={playing}
-            onTogglePlay={togglePlay}
-            onSeekBack={canSeek ? () => seekBy(-10) : undefined}
-            onSeekForward={canSeek ? () => seekBy(10) : undefined}
-          />
-        )}
+        <StageTransport
+          playing={playing}
+          feedback={feedback}
+          waiting={loading}
+          onTogglePlay={togglePlay}
+          onSeekBack={canSeek ? () => seekWithFeedback(-1) : undefined}
+          onSeekForward={canSeek ? () => seekWithFeedback(1) : undefined}
+        />
         <StageChrome
           ready={!loading}
           title={title}
@@ -834,6 +819,7 @@ export function Player({
           onToggleFullscreen={toggleFullscreen}
           timeline={hasTimeline ? (
             <ScrubBar
+              onSeekStep={seekWithFeedback}
               subscribe={subscribeTimeline}
               onSeek={(time) => commitSeek(useDvrTimeline ? seekableStart + time : time)}
               onScrubbingChange={(scrubbing) => { if (scrubbing) showControls(); }}
@@ -861,16 +847,16 @@ export function Player({
                 expanded={sleepTimerOpen}
                 className={`stage-sleep-trigger ${sleepTimer.minutes !== null ? "stage-sleep-trigger-active" : ""}`}
               >
-                <Timer size={22} strokeWidth={1.5} />
+                <Timer {...FILLED_ICON} size={22} />
               </StageControl>
               {onChatToggle && !isFullscreen && <StageControl label={chatOpen ? "Hide chat" : "Show chat"} onClick={onChatToggle} expanded={chatOpen}>
-                <MessageCircle size={22} strokeWidth={1.5} />
+                <ChatCircle {...FILLED_ICON} size={22} />
               </StageControl>}
               <StageSettings
                 sections={settingsSections}
                 open={settingsOpen}
                 onOpenChange={setSettingsOpen}
-                actions={pipSupported ? [{ label: "Picture in picture", icon: <Tv size={20} />, onClick: togglePip }] : []}
+                actions={pipSupported ? [{ label: "Picture in picture", icon: <Monitor {...FILLED_ICON} size={20} />, onClick: togglePip }] : []}
               />
             </>
           }

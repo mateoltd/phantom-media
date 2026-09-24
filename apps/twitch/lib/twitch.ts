@@ -1,3 +1,5 @@
+import { buildDiscoveryProfile, rankDiscovery, type DiscoveryPage, type DiscoveryContinuation, type DiscoveryHistory, type DiscoveryCandidate, type WatchedVideo, type ChannelDiscoveryData, type DiscoveryChannel } from "./discovery.ts";
+
 export interface TwitchVideoData {
   id?: string;
   title?: string;
@@ -252,6 +254,192 @@ export async function searchChannels(query: string): Promise<TwitchSearchResult[
       viewersCount: item.stream?.viewersCount,
     })) ?? []
   );
+}
+
+const DISCOVERY_CHANNEL_FIELDS = `
+  id login displayName profileImageURL(width: 150)
+  broadcastSettings { language game { name boxArtURL(width: 192, height: 256) } }
+  stream {
+    title viewersCount broadcastLanguage previewImageURL(width: 640, height: 360)
+    archiveVideo { id }
+    game { name boxArtURL(width: 192, height: 256) }
+  }
+`;
+
+interface PersonalSection {
+  type: string;
+  items: { user?: DiscoveryChannel | null }[];
+}
+interface DiscoveryConnection { edges: { cursor?: string; node: { broadcaster?: DiscoveryChannel | null } }[]; pageInfo?: { hasNextPage: boolean } }
+const connectionChannels = (connection?: DiscoveryConnection | null) =>
+  connection?.edges.flatMap(({ node }) => node.broadcaster ? [node.broadcaster] : []) ?? [];
+
+export class DiscoveryUpstreamError extends Error {
+  status: 429 | 502 | 403;
+  retryAfter: number;
+  constructor(status: 429 | 502 | 403, retryAfter: number) {
+    super(status === 403 ? "No further public discovery is available. Refresh to discover current channels." : status === 429 ? "Twitch discovery is cooling down" : "Twitch discovery is temporarily unavailable");
+    this.status = status;
+    this.retryAfter = retryAfter;
+  }
+}
+let discoveryCooldownUntil = 0;
+
+/** Discovery makes one attempt per lookup. Scrolling must never fan out retries. */
+async function discoveryRequest<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+  if (discoveryCooldownUntil > Date.now()) throw new DiscoveryUpstreamError(429, Math.ceil((discoveryCooldownUntil - Date.now()) / 1000));
+  try {
+    const response = await fetch(GQL_ENDPOINT, {
+      method: "POST", headers: { "Client-Id": CLIENT_ID, Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ query, variables }), cache: "no-store", signal: AbortSignal.timeout(8_000),
+    });
+    const payload: GraphQLResponse<T> | undefined = response.ok ? await response.json() : undefined;
+    if (response.status === 429 || payload?.errors?.some(({ message }) => /rate.?limit|too many requests/i.test(message ?? ""))) {
+      const value = response.headers.get("Retry-After");
+      const seconds = value && /^\d+$/.test(value) ? Number(value) : value ? (Date.parse(value) - Date.now()) / 1000 : 60;
+      const retryAfter = Math.min(300, Math.max(30, Number.isFinite(seconds) ? Math.ceil(seconds) : 60));
+      discoveryCooldownUntil = Date.now() + retryAfter * 1000;
+      throw new DiscoveryUpstreamError(429, retryAfter);
+    }
+    if (payload?.errors?.some(({ message }) => /integrity check/i.test(message ?? ""))) throw new DiscoveryUpstreamError(403, 0);
+    if (!response.ok || payload?.errors?.length || !payload?.data) throw new DiscoveryUpstreamError(502, 15);
+    return payload.data;
+  } catch (error) {
+    if (error instanceof DiscoveryUpstreamError) throw error;
+    throw new DiscoveryUpstreamError(502, 15);
+  }
+}
+
+const discoveryRequests = new Map<string, { expires: number; result: Promise<unknown> }>();
+/** Short, bounded cache coalesces identical public Twitch lookups across tabs. */
+function discoveryGql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+  const key = JSON.stringify([query, variables]);
+  const cached = discoveryRequests.get(key);
+  if (cached && cached.expires > Date.now()) return cached.result as Promise<T>;
+  if (discoveryRequests.size >= 96) discoveryRequests.delete(discoveryRequests.keys().next().value!);
+  const result = discoveryRequest<T>(query, variables).catch((error) => { discoveryRequests.delete(key); throw error; });
+  discoveryRequests.set(key, { expires: Date.now() + 60_000, result });
+  return result;
+}
+
+const DIRECTORY_QUERY = `query DiscoveryDirectory($languages: [Language!], $after: Cursor) {
+  streams(first: 30, after: $after, options: { languages: $languages, sort: VIEWER_COUNT }) {
+    edges { cursor node { broadcaster { ${DISCOVERY_CHANNEL_FIELDS} } } }
+    pageInfo { hasNextPage }
+  }
+}`;
+function directoryPage(languages: string[], after: string | null = null) {
+  return discoveryGql<{ streams?: DiscoveryConnection }>(DIRECTORY_QUERY, {
+    languages: languages.length ? languages.map((language) => language.toUpperCase()) : null, after,
+  });
+}
+function directoryNext(connection: DiscoveryConnection | undefined, languages: string[], previous?: string): DiscoveryContinuation | undefined {
+  const cursor = connection?.edges.at(-1)?.cursor;
+  return connection?.pageInfo?.hasNextPage && cursor && cursor !== previous
+    ? { cursor, languages: languages.map((language) => language.toUpperCase()) } : undefined;
+}
+interface DiscoveryPlan { games: string[]; languages: string[]; expires: number; next?: DiscoveryContinuation }
+const discoveryPlans = new Map<string, DiscoveryPlan>();
+function createDiscoveryPlan(games: string[], languages: string[]): DiscoveryContinuation | undefined {
+  if (!games.length) return undefined;
+  if (discoveryPlans.size >= 96) discoveryPlans.delete(discoveryPlans.keys().next().value!);
+  const cursor = `plan_${crypto.randomUUID()}`;
+  const normalized = languages.map((language) => language.toUpperCase());
+  discoveryPlans.set(cursor, { games, languages: normalized, expires: Date.now() + 10 * 60_000 });
+  return { cursor, languages: normalized };
+}
+async function expandDiscovery(cursor: string, languages: string[]): Promise<DiscoveryPage> {
+  const plan = discoveryPlans.get(cursor);
+  if (!plan || plan.expires < Date.now() || JSON.stringify(plan.languages) !== JSON.stringify(languages.map((language) => language.toUpperCase()))) {
+    throw new DiscoveryUpstreamError(403, 0);
+  }
+  const game = plan.games[0];
+  const data = await discoveryGql<{ game?: { streams?: DiscoveryConnection } }>(`query DiscoveryExpansionCategory($game: String!, $languages: [String!]) {
+    game(name: $game) { streams(first: 30, options: { languages: $languages, sort: VIEWER_COUNT }) {
+      edges { node { broadcaster { ${DISCOVERY_CHANNEL_FIELDS} } } }
+    } }
+  }`, { game, languages: plan.languages.length ? plan.languages.map((language) => language.toLowerCase()) : null });
+  const channels = [...new Map(connectionChannels(data.game?.streams).filter((channel) => channel.stream).map((channel) => [channel.login.toLowerCase(), {
+    ...channel, recommendation: { source: "category", reason: `${game}, from channels in your recent viewing` },
+  }])).values()];
+  plan.next ??= createDiscoveryPlan(plan.games.slice(1), plan.languages);
+  return { channels, ...(plan.next ? { next: plan.next } : {}) };
+}
+
+export async function fetchMoreChannelDiscovery(cursor: string, languages: string[]): Promise<DiscoveryPage> {
+  if (cursor.startsWith("plan_")) return expandDiscovery(cursor, languages);
+  const data = await directoryPage(languages, cursor);
+  if (!data.streams) throw new DiscoveryUpstreamError(502, 15);
+  const channels = [...new Map(connectionChannels(data.streams).filter((channel) => channel.stream).map((channel) => [channel.login.toLowerCase(), {
+    ...channel, recommendation: { source: "directory", reason: languages.length
+      ? `Discover more ${languages.map((language) => new Intl.DisplayNames(["en"], { type: "language" }).of(language.toLowerCase()) ?? language).join(", ")} streams`
+      : "Discover more live channels on Twitch" },
+  }])).values()];
+  const next = directoryNext(data.streams, languages, cursor);
+  return { channels, ...(next ? { next } : {}) };
+}
+
+export async function fetchChannelDiscovery(logins: string[], history: DiscoveryHistory[] = []): Promise<ChannelDiscoveryData> {
+  const ids = [...new Set(history.flatMap((entry) => entry.vodId && /^\d{1,20}$/.test(entry.vodId) ? [entry.vodId] : []))].slice(0, 8);
+  const [recentResult, videosResult] = await Promise.allSettled([
+    logins.length ? discoveryGql<{ users: (DiscoveryChannel | null)[] }>(
+      `query RecentChannels($logins: [String!]!) { users(logins: $logins) { ${DISCOVERY_CHANNEL_FIELDS} } }`, { logins }) : Promise.resolve({ users: [] }),
+    ids.length ? discoveryGql<Record<string, WatchedVideo | null>>(`query WatchedCategories { ${ids.map((id, index) => `v${index}: video(id: "${id}") { id title game { name } owner { login } }`).join(" ")} }`) : Promise.resolve({}),
+  ]);
+  const users = recentResult.status === "fulfilled" ? recentResult.value.users.filter((user): user is DiscoveryChannel => Boolean(user)) : [];
+  const recent = logins.flatMap((login) => users.find((channel) => channel.login.toLowerCase() === login) ?? []);
+  const videos = videosResult.status === "fulfilled" ? Object.values(videosResult.value).filter((video): video is WatchedVideo => Boolean(video)) : [];
+  const profile = buildDiscoveryProfile(history, recent, videos);
+  const strongest = (map: Map<string, number>, limit: number) => [...map].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([key]) => key);
+  const languages = strongest(profile.languages, 3).filter((language) => /^[a-z]{2}$/.test(language));
+  const games = strongest(profile.games, 3);
+  const seeds = strongest(profile.channels, 2);
+  const [directoryResult, ...sourceResults] = await Promise.allSettled([
+    directoryPage(languages),
+    ...games.map((game) => discoveryGql<{ game?: { streams?: DiscoveryConnection; videos?: { edges: { node: { owner?: DiscoveryChannel | null } }[] } } }>(`query DiscoveryCategory($game: String!, $languages: [String!]) {
+      game(name: $game) {
+        streams(first: 30, options: { languages: $languages, sort: VIEWER_COUNT }) { edges { node { broadcaster { ${DISCOVERY_CHANNEL_FIELDS} } } } }
+        videos(first: 8, languages: $languages, types: [ARCHIVE], sort: TIME) { edges { node { owner { ${DISCOVERY_CHANNEL_FIELDS} } } } }
+      }
+    }`, { game, languages: languages.length ? languages : null }).then((data): DiscoveryCandidate[] => [
+      ...connectionChannels(data.game?.streams).map((channel) => ({ channel, source: "category" as const, game })),
+      ...(data.game?.videos?.edges.flatMap(({ node }) => node.owner ? [{ channel: node.owner, source: "archive" as const, game }] : []) ?? []),
+    ])),
+    ...seeds.map((seed) => discoveryGql<{ personalSections?: PersonalSection[]; user?: { primaryTeam?: { members?: { edges: { node: DiscoveryChannel }[] } } } }>(`query RelatedChannels($channel: String!) {
+      personalSections(input: { sectionInputs: [SIMILAR_SECTION], contextChannelName: $channel, recommendationContext: { platform: "web" } }) {
+        type items { ... on PersonalSectionChannel { user { ${DISCOVERY_CHANNEL_FIELDS} } } }
+      }
+      user(login: $channel) { primaryTeam { members(first: 12) { edges { node { ${DISCOVERY_CHANNEL_FIELDS} } } } } }
+    }`, { channel: seed }).then((data): DiscoveryCandidate[] => [
+      // Anonymous responses frequently substitute POPULAR_SECTION. That is not a relationship.
+      ...(data.personalSections?.filter((section) => section.type === "SIMILAR_SECTION").flatMap((section) => section.items.flatMap(({ user }) => user ? [{ channel: user, source: "similar" as const, seed }] : [])) ?? []),
+      ...(data.user?.primaryTeam?.members?.edges.map(({ node }) => ({ channel: node, source: "team" as const, seed })) ?? []),
+    ])),
+  ]);
+  const discoveryResults = [directoryResult, ...sourceResults];
+  if (discoveryResults.every((result) => result.status === "rejected")) {
+    const failures = discoveryResults.flatMap((result) => result.status === "rejected" && result.reason instanceof DiscoveryUpstreamError ? [result.reason] : []);
+    throw failures.find((error) => error.status === 429) ?? failures[0] ?? new DiscoveryUpstreamError(502, 15);
+  }
+  const sourced = sourceResults.flatMap((result) => result.status === "fulfilled" ? result.value : []);
+  const directory: DiscoveryCandidate[] = directoryResult.status === "fulfilled" ? connectionChannels(directoryResult.value.streams).map((channel) => ({ channel, source: "directory" })) : [];
+  const excluded = [...new Set([...logins, ...history.map((entry) => entry.channel.toLowerCase())])];
+  const sections: ChannelDiscoveryData["sections"] = [];
+  const personalized = rankDiscovery([...sourced.filter(({ channel }) => channel.stream), ...(profile.channels.size ? directory : [])], profile, excluded, 20);
+  if (personalized.length) sections.push({ type: "RECOMMENDED_SECTION", description: "Based on your recent viewing, watched categories and available Twitch channel connections.", channels: personalized });
+  const used = [...excluded, ...personalized.map((channel) => channel.login)];
+  const explore = rankDiscovery(directory, profile, used, 30);
+  if (explore.length) sections.push({ type: "POPULAR_SECTION", description: languages.length ? `More live channels in ${languages.map((language) => new Intl.DisplayNames(["en"], { type: "language" }).of(language) ?? language).join(", ")}, ranked for your interests.` : "Explore live channels across Twitch.", channels: explore });
+  const offline = rankDiscovery(sourced.filter(({ channel }) => !channel.stream), profile, used.concat(explore.map((channel) => channel.login)), 12);
+  if (offline.length) sections.push({ type: "OFFLINE_SECTION", description: "Channels with recent broadcasts in your categories, or a Twitch connection to channels you watch.", channels: offline });
+  // Twitch's directory cursors require browser integrity. Expand only other known
+  // interests through ordinary first-page category queries, then stop honestly.
+  const extraGames = [...new Set([
+    ...strongest(profile.games, 6),
+    ...recent.flatMap((channel) => channel.stream?.game?.name ?? channel.broadcastSettings?.game?.name ?? []),
+  ])].filter((game) => !games.includes(game)).slice(0, 6);
+  const next = createDiscoveryPlan(extraGames, languages);
+  return { recent, sections, ...(next ? { next } : {}) };
 }
 
 export async function fetchPlaybackUrl(
