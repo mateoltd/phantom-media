@@ -6,7 +6,7 @@ packages:
 # UI package is compiled by each app's bundler, so a split would break it.
 catalog:
   lucide-react: ^1.14.0
-  next: ^16.1.7
+  next: ^16.3.6
   react: ^19.2.4
   react-dom: ^19.2.4
   "@types/node": ^25.5.0
@@ -16,7 +16,7 @@ catalog:
   tailwindcss: ^4.2.1
   postcss: ^8.5.8
   eslint: ^9.39.4
-  eslint-config-next: ^16.1.7
+  eslint-config-next: ^16.3.6
   typescript: ^5.9.3
   wrangler: ^4.114.0
 
