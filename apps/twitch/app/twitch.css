@@ -1,0 +1,104 @@
+/* Twitch-specific layout. Shared media and player styling live in @phantom/theme. */
+.twitch-stage-frame {
+  width: 100%;
+  margin: 0;
+}
+.twitch-stage-frame .stage:not(:fullscreen) {
+  height: auto;
+  aspect-ratio: 16 / 9;
+  max-height: calc(100svh - var(--media-header-height) - 9rem);
+}
+
+.twitch-main { min-height: calc(100svh - var(--media-header-height)); }
+.twitch-home { display: flex; flex-direction: column; min-height: 100svh; }
+.twitch-home-hero {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: clamp(20rem, 50svh, 36rem);
+  align-items: flex-end;
+  padding: calc(var(--media-header-height) + 2rem) 0 2rem;
+  isolation: isolate;
+}
+.twitch-home-bottom { flex-shrink: 0; }
+.twitch-history-rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: clamp(220px, 22vw, 280px);
+  gap: 1.25rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: 1rem 0 0.5rem;
+}
+.twitch-footer { margin-top: 2rem; }
+.twitch-home .twitch-footer { margin-top: 0.5rem; }
+.twitch-watch { width: calc(100% - var(--navigation-gutter) * 2 - 1rem); }
+
+.twitch-home-artwork {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 75% 40%, #303038 0, #101113 62%);
+  pointer-events: none;
+}
+.twitch-home-backdrop {
+  object-position: center 40%;
+}
+.twitch-home-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom, #10111366, transparent 24%, #10111380 68%, var(--color-bg)),
+    linear-gradient(to right, #101113f5, #101113c0 40%, transparent 90%);
+}
+
+@media (max-width: 640px) {
+  .twitch-stage-frame .stage:not(:fullscreen) { min-height: 250px; }
+  .twitch-home { min-height: calc(100svh - var(--media-header-height)); }
+  .twitch-home-hero { min-height: 22rem; padding: 4rem 0 2rem; }
+  .twitch-home-scrim {
+    background: linear-gradient(to bottom, #10111350, #101113aa 55%, var(--color-bg));
+  }
+}
+
+.twitch-home[data-has-history="false"] .twitch-home-hero { align-items: center; }
+
+/* Playback and chat share one surface; the default layout shows only video. */
+.twitch-playback-layout { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "video" "details"; gap: 1rem; align-items: stretch; }
+.twitch-playback-video { grid-area: video; min-width: 0; }
+.twitch-playback-details { grid-area: details; min-width: 0; }
+.twitch-playback-details .twitch-watch-details { padding-top: 0.25rem; }
+.twitch-playback-chat { grid-area: chat; position: relative; min-width: 0; min-height: 0; }
+.twitch-playback-chat > .twitch-chat { position: absolute; inset: 0; }
+.twitch-playback-layout[data-chat-open="true"] { grid-template-columns: minmax(0, 1fr) clamp(290px, 26vw, 360px); grid-template-areas: "video chat" "details details"; }
+.twitch-watch-details { display: flex; align-items: flex-start; justify-content: space-between; gap: 1.5rem; padding: 1.25rem 0.5rem 0; }
+.twitch-video-info { min-width: 0; flex: 1; }
+.twitch-video-title { margin: 0; font-size: clamp(1rem, 1.5vw, 1.25rem); font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.twitch-video-byline { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 0.75rem; }
+.twitch-video-channel { display: inline-flex; align-items: center; gap: 0.65rem; min-width: 0; max-width: 100%; font-size: 0.875rem; font-weight: 500; }
+.twitch-video-channel:hover { color: var(--color-text-secondary); }
+.twitch-broadcast-type { display: inline-flex; flex-shrink: 0; padding: 0.35rem 0.65rem; border-radius: 999px; background: #ffffff08; color: var(--color-text-secondary); font-size: 0.75rem; line-height: 1; }
+.twitch-broadcast-live { background: #ef44441a; color: #fca5a5; }
+.twitch-watch-actions { display: flex; flex-shrink: 0; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.twitch-watch-actions > button, .twitch-watch-actions > div > button { height: 40px; }
+.twitch-chat { display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: hidden; border-radius: 20px; background: #ffffff05; }
+.twitch-chat-heading { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.65rem 0.75rem; flex-shrink: 0; }
+.twitch-chat-modes { display: flex; gap: 0.25rem; }
+.twitch-chat-modes button { border-radius: 999px; padding: 0.45rem 0.8rem; color: var(--color-text-tertiary); font-size: 0.8rem; }
+.twitch-chat-modes button[aria-pressed="true"] { background: #ffffff0c; color: var(--color-text); }
+.twitch-chat-content { position: relative; flex: 1; min-height: 0; }
+.twitch-chat-messages { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 0.35rem 1rem 0.75rem; }
+.twitch-chat-message { margin: 0; padding-block: 0.3rem; font-size: 0.8rem; line-height: 1.6; overflow-wrap: anywhere; color: var(--color-text-secondary); }
+.twitch-chat-timestamp { margin-right: 0.5rem; font-family: var(--font-mono); font-size: 0.65rem; color: var(--color-text-tertiary); }
+.twitch-chat-empty { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; padding: 1rem; text-align: center; font-size: 0.8rem; line-height: 1.7; color: var(--color-text-tertiary); }
+.twitch-chat-footer { min-height: 40px; padding: 0.25rem 1rem 0.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: 0.7rem; color: var(--color-text-tertiary); }
+.twitch-chat-follow { position: absolute; bottom: 0.75rem; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.5rem; white-space: nowrap; padding: 0.55rem 0.85rem; border-radius: 999px; background: var(--color-surface-hover); font-size: 0.75rem; }
+.twitch-standalone-chat { max-width: 600px; height: 400px; margin-top: 1.5rem; }
+@media (max-width: 1000px) {
+  .twitch-watch-details { flex-direction: column; gap: 1rem; }
+}
+@media (max-width: 800px) {
+  .twitch-playback-layout[data-chat-open="true"] { grid-template-columns: minmax(0, 1fr); grid-template-areas: "video" "details" "chat"; }
+  .twitch-playback-chat { height: min(50svh, 420px); min-height: 280px; }
+}

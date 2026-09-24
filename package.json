@@ -2,7 +2,7 @@
   "name": "phantom-media",
   "version": "1.0.0",
   "private": true,
-  "description": "The standalone monorepo for Phantom Downloader and Phantom Stream.",
+  "description": "The monorepo for Phantom Downloader, Stream, and Twitch.",
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",

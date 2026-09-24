@@ -1,6 +1,6 @@
 # Phantom Media
 
-The standalone monorepo for Phantom Downloader and Phantom Stream. Two apps,
+The monorepo for Phantom Downloader, Phantom Stream, and Phantom Twitch. Three apps,
 one design system, one install, and no build-time dependency on the Pervasivity
 intelligence repository from which this project was extracted.
 
@@ -8,8 +8,9 @@ intelligence repository from which this project was extracted.
 | ---------------------- | ----------------------------------------------------------------------- |
 | `apps/downloader`      | Phantom Downloader pulls a video or a whole playlist down as a file.    |
 | `apps/stream`          | Phantom Stream finds a film or series and plays it.                     |
+| `apps/twitch`          | Phantom Twitch plays live channels and VODs.                            |
 | `packages/theme`       | Design tokens, base layer and CSS primitives. Tailwind v4.              |
-| `packages/ui`          | React components both apps share, consumed as source.                   |
+| `packages/ui`          | React components the apps share, consumed as source.                    |
 | `packages/config`      | tsconfig, ESLint and PostCSS bases.                                     |
 
 ## Getting set up
@@ -24,8 +25,9 @@ Node 22 or newer, pnpm 10. Everything else comes from the lockfile.
 ## Working on it
 
 ```sh
-pnpm dev                              # both apps
+pnpm dev                              # all apps
 pnpm --filter @phantom/stream dev     # just one
+pnpm --filter @phantom/twitch dev     # Twitch only
 pnpm check                            # typecheck, lint, test and build everything
 pnpm deployment:check                 # Worker/OpenNext dry runs, no deployment
 pnpm container:build:downloader       # real Downloader image build
@@ -39,10 +41,10 @@ what tells you the tree is sound.
 
 ## How the sharing works
 
-Both apps are Next.js 16 with React 19 and Tailwind v4, and both pin the same
+All apps are Next.js 16 with React 19 and Tailwind v4, and pin the same
 majors through the pnpm catalog in `pnpm-workspace.yaml`. A split there would
 break `@phantom/ui`, which ships as TypeScript source and is compiled by
-whichever app imports it. Both `next.config.ts` files therefore include
+whichever app imports it. The apps’ `next.config.ts` files therefore include
 `transpilePackages: ["@phantom/ui"]`.
 
 Styling is one import. Each app's `globals.css` is:
@@ -57,27 +59,32 @@ That last line is not optional. Tailwind only ships classes it can find, and
 the shared components live outside the app it is scanning.
 
 Anything genuinely local stays local. The downloader keeps its locale-switcher
-transition. The stream app pulls in `@phantom/theme/player.css` for video
-chrome, and neither pays for the other's CSS.
+transition. Stream and Twitch import `@phantom/theme/player.css` for shared
+video chrome; their playback engines remain app-specific.
 
-The theme also ships a second surface. `@phantom/theme/cinema.css` re-points
-the palette variables to ink, which repaints every primitive and every shared
-component without any of them knowing about it. The stream app imports it
-because its content is moving pictures; the downloader stays on paper.
+The theme also ships a dark media surface. `@phantom/theme/media.css` re-points
+the palette variables to ink for Stream and Twitch. Stream adds
+`@phantom/theme/cinema.css` for its catalog and watch pages. Both media apps
+use `@phantom/theme/player.css` and player controls from `@phantom/ui`.
+Downloader stays on paper. Twitch keeps its playback engine and chat behavior.
+
+Phantom Twitch was imported from the separate `twitchsubonlybypass` checkout.
+Its channel, VOD, and playlist routes remain local to that app; the source
+checkout is unchanged.
 
 ## Design
 
-One accent on a paper ground, Sora over JetBrains Mono, generous radii. The
-search field is the same component in both apps: a pill, with a round icon
-button rather than a labelled one. Every other surface in the system is
-rounded, including panels, menus, rails and modals. A square field would have
-been the only hard corner on the page, and the field is already the loudest
-thing on a landing page without also shouting its own name.
+Sora and JetBrains Mono anchor all three apps. Downloader uses the paper
+palette; Stream and Twitch use the shared dark media palette. The wordmark,
+search field, buttons, artwork, and player controls come from `@phantom/ui`.
+Stream and Twitch also use the same `MediaHeader` navigation shell and
+`MediaTile` artwork/caption component, styled by `media.css`.
+App-specific catalog, channel, and download layouts stay with their apps.
 
 ## Deployment
 
-Both apps go to Cloudflare, by different routes, because they need different
-things.
+Downloader and Stream go to Cloudflare by different routes because they need
+different things. Twitch has no deployment configuration yet.
 
 **Downloader** runs in a Cloudflare Container. It shells out to `yt-dlp` and
 FFmpeg, so it needs a real filesystem and real binaries. The Worker in
