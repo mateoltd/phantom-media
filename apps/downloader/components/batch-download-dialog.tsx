@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, Check, Download, X } from "lucide-react";
+import { Check, DownloadSimple, X } from "@phosphor-icons/react/ssr";
 import {
   Button,
   IconButton,
@@ -137,7 +137,7 @@ export function BatchDownloadDialog({
           >
             {title}
           </h2>
-          <p className="mt-1 font-mono text-[10px] text-text-tertiary">
+          <p className="mt-1 text-[11px] text-text-tertiary">
             {started
               ? `${savedCount} of ${jobs.length || selectedVideos.length} ${t.queue.saved.toLowerCase()}`
               : `${selectedVideos.length} of ${videos.length} ${t.batch.selected}`}
@@ -148,7 +148,7 @@ export function BatchDownloadDialog({
           onClick={onClose}
           className="-mr-1 -mt-1"
         >
-          <X size={17} strokeWidth={2} />
+          <X weight="regular" size={17} />
         </IconButton>
       </div>
 
@@ -222,7 +222,7 @@ export function BatchDownloadDialog({
                     : "border-border bg-surface"
                 }`}
               >
-                {allSelected && <Check size={12} strokeWidth={3} />}
+                {allSelected && <Check weight="regular" size={12} />}
               </span>
               {allSelected ? t.batch.deselectAll : t.batch.selectAll}
             </button>
@@ -242,7 +242,6 @@ export function BatchDownloadDialog({
       <div className="flex items-center justify-between gap-3 border-t border-border/70 p-3 sm:px-5 sm:py-4">
         {settled ? (
           <Button variant="ghost" onClick={backToSelection} className="pl-2 pr-3">
-            <ArrowLeft size={16} strokeWidth={2.2} />
             {t.batch.back}
           </Button>
         ) : (
@@ -263,7 +262,7 @@ export function BatchDownloadDialog({
                 {t.batch.cancel}
               </Button>
               <Button onClick={start} disabled={selectedVideos.length === 0}>
-                <Download size={16} strokeWidth={2.1} />
+                <DownloadSimple weight="regular" size={16} />
                 {t.batch.add}
               </Button>
             </>

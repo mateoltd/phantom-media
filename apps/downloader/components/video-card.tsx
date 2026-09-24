@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { Check, Download } from "lucide-react";
+import { Check, DownloadSimple } from "@phosphor-icons/react/ssr";
+import { Artwork, MediaTile } from "@phantom/ui";
 import type { VideoInfo } from "@/lib/types";
 import { formatDuration } from "@/lib/types";
 import { useI18n } from "@/components/locale-provider";
@@ -34,7 +34,7 @@ export function VideoCard({
         type="button"
         aria-pressed={selected}
         className={`group flex w-full items-center gap-3 px-2 py-2.5 text-left transition-colors ${
-          selected ? "bg-phantom-soft/50" : "hover:bg-bg"
+          selected ? "bg-phantom-soft/50" : "hover:bg-surface-hover"
         }`}
         style={style}
         onClick={() => onSelect?.(video)}
@@ -46,16 +46,17 @@ export function VideoCard({
               : "border-border bg-surface"
           }`}
         >
-          {selected && <Check size={12} strokeWidth={3} />}
+          {selected && <Check weight="regular" size={12} />}
         </span>
-        <span className="relative h-12 w-[84px] shrink-0 overflow-hidden rounded-lg bg-[#ded9cf]">
-          <Image
+        <span className="relative h-12 w-[84px] shrink-0 overflow-hidden rounded-lg bg-surface-light">
+          <Artwork
             src={video.thumbnailUrl}
-            alt=""
-            fill
             sizes="84px"
-            unoptimized
-            className="h-full w-full object-cover"
+            fallback={
+              <span className="flex h-full items-center justify-center text-sm font-bold text-text-tertiary">
+                {video.title.slice(0, 1)}
+              </span>
+            }
           />
         </span>
         <span className="min-w-0 flex-1">
@@ -71,9 +72,10 @@ export function VideoCard({
   }
 
   return (
-    <article className="stagger-child group min-w-0" style={style}>
+    <article className="stagger-child min-w-0" style={style}>
       <Link
         href={localePath(locale, `/watch?v=${encodeURIComponent(video.id)}`)}
+        aria-label={video.title}
         onClick={(event) => {
           if (!onClick) return;
           event.preventDefault();
@@ -82,39 +84,26 @@ export function VideoCard({
         onPointerEnter={() => prefetchStreamOptions(video.id)}
         onPointerDown={() => prefetchStreamOptions(video.id)}
         onFocus={() => prefetchStreamOptions(video.id)}
-        className="block"
+        className="media-tile-hit group block min-w-0"
       >
-        <span className="relative block aspect-video w-full overflow-hidden rounded-2xl border border-border bg-[#ded9cf]">
-          <Image
-            src={video.thumbnailUrl}
-            alt=""
-            fill
-            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-            unoptimized
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-          />
-          <span className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/20" />
-          <span className="absolute right-2.5 top-2.5 flex h-9 w-9 translate-y-1 items-center justify-center rounded-xl bg-phantom text-white opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
-            <Download size={16} strokeWidth={2.2} />
-          </span>
-          {video.duration > 0 && (
-            <span className="absolute bottom-2 right-2 rounded-md bg-black/75 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-white">
-              {formatDuration(video.duration)}
-            </span>
-          )}
-        </span>
-
-        <h3 className="mt-3 line-clamp-2 text-[13.5px] font-bold leading-5 text-text decoration-phantom decoration-2 underline-offset-4 group-hover:underline">
-          {video.title}
-        </h3>
-        <p className="mt-1.5 truncate text-[11px] font-medium text-text-secondary">
-          {video.author}
-        </p>
-        {video.viewCount !== undefined && (
-          <p className="mt-0.5 font-mono text-[10px] text-text-tertiary">
-            {formatCompactViews(video.viewCount, locale)} {t.results.views}
-          </p>
-        )}
+        <MediaTile
+          title={video.title}
+          titleLines={2}
+          imageUrl={video.thumbnailUrl}
+          meta={
+            <>
+              <span>{video.author}</span>
+              {video.viewCount !== undefined && (
+                <span>
+                  {formatCompactViews(video.viewCount, locale)} {t.results.views}
+                </span>
+              )}
+            </>
+          }
+          badge={video.duration > 0 ? formatDuration(video.duration) : undefined}
+          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+          overlay={<DownloadSimple weight="regular" size={26} />}
+        />
       </Link>
     </article>
   );

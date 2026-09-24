@@ -18,6 +18,8 @@ interface SearchBarProps {
   loading?: boolean;
   placeholder?: string;
   autoFocus?: boolean;
+  initialValue?: string;
+  size?: "default" | "compact";
 }
 
 const VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
@@ -28,14 +30,28 @@ export function SearchBar({
   loading = false,
   placeholder,
   autoFocus = false,
+  initialValue = "",
+  size = "default",
 }: SearchBarProps) {
   const { messages: t } = useI18n();
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(initialValue);
   const [videos, setVideos] = useState<VideoInfo[]>([]);
   const [open, setOpen] = useState(false);
   const [lookingUp, setLookingUp] = useState(false);
   const cacheRef = useRef(new Map<string, VideoInfo[]>());
   const skipNextLookupRef = useRef(false);
+  const shouldAutoOpenRef = useRef(initialValue === "");
+  const initialValueRef = useRef(initialValue);
+
+  useEffect(() => {
+    if (initialValueRef.current === initialValue) return;
+    initialValueRef.current = initialValue;
+    shouldAutoOpenRef.current = false;
+    skipNextLookupRef.current = true;
+    setValue(initialValue);
+    setVideos([]);
+    setOpen(false);
+  }, [initialValue]);
 
   useEffect(() => {
     if (skipNextLookupRef.current) {
@@ -53,7 +69,7 @@ export function SearchBar({
       async () => {
         if (cached) {
           setVideos(cached);
-          setOpen(true);
+          if (shouldAutoOpenRef.current) setOpen(true);
           setLookingUp(false);
           return;
         }
@@ -78,7 +94,7 @@ export function SearchBar({
           const found = result.videos.slice(0, 6);
           cacheRef.current.set(query, found);
           setVideos(found);
-          setOpen(true);
+          if (shouldAutoOpenRef.current) setOpen(true);
         } catch (error) {
           if (!(error instanceof DOMException && error.name === "AbortError")) {
             setVideos([]);
@@ -109,6 +125,7 @@ export function SearchBar({
   );
 
   const updateValue = (nextValue: string) => {
+    shouldAutoOpenRef.current = true;
     setValue(nextValue);
     setOpen(true);
     const query = nextValue.trim();
@@ -125,6 +142,7 @@ export function SearchBar({
       onSubmit={onSubmit}
       loading={loading}
       autoFocus={autoFocus}
+      size={size}
       suggestions={suggestions}
       suggestionsOpen={open}
       suggestionsLoading={lookingUp}
@@ -145,6 +163,7 @@ export function SearchBar({
         suggestions: t.search.suggestions,
         looking: t.search.looking,
         paste: t.search.paste,
+        clear: t.search.clear,
       }}
     />
   );

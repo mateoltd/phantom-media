@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "@phantom/theme";
+@import "@phantom/theme/media.css";
 
 @source "../../../packages/ui/src";
 
@@ -10,4 +11,57 @@
 ::view-transition-old(locale-switcher),
 ::view-transition-new(locale-switcher) {
   animation-duration: 0.16s;
+}
+
+.media-home {
+  display: flex;
+  min-height: 100svh;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+
+.media-home-hero {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: clamp(20rem, 50svh, 36rem);
+  align-items: flex-end;
+  padding: calc(var(--media-header-height) + 2rem) 0 2rem;
+  isolation: isolate;
+}
+
+.media-home-artwork {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 75% 40%, #303038 0, #101113 62%);
+  pointer-events: none;
+}
+
+.media-home-scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom, #10111366, transparent 24%, #10111380 68%, var(--color-bg)),
+    linear-gradient(to right, #101113f5, #101113c0 40%, transparent 90%);
+}
+
+.media-home-bottom {
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .media-home {
+    min-height: calc(100svh - var(--media-header-height));
+  }
+
+  .media-home-hero {
+    min-height: 22rem;
+    padding: 4rem 0 2rem;
+  }
+
+  .media-home-scrim {
+    background: linear-gradient(to bottom, #10111350, #101113aa 55%, var(--color-bg));
+  }
 }

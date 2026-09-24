@@ -2,9 +2,9 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
-import { Download } from "lucide-react";
+import { DownloadSimple } from "@phosphor-icons/react/ssr";
+import { Artwork, Button } from "@phantom/ui";
 import { AppHeader } from "@/components/app-header";
 import { DownloadOptionsDialog } from "@/components/download-options-dialog";
 import { useI18n } from "@/components/locale-provider";
@@ -67,17 +67,18 @@ function WatchPageContent() {
 
         {video && (
           <section className="grid gap-6 sm:grid-cols-[minmax(0,320px)_minmax(0,1fr)] sm:items-start">
-            <span className="relative block aspect-video w-full overflow-hidden rounded-2xl border border-border bg-[#ded9cf]">
-              <Image
+            <span className="relative block aspect-video w-full overflow-hidden rounded-2xl border border-border bg-surface-light">
+              <Artwork
                 src={video.thumbnailUrl}
-                alt=""
-                fill
                 sizes="(min-width: 640px) 320px, 100vw"
-                unoptimized
-                className="h-full w-full object-cover"
+                fallback={
+                  <span className="flex h-full items-center justify-center text-sm font-bold text-text-tertiary">
+                    {video.title.slice(0, 1)}
+                  </span>
+                }
               />
               {video.duration > 0 && (
-                <span className="absolute bottom-2 right-2 rounded-md bg-black/75 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-white">
+                <span className="absolute bottom-2 right-2 rounded-md bg-black/75 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                   {formatDuration(video.duration)}
                 </span>
               )}
@@ -90,14 +91,13 @@ function WatchPageContent() {
               <p className="mt-2 text-[13px] font-medium text-text-secondary">
                 {video.author}
               </p>
-              <button
-                type="button"
+              <Button
                 onClick={() => setDialogOpen(true)}
-                className="mt-6 flex h-11 items-center gap-2 rounded-xl bg-phantom px-5 text-[13px] font-bold text-white transition-colors hover:bg-phantom-dark"
+                className="mt-6"
               >
-                <Download size={16} strokeWidth={2.1} />
+                <DownloadSimple weight="regular" size={16} />
                 {t.watch.download}
-              </button>
+              </Button>
             </div>
           </section>
         )}

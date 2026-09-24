@@ -2,7 +2,8 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Layers2 } from "lucide-react";
+import { Stack } from "@phosphor-icons/react/ssr";
+import { Button } from "@phantom/ui";
 import { BatchDownloadDialog } from "@/components/batch-download-dialog";
 import { DownloadOptionsDialog } from "@/components/download-options-dialog";
 import { useI18n } from "@/components/locale-provider";
@@ -97,7 +98,7 @@ function PlaylistPageContent() {
 
         {result && result.videos.length > 0 && !batchOpen && (
           <section>
-                <div className="mb-7 flex flex-wrap items-center justify-between gap-4 border-b border-black/[0.08] pb-5">
+                <div className="mb-7 flex flex-wrap items-center justify-between gap-4 ">
                   <div className="min-w-0">
                     <h1 className="truncate text-2xl font-extrabold tracking-[-0.03em] text-text">
                       {result.title}
@@ -109,14 +110,10 @@ function PlaylistPageContent() {
                         : t.home.itemsFound}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setBatchOpen(true)}
-                    className="flex h-10 shrink-0 items-center gap-2 rounded-xl bg-text px-4 text-xs font-bold text-white transition-colors hover:bg-text/85"
-                  >
-                    <Layers2 size={15} strokeWidth={2} />
+                  <Button onClick={() => setBatchOpen(true)}>
+                    <Stack weight="regular" size={15} />
                     {t.playlist.downloadAll}
-                  </button>
+                  </Button>
                 </div>
             <VideoList videos={result.videos} onVideoClick={setSingleVideo} />
           </section>

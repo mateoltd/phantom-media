@@ -29,12 +29,12 @@ export function DownloadProgress({ item }: { item: DownloadItem }) {
           >
             {getPhaseLabel(item, t.queue)}
           </p>
-          <p className="mt-1.5 min-h-4 font-mono text-[10px] text-text-tertiary">
+          <p className="mt-1.5 min-h-4 text-[11px] text-text-tertiary">
             {stats}
           </p>
         </div>
         <p
-          className={`shrink-0 font-mono text-[40px] font-extrabold leading-none tracking-[-0.05em] ${
+          className={`shrink-0 text-[40px] font-extrabold leading-none tracking-[-0.05em] tabular-nums ${
             failed ? "text-text-tertiary" : "text-text"
           }`}
         >

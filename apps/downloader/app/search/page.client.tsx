@@ -2,7 +2,8 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { TriangleAlert, Layers2 } from "lucide-react";
+import { Stack, Warning } from "@phosphor-icons/react/ssr";
+import { Button } from "@phantom/ui";
 import { AppHeader } from "@/components/app-header";
 import { BatchDownloadDialog } from "@/components/batch-download-dialog";
 import { DownloadOptionsDialog } from "@/components/download-options-dialog";
@@ -86,7 +87,7 @@ function SearchPageContent() {
     [enqueueBatch, setLastContainer, setLastQualityPreference]
   );
 
-  const showResults = result && result.videos.length > 0 && !batchOpen;
+  const showResults = result && !batchOpen;
 
   return (
     <main className="workspace-canvas flex min-h-screen flex-col">
@@ -94,6 +95,7 @@ function SearchPageContent() {
         onSearch={handleSearch}
         onSelectVideo={setSingleVideo}
         loading={loading}
+        initialQuery={query ?? ""}
       />
 
       <div className="app-shell flex-1 pb-14 pt-2">
@@ -116,7 +118,7 @@ function SearchPageContent() {
 
         {showResults && (
           <>
-            <div className="mb-7 flex flex-wrap items-center justify-between gap-4 border-b border-black/[0.08] pb-5">
+            <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
               <div className="min-w-0">
                 <h1 className="truncate text-2xl font-extrabold tracking-[-0.03em] text-text">
                   {localizeResultTitle(result.title || query || "", t)}
@@ -129,14 +131,10 @@ function SearchPageContent() {
                 </p>
               </div>
               {result.videos.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => setBatchOpen(true)}
-                  className="flex h-10 shrink-0 items-center gap-2 rounded-xl bg-text px-4 text-xs font-bold text-white transition-colors hover:bg-text/85"
-                >
-                  <Layers2 size={15} strokeWidth={2} />
+                <Button onClick={() => setBatchOpen(true)}>
+                  <Stack weight="regular" size={15} />
                   {t.home.batch}
-                </button>
+                </Button>
               )}
             </div>
             <VideoList videos={result.videos} onVideoClick={setSingleVideo} />
@@ -181,9 +179,9 @@ function RestrictedNotice() {
 
   return (
     <div className="mb-8 flex items-start gap-3 border-l-2 border-phantom py-1 pl-3">
-      <TriangleAlert
+      <Warning
+        weight="regular"
         size={17}
-        strokeWidth={2}
         className="mt-0.5 shrink-0 text-phantom-deep"
       />
       <div>

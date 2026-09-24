@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { MediaHeader, Wordmark } from "@phantom/ui";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useI18n } from "@/components/locale-provider";
-import { Logo } from "@phantom/ui";
 import { SearchBar } from "@/components/search-bar";
 import { localePath } from "@/lib/i18n";
 import type { VideoInfo } from "@/lib/types";
@@ -14,7 +14,8 @@ interface AppHeaderProps {
   onSelectVideo?: (video: VideoInfo) => void;
   loading?: boolean;
   placeholder?: string;
-  hideBrandOnDesktop?: boolean;
+  floating?: boolean;
+  initialQuery?: string;
   englishHref?: string;
   spanishHref?: string;
 }
@@ -24,10 +25,12 @@ export function AppHeader({
   onSelectVideo,
   loading = false,
   placeholder,
-  hideBrandOnDesktop = false,
+  floating = false,
+  initialQuery = "",
   englishHref,
   spanishHref,
 }: AppHeaderProps) {
+  const pathname = usePathname();
   const router = useRouter();
   const { locale, messages: t } = useI18n();
 
@@ -48,32 +51,40 @@ export function AppHeader({
   };
 
   return (
-    <header className="app-shell relative z-30 flex flex-wrap items-center gap-x-5 gap-y-3 pb-4 pt-5 lg:grid lg:grid-cols-[1fr_minmax(0,900px)_1fr]">
-      <Link
-        href={localePath(locale, "/")}
-        aria-label={t.nav.home}
-        className={`flex shrink-0 items-center gap-2.5 ${
-          hideBrandOnDesktop ? "lg:hidden" : ""
-        }`}
-      >
-        <Logo size={34} decorative priority className="h-6 w-auto" />
-        <span className="text-xl font-extrabold leading-none text-text">
-          Phantom
-        </span>
-      </Link>
-
-      <div className="order-last w-full min-w-0 lg:order-none lg:col-start-2 lg:w-auto">
+    <MediaHeader
+      routeKey={pathname}
+      floating={floating}
+      labels={{
+        openSearch: t.search.openSearch,
+        closeSearch: t.search.closeSearch,
+      }}
+      brand={
+        <Link href={localePath(locale, "/")} aria-label={t.nav.home}>
+          <Wordmark
+            service="Downloader"
+            tone="chalk"
+            priority
+            className="hidden sm:flex"
+          />
+          <Wordmark tone="chalk" priority className="sm:hidden" />
+        </Link>
+      }
+      search={
         <SearchBar
           onSubmit={handleSearch}
           onSelectVideo={handleSelectVideo}
           loading={loading}
           placeholder={placeholder}
+          initialValue={initialQuery}
+          size="compact"
         />
-      </div>
-
-      <div className="ml-auto shrink-0 lg:justify-self-end">
-        <LanguageSwitcher englishHref={englishHref} spanishHref={spanishHref} />
-      </div>
-    </header>
+      }
+      actions={
+        <LanguageSwitcher
+          englishHref={englishHref}
+          spanishHref={spanishHref}
+        />
+      }
+    />
   );
 }

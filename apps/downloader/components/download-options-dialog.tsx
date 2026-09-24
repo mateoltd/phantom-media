@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import {
-  TriangleAlert,
-  ArrowLeft,
-  Download,
+  DownloadSimple,
+  Warning,
   X,
-} from "lucide-react";
-import { Button, IconButton, Modal } from "@phantom/ui";
+} from "@phosphor-icons/react/ssr";
+import { Artwork, Button, IconButton, Modal } from "@phantom/ui";
 import type { DownloadOption, VideoInfo } from "@/lib/types";
 import {
   containerDisplayName,
@@ -104,17 +102,18 @@ export function DownloadOptionsDialog({
       }`}
     >
       <div className="flex items-start gap-4 p-4 sm:p-5">
-        <div className="relative hidden h-[58px] w-[104px] shrink-0 overflow-hidden rounded-xl bg-[#ded9cf] sm:block">
-          <Image
+        <div className="relative hidden h-[58px] w-[104px] shrink-0 overflow-hidden rounded-xl bg-surface-light sm:block">
+          <Artwork
             src={video.thumbnailUrl}
-            alt=""
-            fill
             sizes="104px"
-            unoptimized
-            className="h-full w-full object-cover"
+            fallback={
+              <span className="flex h-full items-center justify-center text-sm font-bold text-text-tertiary">
+                {video.title.slice(0, 1)}
+              </span>
+            }
           />
           {video.duration > 0 && (
-            <span className="absolute bottom-1 right-1 rounded bg-black/75 px-1 py-0.5 font-mono text-[9px] text-white">
+            <span className="absolute bottom-1 right-1 rounded bg-black/75 px-1 py-0.5 text-[9px] font-semibold text-white">
               {formatDuration(video.duration)}
             </span>
           )}
@@ -126,7 +125,7 @@ export function DownloadOptionsDialog({
           >
             {video.title}
           </h2>
-          <p className="mt-1.5 truncate font-mono text-[10px] text-text-tertiary">
+          <p className="mt-1.5 truncate text-[11px] text-text-tertiary">
             {job ? specs.join(", ") : video.author}
           </p>
         </div>
@@ -135,7 +134,7 @@ export function DownloadOptionsDialog({
           onClick={onClose}
           className="-mr-1 -mt-1"
         >
-          <X size={18} strokeWidth={2} />
+          <X weight="regular" size={18} />
         </IconButton>
       </div>
 
@@ -217,7 +216,6 @@ export function DownloadOptionsDialog({
                 onClick={() => backToFormats(job.id)}
                 className="mr-auto gap-1.5 pl-2 pr-3"
               >
-                <ArrowLeft size={16} strokeWidth={2.2} />
                 {t.format.back}
               </Button>
             )}
@@ -242,7 +240,7 @@ export function DownloadOptionsDialog({
               onClick={startDownload}
               disabled={!selectedOption || loading || DOWNLOADS_RESTRICTED}
             >
-              <Download size={16} strokeWidth={2.1} />
+              <DownloadSimple weight="regular" size={16} />
               {t.format.prepare}
             </Button>
           </>
@@ -310,7 +308,7 @@ function FormatRow({
       role="radio"
       aria-checked={selected}
       onClick={onSelect}
-      className="flex w-full items-center gap-3 border-b border-black/[0.07] py-3 text-left transition-colors last:border-b-0 hover:bg-bg/60"
+      className="flex w-full items-center gap-3 py-3 text-left transition-colors first:pt-0 last:pb-0 hover:bg-surface-hover/60"
     >
       <span
         className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
@@ -322,7 +320,7 @@ function FormatRow({
       <span className="min-w-0 flex-1 truncate text-[14px] font-extrabold text-text">
         {label}
       </span>
-      <span className="shrink-0 font-mono text-[10px] text-text-tertiary">
+      <span className="shrink-0 text-[10px] text-text-tertiary">
         {detail}
       </span>
     </button>
@@ -341,7 +339,7 @@ function MessageState({ title, body }: { title: string; body: string }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center">
       <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-error/10 text-error">
-        <TriangleAlert size={20} strokeWidth={2} />
+        <Warning weight="regular" size={20} />
       </span>
       <h3 className="mt-4 text-sm font-extrabold text-text">{title}</h3>
       <p className="mt-2 max-w-sm text-xs leading-5 text-text-secondary">

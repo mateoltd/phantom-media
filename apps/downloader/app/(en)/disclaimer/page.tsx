@@ -25,7 +25,7 @@ function Section({
   children: ReactNode;
 }>) {
   return (
-    <section className="border-t border-black/[0.08] pt-6">
+    <section className="pt-6">
       <h2 className="text-lg font-extrabold tracking-[-0.02em] text-text">
         {title}
       </h2>
@@ -60,13 +60,10 @@ export default function DisclaimerPage() {
 
       <div className="app-shell max-w-3xl flex-1 pb-16 pt-6">
         <header>
-          <p className="font-mono text-[10px] font-bold uppercase text-phantom">
-            Legal
-          </p>
-          <h1 className="mt-3 text-[clamp(2.2rem,6vw,3rem)] font-extrabold leading-[0.95] tracking-[-0.03em] text-text">
+          <h1 className="text-[clamp(2.2rem,6vw,3rem)] font-extrabold leading-[0.95] tracking-[-0.03em] text-text">
             Legal disclaimer
           </h1>
-          <span className="ink-underline block" aria-hidden="true" />
+          <span className="mt-5 block h-1 w-14 rounded-full bg-phantom" aria-hidden="true" />
           <p className="mt-6 max-w-2xl text-[14px] leading-7 text-text-secondary">
             Phantom YouTube is an independent software tool. This page sets out
             the intended use of the site, the limits of responsibility for its

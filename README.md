@@ -47,26 +47,32 @@ break `@phantom/ui`, which ships as TypeScript source and is compiled by
 whichever app imports it. The apps’ `next.config.ts` files therefore include
 `transpilePackages: ["@phantom/ui"]`.
 
-Styling is one import. Each app's `globals.css` is:
+Styling starts with the shared base. Each app's `globals.css` keeps the shared
+Tailwind source scan and then loads the media surface appropriate to that app:
 
 ```css
 @import "tailwindcss";
 @import "@phantom/theme";
+@import "@phantom/theme/media.css";
 @source "../../../packages/ui/src";
 ```
 
-That last line is not optional. Tailwind only ships classes it can find, and
-the shared components live outside the app it is scanning.
+Stream and Twitch add their additional cinema/player layers. The `@source`
+line is not optional: Tailwind only ships classes it can find, and the shared
+components live outside the app it is scanning.
 
 Anything genuinely local stays local. The downloader keeps its locale-switcher
-transition. Stream and Twitch import `@phantom/theme/player.css` for shared
-video chrome; their playback engines remain app-specific.
+transition and its download/format workflows. All three apps now use the shared
+media header, search field, artwork, and media surface. Stream and Twitch also
+import `@phantom/theme/player.css` for shared video chrome; their playback
+engines remain app-specific.
 
 The theme also ships a dark media surface. `@phantom/theme/media.css` re-points
-the palette variables to ink for Stream and Twitch. Stream adds
-`@phantom/theme/cinema.css` for its catalog and watch pages. Both media apps
-use `@phantom/theme/player.css` and player controls from `@phantom/ui`.
-Downloader stays on paper. Twitch keeps its playback engine and chat behavior.
+the palette variables to ink for all three apps. Stream adds
+`@phantom/theme/cinema.css` for its catalog and watch pages. Downloader keeps
+its download-specific layouts and queue state, while all apps use the shared
+media shell. Stream and Twitch use `@phantom/theme/player.css` and player
+controls from `@phantom/ui`. Twitch keeps its playback engine and chat behavior.
 
 Phantom Twitch was imported from the separate `twitchsubonlybypass` checkout.
 Its channel, VOD, and playlist routes remain local to that app; the source
@@ -74,12 +80,12 @@ checkout is unchanged.
 
 ## Design
 
-Sora and JetBrains Mono anchor all three apps. Downloader uses the paper
-palette; Stream and Twitch use the shared dark media palette. The wordmark,
-search field, buttons, artwork, and player controls come from `@phantom/ui`.
-Stream and Twitch also use the same `MediaHeader` navigation shell and
-`MediaTile` artwork/caption component, styled by `media.css`.
-App-specific catalog, channel, and download layouts stay with their apps.
+Sora anchors the interface across all three apps. JetBrains Mono is limited to
+the Phantom wordmark treatment and existing technical readouts. All three use
+the shared dark media palette. The wordmark, search field, buttons, artwork,
+media header, and media tiles come from `@phantom/ui`. Stream and Twitch also
+use the shared player controls; app-specific catalog, channel, playback, and
+download workflows stay with their apps.
 
 ## Deployment
 

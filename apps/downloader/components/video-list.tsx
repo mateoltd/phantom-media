@@ -36,7 +36,7 @@ export function VideoList({
     <div
       className={
         selectable
-          ? "divide-y divide-black/[0.07]"
+          ? "space-y-1"
           : "grid grid-cols-1 gap-x-5 gap-y-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
       }
     >

@@ -1,8 +1,7 @@
 "use client";
 
-import Image from "next/image";
-import { Check, RefreshCw, Trash2, X } from "lucide-react";
-import { IconButton, ProgressRail } from "@phantom/ui";
+import { ArrowsClockwise, Check, Trash, X } from "@phosphor-icons/react/ssr";
+import { Artwork, IconButton, ProgressRail } from "@phantom/ui";
 import type { DownloadItem as DownloadItemType } from "@/lib/types";
 import { containerDisplayName, formatFileSize } from "@/lib/types";
 import { useI18n } from "@/components/locale-provider";
@@ -37,18 +36,19 @@ export function DownloadItemRow({
   return (
     <article className="job-row">
       <div className="flex gap-3">
-        <div className="relative h-[50px] w-[88px] shrink-0 overflow-hidden rounded-lg bg-[#ded9cf]">
-          <Image
+        <div className="relative h-[50px] w-[88px] shrink-0 overflow-hidden rounded-lg bg-surface-light">
+          <Artwork
             src={item.video.thumbnailUrl}
-            alt=""
-            fill
             sizes="88px"
-            unoptimized
-            className="h-full w-full object-cover"
+            fallback={
+              <span className="flex h-full items-center justify-center text-sm font-bold text-text-tertiary">
+                {item.video.title.slice(0, 1)}
+              </span>
+            }
           />
           {completed && (
             <span className="absolute inset-0 flex items-center justify-center bg-success/85 text-white">
-              <Check size={18} strokeWidth={2.6} />
+              <Check weight="regular" size={18} />
             </span>
           )}
         </div>
@@ -63,7 +63,7 @@ export function DownloadItemRow({
                 (item.status === "started" &&
                   item.phase !== "transferring")) && (
                 <RowAction label={t.queue.cancel} onClick={() => onCancel(item.id)}>
-                  <X size={14} strokeWidth={2.2} />
+                  <X weight="regular" size={14} />
                 </RowAction>
               )}
               {(failed || item.status === "canceled") && (
@@ -71,18 +71,18 @@ export function DownloadItemRow({
                   label={t.queue.restart}
                   onClick={() => onRestart(item.id)}
                 >
-                  <RefreshCw size={14} strokeWidth={2.2} />
+                  <ArrowsClockwise weight="regular" size={14} />
                 </RowAction>
               )}
               {(completed || failed || item.status === "canceled") && (
                 <RowAction label={t.queue.remove} onClick={() => onRemove(item.id)}>
-                  <Trash2 size={14} strokeWidth={2} />
+                  <Trash weight="regular" size={14} />
                 </RowAction>
               )}
             </div>
           </div>
 
-          <p className="mt-1 font-mono text-[10px] text-text-tertiary">
+          <p className="mt-1 text-[10px] text-text-tertiary">
             {specs.join(", ")}
           </p>
 
@@ -100,13 +100,13 @@ export function DownloadItemRow({
             >
               {getPhaseLabel(item, t.queue)}
             </span>
-            <span className="shrink-0 font-mono text-[11px] font-bold text-text">
+            <span className="shrink-0 text-[11px] font-semibold tabular-nums text-text">
               {percent}%
             </span>
           </div>
 
           {stats && (
-            <p className="mt-1 font-mono text-[10px] text-text-tertiary">
+            <p className="mt-1 text-[10px] text-text-tertiary">
               {stats}
             </p>
           )}

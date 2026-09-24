@@ -1,5 +1,6 @@
 "use client";
 
+import { Translate } from "@phosphor-icons/react/ssr";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/components/locale-provider";
 import type { Locale } from "@/lib/i18n";
@@ -25,33 +26,26 @@ export function LanguageSwitcher({
     return () => prefetch.remove();
   }, [englishHref, locale, spanishHref]);
 
+  const changeLocale = (nextLocale: Locale) => {
+    setPendingLocale(nextLocale);
+    window.location.assign(nextLocale === "en" ? englishHref : spanishHref);
+  };
+
   return (
-    <nav
-      aria-label={t.language.label}
-      className="locale-switcher flex items-center rounded-full border border-border bg-surface/75 p-1 text-[10px] font-bold text-text-secondary backdrop-blur-sm"
+    <label
+      className="media-header-action locale-switcher relative focus-within:ring-2 focus-within:ring-white/40"
+      title={`${t.language.label}: ${visibleLocale.toUpperCase()}`}
     >
-      <a
-        href={englishHref}
-        hrefLang="en"
-        aria-current={locale === "en" ? "page" : undefined}
-        onClick={() => setPendingLocale("en")}
-        className={`rounded-full px-2.5 py-1.5 ${
-          visibleLocale === "en" ? "bg-text text-white" : "hover:text-text"
-        }`}
+      <Translate weight="regular" size={18} aria-hidden="true" />
+      <select
+        value={visibleLocale}
+        onChange={(event) => changeLocale(event.target.value as Locale)}
+        aria-label={t.language.label}
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
       >
-        EN
-      </a>
-      <a
-        href={spanishHref}
-        hrefLang="es"
-        aria-current={locale === "es" ? "page" : undefined}
-        onClick={() => setPendingLocale("es")}
-        className={`rounded-full px-2.5 py-1.5 ${
-          visibleLocale === "es" ? "bg-text text-white" : "hover:text-text"
-        }`}
-      >
-        ES
-      </a>
-    </nav>
+        <option value="en">English</option>
+        <option value="es">Español</option>
+      </select>
+    </label>
   );
 }
