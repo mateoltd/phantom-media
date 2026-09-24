@@ -39,3 +39,6 @@ export type { TimeListener, TimeSnapshot } from "./timecode";
 
 export { MediaHeader } from "./media-header";
 export { MediaTile } from "./media-tile";
+
+export { PLAYER_SEEK_SECONDS, useStagePlayback } from "./use-stage-playback";
+export type { StageFeedback } from "./use-stage-playback";

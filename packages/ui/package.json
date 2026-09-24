@@ -13,7 +13,6 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "lucide-react": "*",
     "next": "*",
     "react": "*",
     "react-dom": "*"
@@ -24,13 +23,13 @@
     "@types/react-dom": "catalog:",
     "eslint": "catalog:",
     "eslint-config-next": "catalog:",
-    "lucide-react": "catalog:",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "typescript": "catalog:"
   },
   "dependencies": {
+    "@phosphor-icons/react": "catalog:",
     "liquid-gooey": "^0.2.2"
   }
 }

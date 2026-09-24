@@ -5,12 +5,14 @@ import { MotionPresence } from "./motion-presence";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
+  CaretLeft,
+  CaretRight,
   Check,
-  ChevronLeft,
-  ChevronRight,
-  Settings,
+  Gear,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react/ssr";
+
+const ICON = { weight: "regular" as const };
 
 export interface SignalStrength {
   /** 1 to 5 bars, or 0 for a struck-through meter. */
@@ -84,7 +86,7 @@ export function StageSettings({
   onOpenChange,
   open,
   label = "Settings",
-  icon = <Settings size={22} strokeWidth={1.5} />,
+  icon = <Gear {...ICON} size={22} />,
   actions = [],
 }: StageSettingsProps) {
   const [availableHeight, setAvailableHeight] = useState<number | undefined>();
@@ -175,7 +177,7 @@ export function StageSettings({
                 aria-label={`Back to ${label.toLowerCase()}`}
                 onClick={() => setActive(null)}
               >
-                <ChevronLeft size={18} />
+                <CaretLeft {...ICON} size={18} />
               </button>
             )}
             <span>{section?.title ?? label}</span>
@@ -191,7 +193,7 @@ export function StageSettings({
                 ?.focus({ preventScroll: true });
             }}
           >
-            <X size={18} />
+            <X {...ICON} size={18} />
           </button>
         </div>
         <div key={active ?? "root"} className="stage-sheet-body">
@@ -210,7 +212,7 @@ export function StageSettings({
                       (option) => option.value === entry.value,
                     )?.label}
                   </span>
-                  <ChevronRight size={16} className="shrink-0 text-stage-muted" />
+                  <CaretRight {...ICON} size={16} className="shrink-0 text-stage-muted" />
                 </button>
               ))}
               {actions.length > 0 && (
@@ -257,7 +259,7 @@ export function StageSettings({
                   {selected && (
                     <Check
                       size={14}
-                      strokeWidth={2.6}
+                      {...ICON}
                       className="text-phantom"
                     />
                   )}
@@ -294,7 +296,7 @@ export function StageSettings({
                     aria-label={`Previous ${option.label} version`}
                     className="stage-sheet-step"
                   >
-                    <ChevronLeft size={13} strokeWidth={2.6} />
+                    <CaretLeft {...ICON} size={13} />
                   </button>
                   <span className="stage-sheet-count">
                     {variant.index + 1}/{variant.count}
@@ -305,7 +307,7 @@ export function StageSettings({
                     aria-label={`Next ${option.label} version`}
                     className="stage-sheet-step"
                   >
-                    <ChevronRight size={13} strokeWidth={2.6} />
+                    <CaretRight {...ICON} size={13} />
                   </button>
                 </span>
               </div>

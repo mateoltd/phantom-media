@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown } from "lucide-react";
+import { CaretDown, Check } from "@phosphor-icons/react/ssr";
 
 export interface StyledSelectOption {
   value: string;
@@ -203,14 +203,14 @@ export function StyledSelect({
                         : "border-border bg-surface"
                     }`}
                   >
-                    {selected && <Check size={12} strokeWidth={3} />}
+                    {selected && <Check weight="regular" size={12} />}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px] font-bold">
                       {option.label}
                     </span>
                     {option.detail && (
-                      <span className="mt-0.5 block truncate font-mono text-[10px] text-text-tertiary">
+                      <span className="mt-0.5 block truncate text-[10px] text-text-tertiary">
                         {option.detail}
                       </span>
                     )}
@@ -227,7 +227,7 @@ export function StyledSelect({
     <div className="min-w-0">
       <span
         id={labelId}
-        className="mb-2 block font-mono text-[10px] font-bold uppercase text-text-tertiary"
+        className="mb-2 block text-[11px] font-semibold text-text-secondary"
       >
         {label}
       </span>
@@ -263,7 +263,7 @@ export function StyledSelect({
             {selectedOption?.label ?? placeholder}
           </span>
           {showSelectedDetail && selectedOption?.detail && (
-            <span className="mt-0.5 block truncate font-mono text-[10px] text-text-tertiary">
+            <span className="mt-0.5 block truncate text-[10px] text-text-tertiary">
               {selectedOption.detail}
             </span>
           )}
@@ -273,7 +273,7 @@ export function StyledSelect({
             open ? "rotate-180" : ""
           }`}
         >
-          <ChevronDown size={16} strokeWidth={2} />
+          <CaretDown weight="regular" size={16} />
         </span>
       </button>
       {menu}

@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { Liquid } from "liquid-gooey";
-import { Timer, TimerOff, X } from "lucide-react";
+import { Timer, X } from "@phosphor-icons/react/ssr";
+
+const FILLED_ICON = { weight: "fill" as const };
 
 interface SleepTimerPickerProps {
   open: boolean;
@@ -76,7 +78,7 @@ export function SleepTimerPicker({
       >
         <div className="stage-sleep-header">
           <div className="stage-sleep-title">
-            <Timer size={18} strokeWidth={1.7} aria-hidden="true" />
+            <Timer {...FILLED_ICON} size={18} aria-hidden="true" />
             <span>Sleep timer</span>
           </div>
           <span className="stage-sleep-remaining" aria-live="polite">
@@ -88,13 +90,13 @@ export function SleepTimerPicker({
             aria-label="Close sleep timer"
             onClick={close}
           >
-            <X size={18} strokeWidth={1.7} />
+            <X weight="regular" size={18} />
           </button>
         </div>
         <Liquid className="stage-sleep-liquid" fill="#383b40" blur={10} contrast={18} shadow="0 4px 12px #0004">
           {CHOICES.map((choice, index) => {
             const selected = minutes === choice.minutes;
-            const Icon = choice.minutes === null ? TimerOff : Timer;
+            const Icon = Timer;
             return (
               <Liquid.Item
                 key={choice.short}
@@ -115,7 +117,7 @@ export function SleepTimerPicker({
                     close();
                   }}
                 >
-                  <Icon size={17} strokeWidth={1.7} aria-hidden="true" />
+                  <Icon {...FILLED_ICON} size={17} aria-hidden="true" />
                   <span>{choice.short}</span>
                 </button>
               </Liquid.Item>

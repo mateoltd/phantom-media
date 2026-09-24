@@ -1,4 +1,4 @@
-/* Shared dark media surface for Stream and Twitch. */
+/* Shared dark media surface for all Phantom apps. */
 :root {
   --color-phantom: #e4e6e9;
   --button-primary-text: #181a1e;
@@ -328,5 +328,6 @@ select:focus-visible {
 .media-tile-art.aspect-video .media-tile-badge { top: auto; bottom: 8px; }
 .media-tile-caption { display: block; padding: 0.8rem 0.1rem 0.2rem; }
 .media-tile-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem; font-weight: 500; }
+.media-tile-title.line-clamp-2 { white-space: normal; }
 .media-tile-meta { display: flex; flex-wrap: wrap; gap: 0.35rem 0.65rem; margin-top: 0.35rem; font-size: 0.7rem; color: var(--color-text-tertiary); }
 @media (prefers-reduced-motion: reduce) { .media-tile-art, .media-tile-play { transition: none; } }

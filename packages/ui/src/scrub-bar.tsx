@@ -1,12 +1,14 @@
 "use client";
 
 import { type PointerEvent, useEffect, useRef } from "react";
+import { PLAYER_SEEK_SECONDS } from "./use-stage-playback";
 import { formatTimecode } from "./timecode";
 import type { TimeListener } from "./timecode";
 
 interface ScrubBarProps {
   subscribe: (listener: TimeListener) => () => void;
   onSeek: (seconds: number) => void;
+  onSeekStep?: (direction: -1 | 1) => void;
   onScrubbingChange?: (scrubbing: boolean) => void;
 }
 
@@ -18,6 +20,7 @@ function percent(value: number, total: number): string {
 export function ScrubBar({
   subscribe,
   onSeek,
+  onSeekStep,
   onScrubbingChange,
 }: ScrubBarProps) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -132,10 +135,10 @@ export function ScrubBar({
           const time = currentTimeRef.current;
           const duration = durationRef.current;
           const targets: Record<string, number> = {
-            ArrowLeft: time - 5,
-            ArrowDown: time - 5,
-            ArrowRight: time + 5,
-            ArrowUp: time + 5,
+            ArrowLeft: time - PLAYER_SEEK_SECONDS,
+            ArrowDown: time - PLAYER_SEEK_SECONDS,
+            ArrowRight: time + PLAYER_SEEK_SECONDS,
+            ArrowUp: time + PLAYER_SEEK_SECONDS,
             Home: 0,
             End: duration,
             PageDown: time - duration / 10,
@@ -145,7 +148,12 @@ export function ScrubBar({
           if (target === undefined) return;
           event.preventDefault();
           event.stopPropagation();
-          if (duration > 0) onSeek(Math.max(0, Math.min(duration, target)));
+          if (duration <= 0) return;
+          if (onSeekStep && event.key.startsWith("Arrow")) {
+            onSeekStep(event.key === "ArrowLeft" || event.key === "ArrowDown" ? -1 : 1);
+          } else {
+            onSeek(Math.max(0, Math.min(duration, target)));
+          }
         }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}

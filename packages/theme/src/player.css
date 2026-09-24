@@ -1,3 +1,73 @@
+:root {
+  --icon-swap-dur: 250ms;
+  --icon-swap-blur: 2px;
+  --icon-swap-start-scale: 0.25;
+  --icon-swap-ease: ease-in-out;
+}
+
+.t-icon-swap {
+  position: relative;
+  display: inline-grid;
+}
+.t-icon-swap .t-icon {
+  grid-area: 1 / 1;
+  transition:
+    opacity   var(--icon-swap-dur) var(--icon-swap-ease),
+    filter    var(--icon-swap-dur) var(--icon-swap-ease),
+    transform var(--icon-swap-dur) var(--icon-swap-ease);
+  will-change: opacity, filter, transform;
+}
+.t-icon-swap[data-state="a"] .t-icon[data-icon="a"],
+.t-icon-swap[data-state="b"] .t-icon[data-icon="b"] {
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
+}
+.t-icon-swap[data-state="a"] .t-icon[data-icon="b"],
+.t-icon-swap[data-state="b"] .t-icon[data-icon="a"] {
+  opacity: 0;
+  filter: blur(var(--icon-swap-blur));
+  transform: scale(var(--icon-swap-start-scale));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-icon-swap .t-icon { transition: none !important; }
+}
+
+:root {
+  --text-swap-dur: 150ms;
+  --text-swap-translate-y: 4px;
+  --text-swap-blur: 2px;
+  --text-swap-ease: ease-in-out;
+}
+
+.t-text-swap {
+  display: inline-block;
+  transform: translateY(0);
+  filter: blur(0);
+  opacity: 1;
+  transition:
+    transform var(--text-swap-dur) var(--text-swap-ease),
+    filter    var(--text-swap-dur) var(--text-swap-ease),
+    opacity   var(--text-swap-dur) var(--text-swap-ease);
+  will-change: transform, filter, opacity;
+}
+.t-text-swap.is-exit {
+  transform: translateY(calc(var(--text-swap-translate-y) * -1));
+  filter: blur(var(--text-swap-blur));
+  opacity: 0;
+}
+.t-text-swap.is-enter-start {
+  transform: translateY(var(--text-swap-translate-y));
+  filter: blur(var(--text-swap-blur));
+  opacity: 0;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-text-swap { transition: none !important; }
+}
+
 /* Cinema canvas and a separate, quiet control layer. */
 .motion-presence { display: contents; }
 .motion-presence[data-closing="true"] :is(.stage-sheet, .stage-panel) {
@@ -142,6 +212,13 @@
     color 0.15s,
     opacity 0.15s;
 }
+.stage-control > svg,
+.stage-play > svg {
+  display: block;
+  flex: 0 0 auto;
+  max-width: 100%;
+  max-height: 100%;
+}
 .stage-control:hover,
 .stage-control-selected {
   color: #fff;
@@ -154,6 +231,7 @@
   cursor: not-allowed;
 }
 .stage-transport-controls {
+  --icon-swap-start-scale: 0.92;
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -172,9 +250,36 @@
 .stage-transport .stage-control:hover {
   background: #ffffff10;
 }
+.stage-transport-controls[data-state="b"] .stage-control:hover {
+  background: transparent;
+}
 .stage-transport .stage-transport-play {
   width: 64px;
   height: 64px;
+}
+.stage-transport-feedback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 1rem;
+  pointer-events: none;
+  font-size: 15px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.stage-transport-feedback .t-text-swap {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.stage-transport-controls .stage-control > .t-icon {
+  display: inline-flex;
+}
+.stage-idle .stage-transport:has([data-state="b"]) {
+  opacity: 1;
 }
 .stage-chrome {
   position: absolute;
@@ -812,9 +917,6 @@
   opacity: 0;
   visibility: hidden;
 }
-.stage-flash {
-  animation: stage-flash 0.65s ease both;
-}
 .stage-spinner {
   border: 2px solid #ffffff25;
   border-top-color: #fff;
@@ -831,17 +933,6 @@
     opacity: 0.3;
   }
 }
-@keyframes stage-flash {
-  0%,
-  100% {
-    opacity: 0;
-  }
-  20%,
-  70% {
-    opacity: 1;
-  }
-}
-
 /* Reserve navigation space and fit the entire player in the remaining viewport. */
 @media (min-width: 641px) {
   .stage-frame {
@@ -903,8 +994,8 @@
     height: 60px;
   }
   .stage-transport-play svg {
-    width: 42px;
-    height: 42px;
+    width: 36px;
+    height: 36px;
   }
   .stage-chrome {
     padding: 3rem 0.75rem 0.6rem;

@@ -1,16 +1,22 @@
 "use client";
 
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, MagnifyingGlass } from "@phosphor-icons/react/ssr";
 
-/** Stream's navigation shell, shared by every media app. */
-export function MediaHeader({ brand, search, actions, notice, floating = false, routeKey }: {
+export interface MediaHeaderLabels {
+  openSearch: string;
+  closeSearch: string;
+}
+
+/** Shared navigation shell for the media apps. */
+export function MediaHeader({ brand, search, actions, notice, floating = false, routeKey, labels }: {
   brand: ReactNode;
   search: ReactNode;
   actions?: ReactNode;
   notice?: ReactNode;
   floating?: boolean;
   routeKey?: string;
+  labels?: MediaHeaderLabels;
 }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
@@ -40,11 +46,11 @@ export function MediaHeader({ brand, search, actions, notice, floating = false, 
     <header ref={headerRef} className={`media-header ${floating ? "media-header-over-art" : ""}`} data-search-open={searchOpen}>
       <div className="app-shell media-header-inner">
         <div className="media-header-brand shrink-0 justify-self-start">{brand}</div>
-        <button ref={triggerRef} type="button" data-open-search className="media-header-search-trigger" aria-label="Open search" aria-expanded={searchOpen} aria-controls={searchId} onClick={() => setSearchOpen(true)}>
-          <Search size={21} strokeWidth={1.7} aria-hidden="true" />
+        <button ref={triggerRef} type="button" data-open-search className="media-header-search-trigger" aria-label={labels?.openSearch ?? "Open search"} aria-expanded={searchOpen} aria-controls={searchId} onClick={() => setSearchOpen(true)}>
+          <MagnifyingGlass weight="regular" size={21} aria-hidden="true" />
         </button>
-        <button type="button" className="media-header-search-back" aria-label="Close search" onClick={closeSearch}>
-          <ArrowLeft size={21} strokeWidth={1.7} aria-hidden="true" />
+        <button type="button" className="media-header-search-back" aria-label={labels?.closeSearch ?? "Close search"} onClick={closeSearch}>
+          <ArrowLeft weight="regular" size={21} aria-hidden="true" />
         </button>
         <div ref={searchRef} id={searchId} className="media-header-search" onKeyDown={(event) => {
           if (event.key === "Escape" && searchOpen) closeSearch();

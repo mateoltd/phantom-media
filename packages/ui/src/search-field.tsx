@@ -12,9 +12,9 @@ import { Artwork } from "./artwork";
 import {
   ArrowUpRight,
   Clipboard,
-  Search,
+  MagnifyingGlass,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react/ssr";
 
 type Thumbnail = "video" | "poster" | "avatar" | "none";
 
@@ -36,6 +36,7 @@ export interface SearchFieldLabels {
   suggestions: string;
   looking: string;
   paste?: string;
+  clear?: string;
   empty?: string;
 }
 
@@ -234,9 +235,9 @@ export function SearchField({
         onSubmit={handleSubmit}
         className={`search-pill flex items-center gap-1 ${metrics.form}`}
       >
-        <Search
+        <MagnifyingGlass
+          weight="regular"
           size={metrics.icon}
-          strokeWidth={2}
           className="shrink-0 text-text-secondary"
         />
         <input
@@ -266,9 +267,9 @@ export function SearchField({
             type="button"
             onClick={clear}
             className={`flex shrink-0 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-bg hover:text-text ${metrics.accessory}`}
-            aria-label="Clear"
+            aria-label={labels.clear ?? "Clear"}
           >
-            <X size={metrics.accessoryIcon} strokeWidth={2.2} />
+            <X weight="regular" size={metrics.accessoryIcon} />
           </button>
         )}
 
@@ -280,7 +281,7 @@ export function SearchField({
             aria-label={labels.paste}
             title={labels.paste}
           >
-            <Clipboard size={metrics.pasteIcon} strokeWidth={1.9} />
+            <Clipboard weight="regular" size={metrics.pasteIcon} />
           </button>
         )}
 
@@ -296,7 +297,7 @@ export function SearchField({
               className={`animate-spin rounded-full border-2 border-white/35 border-t-white ${metrics.spinner}`}
             />
           ) : (
-            <ArrowUpRight size={metrics.submitIcon} strokeWidth={2.4} />
+            <ArrowUpRight weight="regular" size={metrics.submitIcon} />
           )}
         </button>
       </form>
