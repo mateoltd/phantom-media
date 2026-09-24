@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  TriangleAlert,
   ArrowUpRight,
-  Search,
+  MagnifyingGlass,
   Star,
-} from "lucide-react";
+  Warning,
+} from "@phosphor-icons/react/ssr";
 import { Artwork } from "@phantom/ui";
 import { AppHeader } from "@/components/app-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -188,8 +188,8 @@ export default function SearchPageClient() {
                         {media.rating > 0 && (
                           <span className="search-result-rating">
                             <Star
+                              weight="regular"
                               size={14}
-                              strokeWidth={1.6}
                               aria-hidden="true"
                             />
                             <span
@@ -210,7 +210,7 @@ export default function SearchPageClient() {
                           {media.genres.slice(0, 2).join(", ")}
                         </span>
                         <span className="search-result-open" aria-hidden="true">
-                          <ArrowUpRight size={19} strokeWidth={1.7} />
+                          <ArrowUpRight weight="regular" size={19} />
                         </span>
                       </span>
                     </span>
@@ -241,9 +241,9 @@ function EmptyState({
   return (
     <div className="search-empty">
       {error ? (
-        <TriangleAlert size={30} strokeWidth={1.4} />
+        <Warning weight="regular" size={30} />
       ) : (
-        <Search size={30} strokeWidth={1.4} />
+        <MagnifyingGlass weight="regular" size={30} />
       )}
       <h2>{title}</h2>
       <p>{body}</p>

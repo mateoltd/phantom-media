@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Play } from "lucide-react";
+import { Play } from "@phosphor-icons/react/ssr";
 import { Artwork } from "@phantom/ui";
 import type { EpisodeSummary } from "@/lib/types";
 import type { TimeListener } from "./use-video-state";
@@ -70,7 +70,7 @@ export function UpNext({
         <span className="stage-upnext-still">
           <Artwork src={episode.stillUrl} sizes="96px" />
           <span className="stage-upnext-play" aria-hidden="true">
-            <Play size={11} />
+            <Play weight="fill" size={11} />
           </span>
         </span>
         <span className="stage-upnext-text">

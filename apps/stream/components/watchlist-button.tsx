@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark } from "lucide-react";
+import { Bookmark } from "@phosphor-icons/react/ssr";
 import { toggleWatchlist, useWatchlist, type WatchlistMedia } from "@/lib/watchlist";
 
 export function WatchlistButton({ media, compact = false }: { media: WatchlistMedia; compact?: boolean }) {
@@ -15,7 +15,7 @@ export function WatchlistButton({ media, compact = false }: { media: WatchlistMe
       disabled={!ready}
       onClick={() => toggleWatchlist(media)}
     >
-      <Bookmark size={compact ? 18 : 19} strokeWidth={1.5} fill={saved ? "currentColor" : "none"} aria-hidden="true" />
+      <Bookmark weight={saved ? "fill" : "regular"} size={compact ? 18 : 19} aria-hidden="true" />
       {!compact && (saved ? "Saved to watchlist" : "Save to watchlist")}
     </button>
   );

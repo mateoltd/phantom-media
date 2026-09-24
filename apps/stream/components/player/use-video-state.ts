@@ -178,13 +178,6 @@ export function useVideoState(
       document.removeEventListener("fullscreenchange", onFullscreenChange);
   }, [containerRef]);
 
-  const togglePlay = useCallback(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (video.paused) void video.play().catch(() => {});
-    else video.pause();
-  }, [videoRef]);
-
   const seekTo = useCallback(
     (seconds: number) => {
       const video = videoRef.current;
@@ -257,7 +250,6 @@ export function useVideoState(
   return {
     state,
     subscribeTime,
-    togglePlay,
     seekTo,
     seekBy,
     setVolume,

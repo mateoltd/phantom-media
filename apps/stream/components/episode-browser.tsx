@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useSyncExternalStore } from "react";
-import { Play } from "lucide-react";
+import { Play } from "@phosphor-icons/react/ssr";
 import { Artwork } from "@phantom/ui";
 import {
   parseProgress,
@@ -145,7 +145,7 @@ export function EpisodeBrowser({
                     }`}
                   >
                     <span className="flex h-9 w-9 items-center justify-center text-white">
-                      <Play size={23} strokeWidth={1.5} />
+                      <Play weight="fill" size={23} />
                     </span>
                   </span>
                   {watched > 0 && (

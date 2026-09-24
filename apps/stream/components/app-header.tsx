@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bookmark } from "lucide-react";
+import { Bookmark } from "@phosphor-icons/react/ssr";
 import { MediaHeader, Wordmark } from "@phantom/ui";
 import { usePathname } from "next/navigation";
 import { useWatchlist } from "@/lib/watchlist";
@@ -33,7 +33,7 @@ export function AppHeader({
           aria-label={`Watchlist${items.length ? `, ${items.length} saved ${items.length === 1 ? "title" : "titles"}` : ""}`}
           aria-current={pathname === "/watchlist" ? "page" : undefined}
         >
-          <Bookmark size={20} strokeWidth={1.6} fill={items.length ? "currentColor" : "none"} aria-hidden="true" />
+          <Bookmark weight={items.length ? "fill" : "regular"} size={20} aria-hidden="true" />
         </Link>
       }
       notice={error && <p role="alert" className="watchlist-error">{error}</p>}

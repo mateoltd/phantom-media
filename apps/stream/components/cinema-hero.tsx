@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Info, Play } from "lucide-react";
+import { Info, Play } from "@phosphor-icons/react/ssr";
 import { Artwork } from "@phantom/ui";
 import { TitleLogo } from "@/components/title-logo";
 import { TitleMeta } from "@/components/title-meta";
@@ -40,14 +40,14 @@ export function CinemaHero({ media }: { media: MediaResult }) {
               href={mediaHref(media)}
               className="cinema-button cinema-button-primary"
             >
-              <Play size={20} strokeWidth={1.5} />
+              <Play weight="fill" size={20} />
               Watch now
             </Link>
             <Link
               href={`${mediaHref(media)}#about`}
               className="cinema-button backdrop-blur-sm"
             >
-              <Info size={17} strokeWidth={2} />
+              <Info weight="regular" size={17} />
               More info
             </Link>
             <WatchlistButton media={media} />

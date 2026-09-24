@@ -8,11 +8,11 @@ import {
   useSyncExternalStore,
 } from "react";
 import {
+  CaretDown,
   Check,
-  ChevronDown,
   Play,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react/ssr";
 import { Artwork } from "@phantom/ui";
 import {
   parseProgress,
@@ -22,6 +22,8 @@ import {
   watchedPercent,
 } from "@/lib/resume";
 import type { EpisodeSummary, MediaResult, SeasonSummary } from "@/lib/types";
+
+const FILLED_ICON = { weight: "fill" as const };
 
 interface EpisodePanelProps {
   media: MediaResult;
@@ -117,9 +119,9 @@ export function EpisodePanel({
               className="stage-panel-season"
             >
               <span className="truncate">{seasonLabel(view)}</span>
-              <ChevronDown
+              <CaretDown
+                {...FILLED_ICON}
                 size={14}
-                strokeWidth={2.6}
                 className={`shrink-0 text-stage-muted transition-transform ${
                   pickingSeason ? "rotate-180" : ""
                 }`}
@@ -141,7 +143,7 @@ export function EpisodePanel({
             aria-label="Close episodes"
             className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-stage-muted transition-colors hover:bg-white/10 hover:text-stage-text"
           >
-            <X size={15} strokeWidth={2.2} />
+            <X {...FILLED_ICON} size={15} />
           </button>
         </header>
 
@@ -173,8 +175,8 @@ export function EpisodePanel({
                     <span className="flex h-4 w-4 shrink-0 items-center justify-center">
                       {showing && (
                         <Check
+                          {...FILLED_ICON}
                           size={14}
-                          strokeWidth={2.6}
                           className="text-phantom"
                         />
                       )}
@@ -230,7 +232,7 @@ export function EpisodePanel({
                         }`}
                       >
                         <span className="flex h-6 w-6 items-center justify-center text-white">
-                          <Play size={10} />
+                          <Play {...FILLED_ICON} size={10} />
                         </span>
                       </span>
                       {watched > 0 && (

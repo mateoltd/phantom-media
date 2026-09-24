@@ -10,21 +10,21 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { Artwork, MotionPresence, ScrubBar, StageChrome, StageControl, StageSettings, StageTransport } from "@phantom/ui";
+import { Artwork, MotionPresence, ScrubBar, StageChrome, StageControl, StageSettings, StageTransport, PLAYER_SEEK_SECONDS, useStagePlayback } from "@phantom/ui";
 import type { SettingsSection, SignalStrength } from "@phantom/ui";
 import Link from "next/link";
 import {
   ArrowLeft,
-  ClosedCaption,
-  ChevronRight,
+  ArrowsClockwise,
+  CaretRight,
+  ClosedCaptioning,
   Keyboard,
   List,
   PictureInPicture,
-  SkipForward,
   Play,
-  RefreshCw,
+  SkipForward,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react/ssr";
 import { formatTimecode } from "@/lib/media";
 import {
   prefsOnServer,
@@ -40,6 +40,8 @@ import { UpNext } from "./up-next";
 import { useCaptions } from "./use-captions";
 import type { Chapter } from "./use-chapters";
 import { useVideoState, type TimeListener } from "./use-video-state";
+
+const FILLED_ICON = { weight: "fill" as const };
 
 export type StageStatus = "idle" | "working" | "ready" | "error";
 
@@ -120,6 +122,7 @@ const PAGE_LEVEL_KEYS: ReadonlySet<string> = new Set([
 
 interface ShortcutEvent {
   key: string;
+  repeat?: boolean;
   metaKey: boolean;
   ctrlKey: boolean;
   altKey: boolean;
@@ -147,8 +150,8 @@ const isCoarsePointer = () => window.matchMedia(COARSE_QUERY).matches;
 
 const SHORTCUTS: ReadonlyArray<readonly [string, string]> = [
   ["Space or K", "Play or pause"],
-  ["Left or right arrow", "Back or forward 5 seconds"],
-  ["J or L", "Back or forward 10 seconds"],
+  ["Left or right arrow", `Back or forward ${PLAYER_SEEK_SECONDS} seconds`],
+  ["J or L", `Back or forward ${PLAYER_SEEK_SECONDS} seconds`],
   ["Up or down arrow", "Volume"],
   ["M", "Mute"],
   ["C", "Subtitles on or off"],
@@ -197,7 +200,6 @@ export function VideoStage({
   const awakeReasonsRef = useRef(new Set<string>());
   const lastTapRef = useRef({ at: 0, x: 0 });
 
-  const [flash, setFlash] = useState<{ id: number; text: string } | null>(null);
   const [skippable, setSkippable] = useState<Chapter | null>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [settingsPanel, setSettingsPanel] = useState<"playback" | "language" | null>(null);
@@ -222,7 +224,6 @@ export function VideoStage({
   const {
     state,
     subscribeTime,
-    togglePlay,
     seekBy,
     seekTo,
     setVolume,
@@ -232,9 +233,7 @@ export function VideoStage({
     togglePictureInPicture,
   } = useVideoState(videoRef, containerRef);
 
-  const showFlash = useCallback((text: string) => {
-    setFlash({ id: Date.now(), text });
-  }, []);
+  const { feedback, showFeedback, togglePlayback, seekWithFeedback, handlePlaybackKey } = useStagePlayback(videoRef, seekBy);
 
   const update = useCallback((next: Partial<PlayerPrefs>) => {
     savePrefs(next);
@@ -264,9 +263,9 @@ export function VideoStage({
   const setSpeed = useCallback(
     (rate: number) => {
       update({ playbackRate: rate });
-      showFlash(rate === 1 ? "Normal speed" : `${rate}×`);
+      showFeedback(rate === 1 ? "Normal speed" : `${rate}×`);
     },
-    [showFlash, update],
+    [showFeedback, update],
   );
 
   const nudgeSpeed = useCallback(
@@ -416,14 +415,14 @@ export function VideoStage({
     if (captions.length === 0) return;
     if (caption !== CAPTIONS_OFF) {
       changeCaption(CAPTIONS_OFF);
-      showFlash("Subtitles off");
+      showFeedback("Subtitles off");
       return;
     }
     const first = captions[0];
     if (!first) return;
     changeCaption(first.value);
-    showFlash(first.label);
-  }, [caption, captions, changeCaption, showFlash]);
+    showFeedback(first.label);
+  }, [caption, captions, changeCaption, showFeedback]);
 
   const changeAudio = useCallback(
     (value: string) => {
@@ -431,9 +430,9 @@ export function VideoStage({
       const choice = audio.options.find((entry) => entry.value === value);
       if (choice?.language) update({ audioLanguage: choice.language });
       audio.onChange(value);
-      if (choice) showFlash(choice.label);
+      if (choice) showFeedback(choice.label);
     },
-    [audio, showFlash, update],
+    [audio, showFeedback, update],
   );
 
   useEffect(() => {
@@ -471,53 +470,36 @@ export function VideoStage({
     if (event.metaKey || event.ctrlKey || event.altKey) return;
     const target = event.target as HTMLElement | null;
     if (
-      target?.closest("input, textarea, select, button, a, [role=dialog]") ||
+      target?.closest("input, textarea, select, a, [role=dialog]") ||
+      (target?.closest("button") && (
+        !target.closest(".stage-transport, .stage-toolbar-play") || event.key === " " || event.key === "Enter"
+      )) ||
       target?.isContentEditable
     )
       return;
 
     const key = event.key;
     if (fromPage && (status !== "ready" || !PAGE_LEVEL_KEYS.has(key))) return;
+    if (handlePlaybackKey(event)) {
+      wake();
+      return;
+    }
     const handlers: Record<string, () => void> = {
-      " ": () => {
-        togglePlay();
-        showFlash(state.playing ? "Paused" : "Playing");
-      },
-      k: () => {
-        togglePlay();
-        showFlash(state.playing ? "Paused" : "Playing");
-      },
-      ArrowLeft: () => {
-        seekBy(-5);
-        showFlash("−5s");
-      },
-      ArrowRight: () => {
-        seekBy(5);
-        showFlash("+5s");
-      },
-      j: () => {
-        seekBy(-10);
-        showFlash("−10s");
-      },
-      l: () => {
-        seekBy(10);
-        showFlash("+10s");
-      },
       ArrowUp: () => {
         nudgeVolume(0.1);
-        showFlash(
+        showFeedback(
           `Volume ${Math.round(Math.min(1, state.volume + 0.1) * 100)}%`,
         );
       },
       ArrowDown: () => {
         nudgeVolume(-0.1);
-        showFlash(
+        showFeedback(
           `Volume ${Math.round(Math.max(0, state.volume - 0.1) * 100)}%`,
         );
       },
       m: () => {
         toggleMute();
-        showFlash(state.muted ? "Sound on" : "Muted");
+        showFeedback(state.muted ? "Sound on" : "Muted");
       },
       c: toggleCaptions,
       f: () => toggleFullscreen(),
@@ -544,7 +526,7 @@ export function VideoStage({
       (/^[0-9]$/.test(key) && state.duration > 0
         ? () => {
             seekTo(state.duration * (Number(key) / 10));
-            showFlash(`${Number(key) * 10}%`);
+            showFeedback(`${Number(key) * 10}%`);
           }
         : undefined);
 
@@ -596,7 +578,7 @@ export function VideoStage({
     }
 
     if (!coarsePointer) {
-      togglePlay();
+      togglePlayback();
       return;
     }
 
@@ -609,13 +591,11 @@ export function VideoStage({
     if (now - last.at < DOUBLE_TAP_MS && sameSide) {
       lastTapRef.current = { at: 0, x: 0 };
       if (x < rect.width * 0.4) {
-        seekBy(-10);
-        showFlash("−10s");
+        seekWithFeedback(-1);
       } else if (x > rect.width * 0.6) {
-        seekBy(10);
-        showFlash("+10s");
+        seekWithFeedback(1);
       } else {
-        togglePlay();
+        togglePlayback();
       }
       return;
     }
@@ -644,7 +624,7 @@ export function VideoStage({
           const selected = language.options.find(
             (option) => option.value === value,
           );
-          if (selected) showFlash(`${selected.label} audio`);
+          if (selected) showFeedback(`${selected.label} audio`);
         },
       });
     }
@@ -775,7 +755,7 @@ export function VideoStage({
     language,
     quality,
     setSpeed,
-    showFlash,
+    showFeedback,
     sources,
     update,
   ]);
@@ -847,11 +827,11 @@ export function VideoStage({
             aria-label="Leave fullscreen"
             className="stage-control"
           >
-            <ArrowLeft size={20} strokeWidth={1.5} />
+            <ArrowLeft {...FILLED_ICON} size={20} />
           </button>
         ) : (
           <Link href="/" aria-label="Back to browse" className="stage-control">
-            <ArrowLeft size={20} strokeWidth={1.5} />
+            <ArrowLeft {...FILLED_ICON} size={20} />
           </Link>
         )}
         <div className="min-w-0 flex-1">
@@ -875,9 +855,9 @@ export function VideoStage({
             className="stage-play"
           >
             {status === "error" ? (
-              <RefreshCw size={26} strokeWidth={2.2} />
+              <ArrowsClockwise {...FILLED_ICON} size={26} />
             ) : (
-              <Play size={24} strokeWidth={1.3} />
+              <Play {...FILLED_ICON} size={24} />
             )}
             {requestLabel}
           </button>
@@ -898,28 +878,15 @@ export function VideoStage({
         </div>
       )}
 
-      {status === "ready" && state.waiting && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <span className="stage-spinner h-9 w-9" />
-        </div>
-      )}
-
-      {status === "ready" && !state.waiting && (
+      {status === "ready" && (
         <StageTransport
           playing={state.playing}
-          onTogglePlay={togglePlay}
-          onSeekBack={() => seekBy(-10)}
-          onSeekForward={() => seekBy(10)}
+          feedback={feedback}
+          waiting={state.waiting}
+          onTogglePlay={togglePlayback}
+          onSeekBack={() => seekWithFeedback(-1)}
+          onSeekForward={() => seekWithFeedback(1)}
         />
-      )}
-
-      {flash && (
-        <span
-          key={flash.id}
-          className="stage-flash pointer-events-none absolute left-1/2 top-1/2 z-[3] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-black/70 px-4 py-2 font-mono text-sm font-bold text-stage-text"
-        >
-          {flash.text}
-        </span>
       )}
 
       {toast && status === "ready" && (
@@ -940,7 +907,7 @@ export function VideoStage({
             aria-label="Dismiss"
             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-stage-muted transition-colors hover:bg-white/10 hover:text-stage-text"
           >
-            <X size={13} strokeWidth={2.2} />
+            <X {...FILLED_ICON} size={13} />
           </button>
         </div>
       )}
@@ -956,7 +923,7 @@ export function VideoStage({
           }}
         >
           Skip {skippable?.label ?? ""}
-          <ChevronRight size={15} strokeWidth={2.4} />
+          <CaretRight {...FILLED_ICON} size={15} />
         </button>
       )}
 
@@ -999,7 +966,7 @@ export function VideoStage({
         muted={state.muted}
         volume={state.volume}
         fullscreen={state.fullscreen}
-        onTogglePlay={togglePlay}
+        onTogglePlay={togglePlayback}
         onToggleMute={toggleMute}
         onVolumeChange={setVolume}
         onToggleFullscreen={toggleFullscreen}
@@ -1007,13 +974,14 @@ export function VideoStage({
           <ScrubBar
             subscribe={subscribeTime}
             onSeek={seekTo}
+            onSeekStep={seekWithFeedback}
             onScrubbingChange={(held) => holdAwake(held, "scrubbing")}
           />
         ) : undefined}
         timecode={<Timecode subscribe={subscribeTime} />}
         leftExtra={onNextEpisode ? (
           <StageControl label="Next episode" onClick={onNextEpisode}>
-            <SkipForward size={22} strokeWidth={1.5} />
+            <SkipForward {...FILLED_ICON} size={22} />
           </StageControl>
         ) : undefined}
         rightExtra={
@@ -1025,12 +993,12 @@ export function VideoStage({
                 expanded={episodesOpen}
                 className={episodesOpen ? "stage-control-selected" : ""}
               >
-                <List size={22} strokeWidth={1.5} />
+                <List {...FILLED_ICON} size={22} />
               </StageControl>
             )}
             <StageSettings
               label="Audio and subtitles"
-              icon={<ClosedCaption size={22} strokeWidth={1.5} />}
+              icon={<ClosedCaptioning {...FILLED_ICON} size={22} />}
               sections={languageSections}
               open={settingsPanel === "language"}
               onOpenChange={(open) => changeSettingsPanel("language", open)}
@@ -1042,12 +1010,12 @@ export function VideoStage({
               actions={[
                 ...(status === "ready" && canPictureInPicture ? [{
                   label: "Picture in picture",
-                  icon: <PictureInPicture size={20} strokeWidth={1.5} />,
+                  icon: <PictureInPicture {...FILLED_ICON} size={20} />,
                   onClick: togglePictureInPicture,
                 }] : []),
                 ...(!coarsePointer ? [{
                   label: "Keyboard shortcuts",
-                  icon: <Keyboard size={20} strokeWidth={1.5} />,
+                  icon: <Keyboard {...FILLED_ICON} size={20} />,
                   onClick: () => setShortcutsOpen(true),
                 }] : []),
               ]}
