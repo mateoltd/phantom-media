@@ -7,7 +7,6 @@ import {
   useState,
 } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ChatCircle, VideoCamera } from "@phosphor-icons/react/ssr";
 import { MediaTile, Button, ProgressRail } from "@phantom/ui";
@@ -21,6 +20,7 @@ import { WatchLayout } from "@/components/WatchLayout";
 import { DownloadButton } from "@/components/DownloadButton";
 import { ShareButton } from "@/components/ShareButton";
 import { VodInfo } from "@/components/VodInfo";
+import { Footer } from "@/components/Footer";
 import { formatTime } from "@/lib/format";
 import {
   buildChannelPath,
@@ -428,17 +428,4 @@ function isLikelyLiveArchive(video: ChannelVideo, stream: LiveStream) {
   if (!Number.isFinite(videoStart) || !Number.isFinite(streamStart)) return false;
 
   return Math.abs(videoStart - streamStart) < 20 * 60 * 1000;
-}
-
-function Footer() {
-  return (
-    <footer className="twitch-footer py-5 text-center">
-      <p className="text-[11px] text-text-tertiary">
-        Not affiliated with Twitch. For authorized use only.{" "}
-        <Link href="/disclaimer" className="underline underline-offset-4 transition-colors hover:text-text">
-          Legal disclaimer
-        </Link>
-      </p>
-    </footer>
-  );
 }

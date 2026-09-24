@@ -65,6 +65,7 @@ function Feed({ entries, onVideo, data, loading, refresh, error, footer }: {
     if (!target || loading || !data || moreError || !hasMore) return;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
+    // Prefetch half a viewport ahead so the end of the feed never comes into view.
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting || inFlight.current) return;
       observer.disconnect();
@@ -90,12 +91,12 @@ function Feed({ entries, onVideo, data, loading, refresh, error, footer }: {
           if (!controller.signal.aborted) setFetching(false);
         }
       }, Math.max(0, 2000 - (Date.now() - lastRequest.current)));
-    }, { rootMargin: "100px 0px" });
+    }, { rootMargin: "0px 0px 50% 0px" });
     observer.observe(target);
     return () => { observer.disconnect(); controller.abort(); clearTimeout(timer); inFlight.current = false; };
   }, [data, feed.length, hasMore, loading, moreError, next, visible]);
 
-  return <div className="app-shell twitch-home-layout">
+  return <div className="twitch-home-layout">
     <ChannelRail recent={recent} suggestions={pool} loading={loading && !data} />
     <section className="twitch-home-feed" aria-labelledby="home-feed-heading">
       <div className="twitch-home-feed-heading">

@@ -52,6 +52,10 @@ function Thumbnail({ image, channel }: { image?: string; channel: DiscoveryChann
 export function HomeTileSkeleton() {
   return <div className="twitch-home-tile twitch-home-tile-skeleton" aria-hidden="true">
     <span className="media-tile-art twitch-home-art"><Skeleton height="100%" borderRadius={0} /></span>
+    <span className="twitch-home-tile-meta">
+      <span className="twitch-home-avatar-wrap"><Skeleton circle height="100%" /></span>
+      <span className="twitch-home-tile-copy"><Skeleton width="88%" height={15} /><Skeleton width="42%" height={12} /></span>
+    </span>
   </div>;
 }
 
@@ -61,17 +65,16 @@ function TileContents({ channel, title, image, live = false, progress, resumeLab
   return <>
     <span className="media-tile-art twitch-home-art">
       <Thumbnail key={image || "fallback"} image={image} channel={channel} />
-      <span className="twitch-home-art-shade" />
       <span className="media-tile-play twitch-home-play" aria-hidden="true"><Play size={32} weight="fill" /></span>
-      <span className="twitch-home-tile-header">
-        <span className="twitch-home-tile-byline">
-          <HomeAvatar channel={channel} />
-          <span className="twitch-home-tile-channel">{channel.displayName}</span>
-        </span>
-        {live && channel.stream && <span className="twitch-home-live" aria-label={`Live, ${channel.stream.viewersCount.toLocaleString("en")} viewers`}>Live <span>{new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(channel.stream.viewersCount)}</span></span>}
-      </span>
-      <span className="twitch-home-art-title">{title}</span>
+      {live && channel.stream && <span className="twitch-home-live" aria-label={`Live, ${channel.stream.viewersCount.toLocaleString("en")} viewers`}>Live <span>{new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(channel.stream.viewersCount)}</span></span>}
       {progress !== undefined && <ProgressRail slim percent={progress} label={resumeLabel || "Watch progress"} className="twitch-resume-progress" />}
+    </span>
+    <span className="twitch-home-tile-meta">
+      <HomeAvatar channel={channel} />
+      <span className="twitch-home-tile-copy">
+        <span className="twitch-home-art-title">{title}</span>
+        <span className="twitch-home-tile-channel">{channel.displayName}</span>
+      </span>
     </span>
   </>;
 }

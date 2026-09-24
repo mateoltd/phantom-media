@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { ClockCounterClockwise } from "@phosphor-icons/react/ssr";
 import { MediaHeader, SearchField, Wordmark, type SearchSuggestion } from "@phantom/ui";
 import { buildChannelPath, buildVodPath, extractChannelName, extractVodId } from "@/lib/validation";
 import { formatTime } from "@/lib/format";
@@ -27,6 +28,9 @@ export function GlobalSearch() {
       <Wordmark tone="chalk" className="sm:hidden" />
     </Link>}
     search={<TwitchSearch key={pathname} />}
+    actions={<Link href="/watch-history" className="media-header-action" aria-label="Watch history" title="Watch history" aria-current={pathname === "/watch-history" ? "page" : undefined}>
+      <ClockCounterClockwise weight={pathname === "/watch-history" ? "bold" : "regular"} size={20} aria-hidden="true" />
+    </Link>}
   />;
 }
 

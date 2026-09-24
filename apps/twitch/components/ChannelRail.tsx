@@ -32,7 +32,10 @@ export function ChannelRail({ recent, suggestions, loading }: { recent: Discover
       const horizontal = style.flexDirection === "row";
       const avatarSize = horizontal ? 52 : window.innerWidth <= 1000 ? 42 : 46;
       const gap = parseFloat(style.gap) || 0;
-      const space = horizontal ? element.clientWidth - 4 : window.innerHeight - (parseFloat(style.top) || element.getBoundingClientRect().top) - 32;
+      // Size for the unscrolled position. Once stuck the rail sits higher, and measuring there would add avatars that overflow back at the top.
+      const layout = element.parentElement;
+      const restingTop = layout ? layout.getBoundingClientRect().top + window.scrollY + parseFloat(getComputedStyle(layout).paddingTop) + parseFloat(style.marginTop) : element.getBoundingClientRect().top;
+      const space = horizontal ? element.clientWidth - 4 : window.innerHeight - restingTop - 32;
       setCapacity(Math.max(0, Math.floor((space + gap - 8) / (avatarSize + gap))));
       setShowTip(false);
     };

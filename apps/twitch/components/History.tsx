@@ -14,6 +14,28 @@ export interface HistoryEntry {
 }
 
 export function useHistory() {
+  return useHydratedHistory()[0];
+}
+
+export function useHistoryEditor() {
+  const [history, setHistory] = useHydratedHistory();
+  const forget = (entries: HistoryEntry[]) => {
+    try { entries.forEach((entry) => localStorage.removeItem(`phantom-playback:${entry.vodId}`)); } catch {}
+  };
+  return {
+    history,
+    remove(vodId: string) {
+      forget(history.filter((entry) => entry.vodId === vodId));
+      setHistory(history.filter((entry) => entry.vodId !== vodId));
+    },
+    clear() {
+      forget(history);
+      setHistory([]);
+    },
+  };
+}
+
+function useHydratedHistory() {
   const [history, setHistory] = useLocalStorage<HistoryEntry[]>("phantom-history", []);
   const hydrated = useRef(new Set<string>());
   useEffect(() => {
@@ -37,7 +59,7 @@ export function useHistory() {
     });
     return () => controller.abort();
   }, [history, setHistory]);
-  return history;
+  return [history, setHistory] as const;
 }
 
 export function addToHistory(entry: Omit<HistoryEntry, "timestamp">) {
