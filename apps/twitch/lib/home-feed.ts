@@ -16,7 +16,7 @@ export function channelRail<T extends { login: string }>(recent: T[], suggested:
   return [...watched.map((channel) => ({ channel, suggested: false })), ...recommendations.map((channel) => ({ channel, suggested: true }))];
 }
 
-/** An old video from a currently-live channel must still open as a video. */
+/** Only the archive of the broadcast that is on air right now counts as live. Older videos from a live channel do not. */
 export function isCurrentBroadcast(entry: { vodId: string }, channel?: { stream?: { archiveVideo?: { id: string } | null } | null }) {
   return Boolean(channel?.stream?.archiveVideo?.id && channel.stream.archiveVideo.id === entry.vodId);
 }

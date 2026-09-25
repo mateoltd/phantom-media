@@ -25,7 +25,7 @@ test("new visitors get recommendation avatars without requiring history", () => 
 });
 
 
-test("only the archive belonging to the current broadcast becomes a live tile", () => {
+test("only the archive belonging to the current broadcast is marked live", () => {
   const channel = { stream: { archiveVideo: { id: "ongoing" } } };
   assert.equal(isCurrentBroadcast({ vodId: "ongoing" }, channel), true);
   assert.equal(isCurrentBroadcast({ vodId: "older" }, channel), false);

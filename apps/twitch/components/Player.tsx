@@ -312,7 +312,8 @@ export function Player({
       }
       syncLevels(data.levels.length > 0 ? data.levels : hls.levels);
       if (isLive || dvrMode) {
-        hls.startLoad(startTime > 0 ? startTime : -1);
+        // An archive is opened to catch up, so it starts from the beginning. Only the plain live stream starts at the edge.
+        hls.startLoad(dvrMode ? startTime : startTime > 0 ? startTime : -1);
       }
       if (!isLive && startTime > 0) {
         video.currentTime = startTime;

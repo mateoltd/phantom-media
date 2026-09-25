@@ -1,22 +1,22 @@
 import { ResolvedQuality } from "./validation";
 
-function buildMediaPlaylistPath(vodId: string, quality: string): string {
+function buildMediaPlaylistPath(source: Record<string, string>, quality: string): string {
   const params = new URLSearchParams({
-    vodId,
+    ...source,
     quality,
   });
   return `/api/vod/media.m3u8?${params.toString()}`;
 }
 
 export function generateMasterPlaylist(
-  vodId: string,
+  source: Record<string, string>,
   qualities: ResolvedQuality[]
 ): string {
   let playlist = "#EXTM3U\n#EXT-X-VERSION:3\n";
 
   for (const q of qualities) {
     playlist += `#EXT-X-STREAM-INF:BANDWIDTH=${q.bandwidth},CODECS="${q.codec},mp4a.40.2",RESOLUTION=${q.resolution},FRAME-RATE=${q.frameRate}\n`;
-    playlist += `${buildMediaPlaylistPath(vodId, q.key)}\n`;
+    playlist += `${buildMediaPlaylistPath(source, q.key)}\n`;
   }
 
   return playlist;

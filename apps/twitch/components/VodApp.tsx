@@ -8,7 +8,7 @@ import {
 } from "react";
 import Image from "next/image";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ChatCircle, VideoCamera } from "@phosphor-icons/react/ssr";
+import { Broadcast, ChatCircle, VideoCamera } from "@phosphor-icons/react/ssr";
 import { MediaTile, Button, ProgressRail } from "@phantom/ui";
 import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { addToHistory, useHistory } from "@/components/History";
@@ -69,6 +69,7 @@ interface LiveStream {
   viewersCount: number;
   createdAt: string;
   game?: { name: string } | null;
+  archiveVideo?: { id: string } | null;
 }
 
 interface ChannelData {
@@ -341,10 +342,22 @@ function ChannelView({ channel, masterUrl, onVideo }: {
   onVideo: (vodId: string) => void;
 }) {
   const [chatOpen, setChatOpen] = useState(false);
+  const [unlistedArchive, setUnlistedArchive] = useState<{ login: string; masterUrl: string } | null>(null);
+  const [watchingArchive, setWatchingArchive] = useState(false);
   const stream = channel.stream;
-  const liveArchive = stream
-    ? channel.videos.find((video) => isLikelyLiveArchive(video, stream)) ?? channel.videos.find((video) => video.broadcastType.toLowerCase() === "archive")
-    : null;
+  const listedArchiveId = stream ? stream.archiveVideo?.id ?? channel.videos.find((video) => isLikelyLiveArchive(video, stream))?.id : undefined;
+  const archiveUrl = unlistedArchive?.login === channel.login ? unlistedArchive.masterUrl : null;
+  const showingArchive = watchingArchive && Boolean(archiveUrl);
+
+  useEffect(() => {
+    if (!stream || listedArchiveId) return;
+    const controller = new AbortController();
+    fetch(`/api/live/archive?channel=${encodeURIComponent(channel.login)}`, { signal: controller.signal })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data: { masterUrl: string | null } | null) => { if (data?.masterUrl) setUnlistedArchive({ login: channel.login, masterUrl: data.masterUrl }); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [channel.login, listedArchiveId, stream]);
   const toggleChat = () => setChatOpen((open) => !open);
   const closeChat = () => {
     setChatOpen(false);
@@ -369,10 +382,12 @@ function ChannelView({ channel, masterUrl, onVideo }: {
     <div className={`app-shell ${stream ? "twitch-watch" : ""} relative pb-8`}>
       <section className="pt-2">
         {stream && masterUrl && <WatchLayout chatOpen={chatOpen}
-          video={<Player src={masterUrl} qualities={LIVE_QUALITIES} isLive title={stream.title} subtitle={channel.displayName} chatOpen={chatOpen} onChatToggle={toggleChat} />}
+          video={<Player key={showingArchive ? "archive" : "live"} src={showingArchive && archiveUrl ? archiveUrl : masterUrl} qualities={LIVE_QUALITIES} isLive dvrMode={showingArchive} title={stream.title} subtitle={channel.displayName} chatOpen={chatOpen} onChatToggle={toggleChat} />}
           rail={<WatchRail channel={channel.login} displayName={channel.displayName} image={channel.profileImageURL} broadcastType="Live" actions={[
             <button key="chat" type="button" className="twitch-rail-action" onClick={toggleChat} aria-label={chatOpen ? "Hide chat" : "Show chat"} aria-expanded={chatOpen} aria-controls="watch-chat"><ChatCircle size={21} /></button>,
-            ...(liveArchive ? [<button key="archive" type="button" className="twitch-rail-action" onClick={() => onVideo(liveArchive.id)} aria-label="Open archive"><VideoCamera size={21} /></button>] : []),
+            ...(listedArchiveId ? [<button key="archive" type="button" className="twitch-rail-action" onClick={() => onVideo(listedArchiveId)} aria-label="Open archive"><VideoCamera size={21} /></button>]
+              : archiveUrl ? [<button key="archive" type="button" className="twitch-rail-action" onClick={() => setWatchingArchive((watching) => !watching)} aria-label={showingArchive ? "Back to live" : "Open archive"}>
+                {showingArchive ? <Broadcast size={21} /> : <VideoCamera size={21} />}</button>] : []),
           ]} />}
           chat={chat}
         >{details}</WatchLayout>}

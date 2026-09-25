@@ -47,6 +47,7 @@ export interface TwitchLiveStream {
   viewersCount: number;
   createdAt: string;
   game?: { name: string } | null;
+  archiveVideo?: { id: string } | null;
 }
 
 export interface TwitchChannelData {
@@ -174,6 +175,7 @@ export async function fetchChannel(login: string): Promise<TwitchChannelData> {
           viewersCount
           createdAt
           game { name }
+          archiveVideo { id }
         }
         videos(first: 18, sort: TIME) {
           edges {

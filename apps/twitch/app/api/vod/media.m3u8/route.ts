@@ -1,22 +1,22 @@
 import { NextRequest } from "next/server";
 import { debugServer } from "@/lib/debug";
-import { resolveVod } from "@/lib/resolve";
+import { readPlaybackSource, resolvePlayback } from "@/lib/resolve";
 import { rewriteMediaPlaylist } from "@/lib/playlist";
 
 export async function GET(request: NextRequest) {
-  const vodId = request.nextUrl.searchParams.get("vodId");
+  const source = readPlaybackSource(request.nextUrl.searchParams);
   const quality = request.nextUrl.searchParams.get("quality");
 
-  if (!vodId || !/^\d+$/.test(vodId) || !quality) {
+  if (!source || !quality) {
     return new Response("Missing or invalid parameters", { status: 400 });
   }
 
   try {
-    const data = await resolveVod(vodId);
+    const data = await resolvePlayback(source);
     const selectedQuality = data.qualities.find((entry) => entry.key === quality);
 
     if (!selectedQuality) {
-      debugServer("media.m3u8", "quality not found", { vodId, quality });
+      debugServer("media.m3u8", "quality not found", { source, quality });
       return new Response("Quality not found", { status: 404 });
     }
 
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     if (!upstream.ok) {
       debugServer("media.m3u8", "upstream playlist error", {
-        vodId,
+        source,
         quality,
         status: upstream.status,
         playlistUrl: selectedQuality.playlistUrl,
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     }
 
     debugServer("media.m3u8", "serving media playlist", {
-      vodId,
+      source,
       quality,
       playlistUrl: selectedQuality.playlistUrl,
     });
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch {
-    debugServer("media.m3u8", "failed to resolve vod", { vodId, quality });
+    debugServer("media.m3u8", "failed to resolve vod", { source, quality });
     return new Response("VOD not found", { status: 404 });
   }
 }

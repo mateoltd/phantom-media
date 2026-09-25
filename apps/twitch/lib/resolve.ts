@@ -5,6 +5,7 @@ import { probeQuality } from "./quality";
 import { defaultResolutions } from "./resolutions";
 import { cacheGet, cacheSet } from "./cache";
 import { ResolvedQuality } from "./validation";
+import { archiveFolder, archiveHosts, archiveStartCandidates } from "./stream-archive";
 
 export interface CachedVodData {
   vodId: string;
@@ -59,35 +60,7 @@ export async function resolveVod(vodId: string): Promise<CachedVodData> {
     }
   }
 
-  // Probe all qualities in parallel
-  const probeEntries = Object.entries(defaultResolutions);
-
-  const probes = probeEntries.map(async ([key, res]) => {
-    const playlistUrl = buildPlaylistUrl(urlInfo, vodId, key, vodData.createdAt);
-    const result = await probeQuality(playlistUrl);
-    return { key, res, result, playlistUrl };
-  });
-
-  const results = await Promise.all(probes);
-
-  // Assign decreasing bandwidth values (preserves quality order)
-  let bandwidth = 8534030;
-  const qualities: ResolvedQuality[] = [];
-
-  for (const { key, res, result, playlistUrl } of results) {
-    if (result) {
-      qualities.push({
-        key,
-        name: res.name,
-        resolution: res.resolution,
-        frameRate: res.frameRate,
-        bandwidth,
-        codec: result.codec,
-        playlistUrl,
-      });
-      bandwidth -= 100;
-    }
-  }
+  const qualities = await probeQualities(urlInfo, vodId, vodData.createdAt);
 
   if (qualities.length === 0) {
     const fallbackQualities = await resolveVodFromUsher(vodId);
@@ -117,6 +90,106 @@ export async function resolveVod(vodId: string): Promise<CachedVodData> {
 
   cacheSet(cacheKey, data);
   return data;
+}
+
+async function probeQualities(urlInfo: VodUrlInfo, vodId: string, createdAt: string): Promise<ResolvedQuality[]> {
+  const results = await Promise.all(Object.entries(defaultResolutions).map(async ([key, res]) => {
+    const playlistUrl = buildPlaylistUrl(urlInfo, vodId, key, createdAt);
+    const result = await probeQuality(playlistUrl);
+    return { key, res, result, playlistUrl };
+  }));
+
+  // Assign decreasing bandwidth values (preserves quality order)
+  let bandwidth = 8534030;
+  const qualities: ResolvedQuality[] = [];
+
+  for (const { key, res, result, playlistUrl } of results) {
+    if (result) {
+      qualities.push({
+        key,
+        name: res.name,
+        resolution: res.resolution,
+        frameRate: res.frameRate,
+        bandwidth,
+        codec: result.codec,
+        playlistUrl,
+      });
+      bandwidth -= 100;
+    }
+  }
+
+  return qualities;
+}
+
+export type PlaybackSource = { vodId: string } | { archive: string };
+
+export function readPlaybackSource(params: URLSearchParams): PlaybackSource | null {
+  const vodId = params.get("vodId");
+  if (vodId) return /^\d+$/.test(vodId) ? { vodId } : null;
+  const archive = params.get("archive")?.toLowerCase();
+  return archive && /^[a-z0-9_]{3,25}$/.test(archive) ? { archive } : null;
+}
+
+export async function resolvePlayback(source: PlaybackSource): Promise<CachedVodData> {
+  if ("vodId" in source) return resolveVod(source.vodId);
+  const data = await resolveStreamArchive(source.archive);
+  if (!data) throw new Error("Archive not found");
+  return data;
+}
+
+/**
+ * Some channels keep the broadcast that is on air out of their video list, so it has no video ID.
+ * The recording is still on the CDN under a folder derived from the stream, which is found by probing.
+ */
+export async function resolveStreamArchive(login: string): Promise<CachedVodData | null> {
+  const channel = await fetchChannel(login);
+  const stream = channel.stream;
+  if (!stream) return null;
+
+  const cacheKey = `archive:v1:${stream.id}`;
+  const cached = cacheGet<CachedVodData | false>(cacheKey);
+  if (cached !== null) return cached || null;
+
+  const found = await findArchiveFolder(channel.login, stream.id, stream.createdAt, archiveHosts(channel.videos));
+  const qualities = found
+    ? await probeQualities({ ...found, channel: channel.login, broadcastType: "archive" }, stream.id, stream.createdAt)
+    : [];
+  if (!found || qualities.length === 0) {
+    // The folder can appear a little after the stream starts, so a miss is only remembered briefly.
+    cacheSet(cacheKey, false, 2 * 60 * 1000);
+    return null;
+  }
+
+  const data: CachedVodData = {
+    vodId: stream.id,
+    channel: channel.login,
+    channelDisplayName: channel.displayName,
+    channelProfileImageURL: channel.profileImageURL,
+    title: stream.title,
+    isLiveArchive: true,
+    broadcastType: "archive",
+    createdAt: stream.createdAt,
+    urlInfo: { ...found, channel: channel.login, broadcastType: "archive" },
+    qualities,
+  };
+  cacheSet(cacheKey, data, 12 * 60 * 60 * 1000);
+  return data;
+}
+
+async function findArchiveFolder(login: string, streamId: string, createdAt: string, hosts: string[]) {
+  const candidates = archiveStartCandidates(createdAt);
+  for (const domain of hosts) {
+    for (let index = 0; index < candidates.length; index += 16) {
+      const batch = candidates.slice(index, index + 16).map((startedAt) => archiveFolder(login, streamId, startedAt));
+      const hits = await Promise.all(batch.map(async (folder) => {
+        const response = await fetch(`https://${domain}/${folder}/chunked/index-dvr.m3u8`, { method: "HEAD", cache: "no-store" }).catch(() => null);
+        return response?.ok ? folder : null;
+      }));
+      const vodSpecialID = hits.find(Boolean);
+      if (vodSpecialID) return { domain, vodSpecialID };
+    }
+  }
+  return null;
 }
 
 function createCachedVodData({

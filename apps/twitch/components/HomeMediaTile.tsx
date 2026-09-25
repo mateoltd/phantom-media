@@ -85,11 +85,9 @@ export function ResumeTile({ entry, channel, onSelect }: { entry: HistoryEntry; 
   const progress = resume && entry.lengthSeconds && entry.lengthSeconds > 0 ? Math.min(100, resume / entry.lengthSeconds * 100) : undefined;
   const resumeLabel = resume ? `Resume at ${formatTime(resume)}` : "Resume watching";
   const owner = channel ?? { id: entry.channel, login: entry.channel, displayName: entry.channel };
-  if (isCurrentBroadcast(entry, channel)) return <Link href={buildChannelPath(owner.login)} className="twitch-home-tile media-tile-hit" aria-label={`${owner.displayName}, live, ${owner.stream?.title || entry.title}`}>
-    <TileContents channel={owner} title={owner.stream?.title || entry.title || owner.displayName} image={owner.stream?.previewImageURL} live />
-  </Link>;
-  return <button type="button" className="twitch-home-tile media-tile-hit" onClick={() => onSelect(entry.vodId)} aria-label={`${entry.title || entry.channel}, ${resumeLabel}`} title={`${entry.title || entry.channel}: ${resumeLabel}`}>
-    <TileContents channel={owner} title={entry.title || entry.channel} image={historyPreview(entry, channel)} progress={progress} resumeLabel={resumeLabel} />
+  const live = isCurrentBroadcast(entry, channel);
+  return <button type="button" className="twitch-home-tile media-tile-hit" onClick={() => onSelect(entry.vodId)} aria-label={`${entry.title || entry.channel}, ${live ? "live, " : ""}${resumeLabel}`} title={`${entry.title || entry.channel}: ${resumeLabel}`}>
+    <TileContents channel={owner} title={entry.title || entry.channel} image={historyPreview(entry, channel)} live={live} progress={progress} resumeLabel={resumeLabel} />
   </button>;
 }
 
