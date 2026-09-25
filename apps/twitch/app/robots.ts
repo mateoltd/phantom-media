@@ -9,7 +9,9 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/videos/"],
+        // API routes and per-user state are not content. Channel pages and
+        // /videos are crawlable: they are the indexable surface.
+        disallow: ["/api/", "/watch-history"],
       },
     ],
     sitemap: new URL("/sitemap.xml", baseUrl).toString(),

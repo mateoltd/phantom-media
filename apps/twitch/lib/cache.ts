@@ -23,10 +23,16 @@ export function cacheSet<T>(key: string, data: T, ttl = DEFAULT_TTL): void {
 
 // Cleanup expired entries periodically
 if (typeof setInterval !== "undefined") {
-  setInterval(() => {
+  const sweeper = setInterval(() => {
     const now = Date.now();
     for (const [key, entry] of store) {
       if (now > entry.expiresAt) store.delete(key);
     }
   }, 60_000);
+
+  // Under Node (tests, scripts) a pending timer keeps the process alive.
+  // Workers return a plain number and have no unref, so guard the call.
+  if (typeof sweeper === "object" && typeof sweeper.unref === "function") {
+    sweeper.unref();
+  }
 }
