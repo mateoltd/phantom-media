@@ -23,8 +23,11 @@ the custom domain to Wrangler:
 
 ```sh
 NEXT_PUBLIC_BASE_URL=https://your-host.example pnpm --filter @phantom/twitch exec opennextjs-cloudflare build
-pnpm --filter @phantom/twitch exec wrangler deploy --domain your-host.example --var NEXT_PUBLIC_BASE_URL:https://your-host.example
+pnpm --filter @phantom/twitch exec wrangler deploy --domain notwitch.tv --domain www.notwitch.tv --var NEXT_PUBLIC_BASE_URL:https://notwitch.tv
 ```
+
+`www.notwitch.tv` permanently redirects to the apex while preserving paths and
+query strings.
 
 Playback opens with chat hidden. Show chat in the player controls or beside the
 video details to open the optional split view. On narrow screens, chat appears
