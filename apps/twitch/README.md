@@ -29,6 +29,12 @@ pnpm --filter @phantom/twitch exec wrangler deploy --domain notwitch.tv --domain
 `www.notwitch.tv` permanently redirects to the apex while preserving paths and
 query strings.
 
+Cloudflare Builds deploys this Worker from `main` with `/apps/twitch` as its root.
+The build installs the workspace dependencies and runs OpenNext; Wrangler then
+deploys to both custom domains. Build caching is enabled and preview builds are
+disabled. The Worker watches this app, shared packages, and workspace dependency
+files, so changes confined to other apps do not rebuild it.
+
 Playback opens with chat hidden. Show chat in the player controls or beside the
 video details to open the optional split view. On narrow screens, chat appears
 below the video details. VODs offer synchronized replay and the channel's live

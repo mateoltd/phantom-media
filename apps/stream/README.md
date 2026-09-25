@@ -392,6 +392,12 @@ must never be committed to Git. CineSrc and Videasy need
 `VIDEASY_RESOLVER_SECRET` to match the resolver's
 `PHANTOM_RESOLVER_SECRET`.
 
+Cloudflare Builds deploys this Worker from `main` with `/apps/stream` as its root.
+The build installs the workspace dependencies and runs OpenNext; Wrangler then
+deploys to the configured custom domain. Build caching is enabled and preview
+builds are disabled. The Worker watches this app, shared packages, and workspace
+dependency files, so changes confined to other apps do not rebuild it.
+
 The Videasy resolver runs in Dokploy's `phantom-media` project as
 `phantom-resolver`, built from `main` using `apps/stream/Dockerfile.resolver`
 and Docker context `apps/stream`. Its generated HTTPS hostname is configured
