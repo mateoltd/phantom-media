@@ -378,18 +378,19 @@ manifests; authenticated or paid services are intentionally unsupported.
 
 ## Deployment
 
-Cloudflare Workers Builds connects the private `mateoltd/phantom-media` GitHub
-repository to `phantom-stream`. Pushes to `main` deploy production using the
-repository root, with these commands:
+Build the Worker from the monorepo root and deploy it with Wrangler. Set the
+canonical URL in both the build environment and the Worker. The custom domain
+is supplied at deploy time so it does not appear in the public repository:
 
 ```sh
-pnpm --filter @phantom/stream exec opennextjs-cloudflare build
-pnpm --filter @phantom/stream exec wrangler deploy
+NEXT_PUBLIC_BASE_URL=https://your-host.example pnpm --filter @phantom/stream exec opennextjs-cloudflare build
+pnpm --filter @phantom/stream exec wrangler deploy --domain your-host.example --var NEXT_PUBLIC_BASE_URL:https://your-host.example
 ```
 
-The custom domains are `happy.streaming.gatites.com` and
-`stream.her.mateorb.com`. Runtime secrets, including `SUBDL_API_KEY`, are stored
-in the Worker secret settings and must never be committed to Git.
+Runtime secrets, including `SUBDL_API_KEY`, are stored in Worker secrets and
+must never be committed to Git. CineSrc and Videasy need
+`VIDEASY_RESOLVER_SECRET` to match the resolver's
+`PHANTOM_RESOLVER_SECRET`.
 
 The Videasy resolver runs in Dokploy's `phantom-media` project as
 `phantom-resolver`, built from `main` using `apps/stream/Dockerfile.resolver`

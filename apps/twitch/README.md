@@ -18,6 +18,14 @@ pnpm --filter @phantom/twitch dev
 The app runs on the default Next.js development port. See the root README for
 workspace checks and design package boundaries.
 
+For a Cloudflare Worker deployment, build with the canonical URL and provide
+the custom domain to Wrangler:
+
+```sh
+NEXT_PUBLIC_BASE_URL=https://your-host.example pnpm --filter @phantom/twitch exec opennextjs-cloudflare build
+pnpm --filter @phantom/twitch exec wrangler deploy --domain your-host.example --var NEXT_PUBLIC_BASE_URL:https://your-host.example
+```
+
 Playback opens with chat hidden. Show chat in the player controls or beside the
 video details to open the optional split view. On narrow screens, chat appears
 below the video details. VODs offer synchronized replay and the channel's live

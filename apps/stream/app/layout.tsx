@@ -48,8 +48,8 @@ export const metadata: Metadata = {
     images: ["/og.png"],
   },
   robots: {
-    index: true,
-    follow: true,
+    index: false,
+    follow: false,
   },
 };
 

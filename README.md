@@ -89,8 +89,9 @@ download workflows stay with their apps.
 
 ## Deployment
 
-Downloader and Stream go to Cloudflare by different routes because they need
-different things. Twitch has no deployment configuration yet.
+All three apps have Cloudflare deployment configuration. Downloader uses a
+Container; Stream and Twitch run as Workers through OpenNext. Deploy only the
+apps intended for the current environment.
 
 **Downloader** runs in a Cloudflare Container. It shells out to `yt-dlp` and
 FFmpeg, so it needs a real filesystem and real binaries. The Worker in
@@ -106,11 +107,14 @@ The image builds from the workspace root because the app compiles against
 packages that live outside its own folder. The `image_build_context` setting is
 in `apps/downloader/wrangler.jsonc`.
 
-**Stream** is pure Next with no processes to keep alive, so it runs on Workers
-directly through OpenNext.
+**Stream and Twitch** run on Workers through OpenNext. Build each app, then
+deploy its Worker with `wrangler --domain` and `NEXT_PUBLIC_BASE_URL` set to its
+canonical HTTPS URL. Keep production hostnames in deployment settings rather
+than this repository.
 
 ```sh
-pnpm --filter @phantom/stream deploy
+NEXT_PUBLIC_BASE_URL=https://your-host.example pnpm --filter @phantom/stream exec opennextjs-cloudflare build
+pnpm --filter @phantom/stream exec wrangler deploy --domain your-host.example --var NEXT_PUBLIC_BASE_URL:https://your-host.example
 ```
 
 For local work, copy an app's `.env.example` to `.env.local` in that same app

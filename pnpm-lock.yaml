@@ -180,7 +180,7 @@ importers:
         version: 9.39.5(jiti@2.7.0)
       eslint-config-next:
         specifier: 'catalog:'
-        version: 16.3.6(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.3.6(@typescript-eslint/parser@8.65.0(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
       postcss:
         specifier: 'catalog:'
         version: 8.5.23
@@ -221,6 +221,9 @@ importers:
         specifier: ^3.5.0
         version: 3.5.0(react@19.2.8)
     devDependencies:
+      '@opennextjs/cloudflare':
+        specifier: ^1.20.2
+        version: 1.20.2(next@16.3.6(@types/node@25.9.5)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(wrangler@4.114.0(@cloudflare/workers-types@5.20260724.1))
       '@phantom/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -244,7 +247,7 @@ importers:
         version: 9.39.5(jiti@2.7.0)
       eslint-config-next:
         specifier: 'catalog:'
-        version: 16.3.6(@typescript-eslint/parser@8.65.0(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
+        version: 16.3.6(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
       postcss:
         specifier: 'catalog:'
         version: 8.5.23
@@ -254,6 +257,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+      wrangler:
+        specifier: 'catalog:'
+        version: 4.114.0(@cloudflare/workers-types@5.20260724.1)
 
   packages/config:
     devDependencies:
