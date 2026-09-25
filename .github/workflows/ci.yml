@@ -2,7 +2,17 @@ name: CI
 
 on:
   pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
+      - "design/**"
   push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "LICENSE"
+      - "design/**"
+  workflow_dispatch:
 
 permissions:
   contents: read
