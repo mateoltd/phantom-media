@@ -1,5 +1,9 @@
 # Phantom Media
 
+> **Work in progress.** Everything here is under active development. The apps,
+> the architecture, the roadmap, and the documented behaviour are all expected
+> to change. Treat none of it as stable or supported.
+
 The monorepo for Phantom Downloader, Phantom Stream, and Phantom Twitch. Three apps,
 one design system, one install, and no build-time dependency on the Pervasivity
 intelligence repository from which this project was extracted.
@@ -12,6 +16,36 @@ intelligence repository from which this project was extracted.
 | `packages/theme`       | Design tokens, base layer and CSS primitives. Tailwind v4.              |
 | `packages/ui`          | React components the apps share, consumed as source.                    |
 | `packages/config`      | tsconfig, ESLint and PostCSS bases.                                     |
+
+## Phantom tools
+
+A Phantom tool does one job. That is the whole idea: a small, focused tool that
+does its single thing well, rather than a growing suite that does everything
+badly. This monorepo holds the tools that happen to share a design system and a
+toolchain, and it is not otherwise a boundary. When a need appears that none of
+the current tools serve, the answer is a new tool built alongside these ones
+rather than another feature bolted onto an existing one.
+
+The shared interest running through all of it is a free, open internet. That
+means circumvention, bypasses, and keeping pace with platforms as they change
+underneath you. There are walls that will not be climbed, and they do not get
+climbed.
+
+## Scope and roadmap
+
+**Downloader** grows outward. Today it resolves and downloads YouTube; the goal
+is inexpensive YouTube downloading plus Spotify, Twitch, and the other video and
+audio platforms worth supporting. Twitch is already covered by the Twitch app,
+so the work there is making the downloader the front door to it.
+
+**Twitch** broadens into a fuller client than the channel and VOD player it is
+today.
+
+**Stream** narrows, on purpose. It is a stream frontend, and that is what it
+stays: the sources are on their way out of this repository and the app is
+heading toward being agnostic about where playback comes from. That is the
+destination rather than the current state. The sources are still here, and the
+app is still coupled to them.
 
 ## Getting set up
 
@@ -145,5 +179,5 @@ This repository is licensed under the [MIT License](LICENSE). Third-party
 software, assets, and services retain their own licenses and terms.
 
 The apps are independent projects, affiliated with none of the services they
-talk to, and neither hosts any media. Use them only for media you own, control,
+talk to, and none hosts any media. Use them only for media you own, control,
 or are legally authorized to access.

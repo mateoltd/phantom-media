@@ -23,11 +23,12 @@ the custom domain to Wrangler:
 
 ```sh
 NEXT_PUBLIC_BASE_URL=https://your-host.example pnpm --filter @phantom/twitch exec opennextjs-cloudflare build
-pnpm --filter @phantom/twitch exec wrangler deploy --domain notwitch.tv --domain www.notwitch.tv --var NEXT_PUBLIC_BASE_URL:https://notwitch.tv
+pnpm --filter @phantom/twitch exec wrangler deploy --domain your-host.example --domain www.your-host.example --var NEXT_PUBLIC_BASE_URL:https://your-host.example
 ```
 
-`www.notwitch.tv` permanently redirects to the apex while preserving paths and
-query strings.
+The `www` host permanently redirects to the apex while preserving paths and
+query strings. Production hostnames are supplied at deploy time and are kept out
+of this repository.
 
 Cloudflare Builds deploys this Worker from `main` with `/apps/twitch` as its root.
 The build installs the workspace dependencies and runs OpenNext; Wrangler then
