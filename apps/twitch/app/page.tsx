@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { DebugVideoScript } from "@/components/DebugVideoScript";
 import { VodApp } from "@/components/VodApp";
+import { HomeContent } from "@/components/HomeContent";
 import { StructuredData } from "@/components/structured-data";
 import { isDebugEnabled } from "@/lib/debug";
 import { buildMetadata, getBaseUrl, siteConfig } from "@/lib/seo";
@@ -32,11 +33,6 @@ export default function Home() {
           name: siteConfig.name,
           url: baseUrl,
           description: siteConfig.description,
-          potentialAction: {
-            "@type": "SearchAction",
-            target: `${baseUrl}?v={search_term_string}`,
-            "query-input": "required name=search_term_string",
-          },
         }}
       />
       <StructuredData
@@ -46,13 +42,10 @@ export default function Home() {
           name: siteConfig.name,
           applicationCategory: "MultimediaApplication",
           operatingSystem: "Web",
+          isAccessibleForFree: true,
           description: siteConfig.description,
           url: baseUrl,
-          offers: {
-            "@type": "Offer",
-            price: "0",
-            priceCurrency: "USD",
-          },
+          offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
         }}
       />
       <StructuredData
@@ -88,9 +81,10 @@ export default function Home() {
         }}
       />
       {debugEnabled && <DebugVideoScript />}
-      <Suspense>
+      <Suspense fallback={null}>
         <VodApp />
       </Suspense>
+      <HomeContent />
     </>
   );
 }

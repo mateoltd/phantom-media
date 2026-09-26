@@ -7,6 +7,12 @@ export const siteConfig = {
     "Search Twitch channels, watch live streams, browse recent VODs, and resume playback in a modern adaptive Twitch client.",
   creator: "mateoltd",
   publisher: "Phantom Research",
+  ogImage: {
+    url: "/og.png",
+    width: 1730,
+    height: 909,
+    alt: "Phantom Twitch - watch Twitch live and VODs",
+  },
   keywords: [
     "twitch client",
     "watch twitch live",
@@ -35,13 +41,80 @@ export function getBaseUrl() {
   return new URL("http://localhost:3000");
 }
 
+/**
+ * Paths that must never resolve to a Twitch channel. Static segments win over
+ * the `[channelName]` dynamic segment on their own, but this list keeps the
+ * channel route from claiming app-owned words if a route is ever renamed.
+ */
+export const reservedChannelNames = new Set([
+  "api",
+  "disclaimer",
+  "favicon.ico",
+  "icon.png",
+  "apple-icon.png",
+  "manifest.webmanifest",
+  "og.png",
+  "robots.txt",
+  "sitemap.xml",
+  "videos",
+  "watch-history",
+]);
+
+export function isReservedChannelName(value: string): boolean {
+  const name = value.trim().toLowerCase();
+
+  if (!name) return true;
+  if (reservedChannelNames.has(name)) return true;
+  // Anything that looks like a file or an asset path is never a channel.
+  if (name.includes(".")) return true;
+
+  return false;
+}
+
+type RouteImage = {
+  url: string;
+  width?: number;
+  height?: number;
+  alt: string;
+};
+
 type RouteMetadataOptions = {
   title: string;
   description: string;
   path?: string;
   keywords?: string[];
   noIndex?: boolean;
+  /** Defaults to the site-wide OG card. */
+  image?: string | RouteImage;
+  imageAlt?: string;
+  type?: "website" | "profile" | "video.other";
 };
+
+function resolveImage(image: string | RouteImage | undefined, alt: string | undefined): RouteImage {
+  if (typeof image === "string") {
+    return { url: image, width: siteConfig.ogImage.width, height: siteConfig.ogImage.height, alt: alt ?? siteConfig.ogImage.alt };
+  }
+
+  if (image) return { ...image, alt: image.alt || alt || siteConfig.ogImage.alt };
+
+  return { ...siteConfig.ogImage, alt: alt ?? siteConfig.ogImage.alt };
+}
+
+function buildRobots(noIndex: boolean): Metadata["robots"] {
+  const index = !noIndex;
+
+  return {
+    index,
+    follow: true,
+    googleBot: {
+      index,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  };
+}
 
 export function buildMetadata({
   title,
@@ -49,8 +122,12 @@ export function buildMetadata({
   path = "/",
   keywords = [],
   noIndex = false,
+  image,
+  imageAlt,
+  type = "website",
 }: RouteMetadataOptions): Metadata {
   const url = new URL(path, getBaseUrl()).toString();
+  const socialImage = resolveImage(image, imageAlt);
 
   return {
     title,
@@ -65,36 +142,16 @@ export function buildMetadata({
       url,
       siteName: siteConfig.name,
       locale: "en_US",
-      type: "website",
+      type,
+      images: [socialImage],
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title,
       description,
       creator: "@mateoltd",
+      images: [socialImage.url],
     },
-    robots: noIndex
-      ? {
-          index: false,
-          follow: true,
-          googleBot: {
-            index: false,
-            follow: true,
-            "max-video-preview": -1,
-            "max-image-preview": "large",
-            "max-snippet": -1,
-          },
-        }
-      : {
-          index: true,
-          follow: true,
-          googleBot: {
-            index: true,
-            follow: true,
-            "max-video-preview": -1,
-            "max-image-preview": "large",
-            "max-snippet": -1,
-          },
-        },
+    robots: buildRobots(noIndex),
   };
 }

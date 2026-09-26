@@ -37,7 +37,8 @@
 .twitch-home-rail-mobile-name { display: none; }
 .twitch-home-feed { min-width: 0; width: 100%; }
 .twitch-home-feed-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: var(--feed-heading-height); margin-bottom: var(--feed-heading-gap); }
-.twitch-home-feed-heading h1 { font-size: 26px; line-height: 1.35; font-weight: 600; margin: 0; }
+/* The feed heading is an h2: the page h1 lives in the server-rendered .twitch-seo block. */
+.twitch-home-feed-heading h1, .twitch-home-feed-heading h2 { font-size: 26px; line-height: 1.35; font-weight: 600; margin: 0; }
 .twitch-home-feed-heading > button { margin-right: -9px; }
 .twitch-home-media-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 24px; }
 .twitch-home-tile { display: block; min-width: 0; width: 100%; text-align: left; border-radius: 16px; container-type: inline-size; }
@@ -505,3 +506,100 @@
 @media (prefers-reduced-motion: reduce) {
   .t-panel-slide { transition: none !important; }
 }
+
+/* Server-rendered content blocks. These render below the app shell and carry
+   the indexable copy, so they must stay readable and well linked. */
+.twitch-seo {
+  width: 100%;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+.twitch-seo-inner {
+  width: calc(100% - var(--navigation-gutter) * 2);
+  max-width: 68rem;
+  margin-inline: auto;
+  padding: clamp(2.5rem, 6vw, 4.5rem) 1.5rem clamp(3rem, 7vw, 5rem);
+}
+.twitch-seo-title {
+  margin: 0;
+  font-size: clamp(1.6rem, 3.4vw, 2.25rem);
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+.twitch-seo-lede {
+  margin: 1rem 0 0;
+  max-width: 58ch;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--color-text-secondary);
+}
+.twitch-seo-body {
+  margin: 0.75rem 0 0;
+  max-width: 65ch;
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  color: var(--color-text-secondary);
+}
+.twitch-seo-block { margin-top: clamp(2rem, 4vw, 3rem); }
+.twitch-seo-subheading {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+.twitch-seo-channel-head { display: flex; align-items: center; gap: 1rem; }
+.twitch-seo-avatar { flex: none; width: 4.5rem; height: 4.5rem; border-radius: 1.25rem; }
+.twitch-seo-handle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0.375rem 0 0;
+  font-size: 0.875rem;
+  color: var(--color-text-tertiary);
+}
+.twitch-seo-status {
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+.twitch-seo-status.is-live { border-color: var(--color-error); color: var(--color-error); }
+.twitch-seo-features {
+  display: grid;
+  /* min() keeps the track from forcing horizontal overflow on very narrow screens */
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+  gap: 1.5rem 2rem;
+  margin: 1rem 0 0;
+}
+.twitch-seo-feature-title { font-size: 0.9375rem; font-weight: 600; color: var(--color-text); }
+.twitch-seo-feature-body { margin: 0.375rem 0 0; font-size: 0.875rem; line-height: 1.7; color: var(--color-text-secondary); }
+.twitch-seo-links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+.twitch-seo-link {
+  display: inline-block;
+  padding: 0.375rem 0.875rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 0.875rem;
+  color: var(--color-text);
+  text-decoration: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+.twitch-seo-link:hover { border-color: var(--color-phantom); background: var(--color-surface-hover); }
+.twitch-seo-faq { margin: 1rem 0 0; }
+.twitch-seo-faq-item { padding: 1.125rem 0; border-top: 1px solid var(--color-border); }
+.twitch-seo-faq-item:last-child { border-bottom: 1px solid var(--color-border); }
+.twitch-seo-faq-question { font-size: 0.9375rem; font-weight: 600; color: var(--color-text); }
+.twitch-seo-faq-answer { margin: 0.5rem 0 0; font-size: 0.9375rem; line-height: 1.75; color: var(--color-text-secondary); }
+.twitch-seo-vods { margin: 1rem 0 0; padding: 0; list-style: none; }
+.twitch-seo-vod { padding: 0.875rem 0; border-top: 1px solid var(--color-border); }
+.twitch-seo-vod-link { font-size: 0.9375rem; color: var(--color-text); text-decoration: none; }
+.twitch-seo-vod-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.twitch-seo-vod-meta { display: block; margin-top: 0.25rem; font-size: 0.8125rem; color: var(--color-text-tertiary); }

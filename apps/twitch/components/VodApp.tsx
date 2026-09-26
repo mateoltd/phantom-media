@@ -426,9 +426,9 @@ function ChannelHeader({
         className={compact ? "h-12 w-12 rounded-2xl" : "h-14 w-14 rounded-2xl"}
       />
       <div className="min-w-0">
-        <h1 className={compact ? "truncate text-lg font-semibold text-text" : "truncate text-2xl font-semibold text-text"}>
+        <h2 className={compact ? "truncate text-lg font-semibold text-text" : "truncate text-2xl font-semibold text-text"}>
           {channel.displayName}
-        </h1>
+        </h2>
         <p className="truncate text-sm text-text-tertiary">@{channel.login}</p>
       </div>
     </div>

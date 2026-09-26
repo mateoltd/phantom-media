@@ -41,12 +41,14 @@ export const metadata: Metadata = {
     siteName: siteConfig.name,
     locale: "en_US",
     type: "website",
+    images: [siteConfig.ogImage],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Phantom Twitch - Twitch Live and VOD Client",
     description: siteConfig.description,
     creator: "@mateoltd",
+    images: [siteConfig.ogImage.url],
   },
   robots: {
     index: true,

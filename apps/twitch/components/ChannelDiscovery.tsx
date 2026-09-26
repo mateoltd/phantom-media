@@ -100,7 +100,7 @@ function Feed({ entries, onVideo, data, loading, refresh, error, footer }: {
     <ChannelRail recent={recent} suggestions={pool} loading={loading && !data} />
     <section className="twitch-home-feed" aria-labelledby="home-feed-heading">
       <div className="twitch-home-feed-heading">
-        <h1 id="home-feed-heading">{entries.length ? "Your next watch" : "Find your next stream"}</h1>
+        <h2 id="home-feed-heading">{entries.length ? "Your next watch" : "Find your next stream"}</h2>
         <IconButton label="Refresh streams" disabled={loading || fetching || Boolean(error)} onClick={refresh}><ArrowClockwise size={18} /></IconButton>
       </div>
       <div className="twitch-home-media-grid" aria-busy={loading || fetching}>
