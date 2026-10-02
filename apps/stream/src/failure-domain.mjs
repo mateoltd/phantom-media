@@ -48,6 +48,26 @@ export function fingerprintFailureLayer(seed) {
   return hash(String(seed ?? ""));
 }
 
+export const CINESRC_CONTROL_PLANE_SEED =
+  "cinesrc:index:challenge:media-origin";
+
+export function cinesrcControlPlaneDomain() {
+  return hash(CINESRC_CONTROL_PLANE_SEED);
+}
+
+// Each media host gets its own failure domain so one bad CDN does not cool
+// the whole provider. The shared control-plane domain is retained in the
+// capacity list for index/challenge-wide outages.
+export function cinesrcMediaFailureDomain(hostname) {
+  return hash(`cinesrc:media:${String(hostname ?? "").toLowerCase()}`);
+}
+
+export function cinesrcCapacityDomains(hostname) {
+  const media = cinesrcMediaFailureDomain(hostname);
+  const control = cinesrcControlPlaneDomain();
+  return Object.freeze(media === control ? [media] : [media, control]);
+}
+
 export function failureDomainFor(sourceId) {
   const id = String(sourceId ?? "");
   if (id.startsWith("fd-")) return id;

@@ -1,13 +1,16 @@
 import { Buffer } from "node:buffer";
 import { debugEvent } from "../debug.mjs";
-import { fingerprintFailureLayer } from "../failure-domain.mjs";
+import {
+  cinesrcCapacityDomains,
+  cinesrcControlPlaneDomain,
+  cinesrcMediaFailureDomain,
+} from "../failure-domain.mjs";
 import { normalizeVariants } from "./normalize.mjs";
 import { evaluateCineSrcScripts } from "./cinesrc-runtime.mjs";
 import { proxyDiscoveredCineSrcCandidate } from "./wrapper-media-proxy.mjs";
+import { hlsAudioLanguages } from "../media-language.mjs";
 
-export const CINESRC_FAILURE_DOMAIN = fingerprintFailureLayer(
-  "cinesrc:index:challenge:media-origin",
-);
+export const CINESRC_FAILURE_DOMAIN = cinesrcControlPlaneDomain();
 
 const DEFAULT_ORIGIN = "https://cinesrc.st";
 const USER_AGENT =
@@ -18,7 +21,11 @@ const MAX_PAGE_BYTES = 2 * 1024 * 1024;
 const MAX_SCRIPT_BYTES = 2 * 1024 * 1024;
 const MAX_ACTION_BYTES = 2 * 1024 * 1024;
 const MAX_SCRIPTS = 24;
-const MAX_PROVIDERS = 8;
+const MAX_PROVIDERS = 6;
+// Bounded lane race: verify up to 5 provider lanes in parallel, rank them,
+// return the best first but keep the rest for failover.
+export const CINESRC_MAX_RACE_LANES = 5;
+export const CINESRC_LANE_TIMEOUT_MS = 9_000;
 const MAX_CHALLENGE_ATTEMPTS = 2;
 const CACHE_TTL_MS = 15_000;
 const CACHE = new Map();
@@ -459,7 +466,7 @@ function streamArgs(media, proof, providerId) {
   ];
 }
 
-function variantsFromEnvelope(envelope, providerId) {
+function variantsFromEnvelope(envelope, providerId, providerRank = 0) {
   const variants = [];
   for (const candidate of envelope?.url ?? []) {
     if (typeof candidate?.url !== "string") continue;
@@ -469,19 +476,63 @@ function variantsFromEnvelope(envelope, providerId) {
       if (!declared.includes("hls") && !target.pathname.toLowerCase().includes("m3u8")) {
         continue;
       }
+      const host = target.hostname.toLowerCase();
       variants.push({
         url: target.href,
         type: "hls",
         quality: candidate.label ?? candidate.source ?? null,
-        failureDomain: CINESRC_FAILURE_DOMAIN,
+        failureDomain: cinesrcMediaFailureDomain(host),
+        capacityDomains: cinesrcCapacityDomains(host),
         deliveryMode: "resolver-full-relay",
         provider: providerId,
+        providerRank,
+        audioLanguages: [],
+        laneId: null,
       });
     } catch {
       continue;
     }
   }
   return variants;
+}
+
+function laneHash8(value) {
+  let state = 0x811c9dc5;
+  for (const character of String(value)) {
+    state ^= character.codePointAt(0);
+    state = Math.imul(state, 0x01000193);
+  }
+  return (state >>> 0).toString(16).padStart(8, "0");
+}
+
+// Opaque lane id: stable for a provider+url pair, reveals no upstream brand.
+export function cinesrcLaneId(providerId, variantUrl, index) {
+  return `lane-${laneHash8(`${providerId}\n${variantUrl}\n${index}`)}`;
+}
+
+export function estimateManifestQuality(manifest) {
+  let bandwidth = 0;
+  let height = 0;
+  for (const line of String(manifest ?? "").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed.toUpperCase().startsWith("#EXT-X-STREAM-INF")) continue;
+    const bw = Number(/BANDWIDTH\s*=\s*(\d+)/i.exec(trimmed)?.[1]);
+    if (Number.isFinite(bw) && bw > bandwidth) bandwidth = bw;
+    const res = /RESOLUTION\s*=\s*\d+x(\d+)/i.exec(trimmed)?.[1];
+    const parsed = Number(res);
+    if (Number.isFinite(parsed) && parsed > height) height = parsed;
+  }
+  return { bandwidth, height };
+}
+
+function laneScore({ quality, latencyMs, providerRank }) {
+  // Quality dominates, then latency, then the provider-index rank.
+  return (
+    (quality?.height ?? 0) * 1_000_000 +
+    (quality?.bandwidth ?? 0) / 1_000 +
+    providerRank * 10 -
+    Math.min(latencyMs ?? 0, 20_000) / 100
+  );
 }
 
 function subtitlesFromEnvelope(envelope) {
@@ -504,14 +555,60 @@ function subtitlesFromEnvelope(envelope) {
   return subtitles.slice(0, 100);
 }
 
-async function resolveProvider(context, provider) {
+async function verifyVariant(context, variant, laneId, signal) {
+  const startedAt = performance.now();
+  const headers = {
+    accept: "application/vnd.apple.mpegurl,application/x-mpegURL,*/*",
+    referer: `${context.pageUrl.origin}/`,
+    origin: context.pageUrl.origin,
+    "user-agent": USER_AGENT,
+  };
+  const response = await context.fetchImpl(variant.url, {
+    headers,
+    redirect: "manual",
+    signal,
+  });
+  if (!response.ok) {
+    response.body?.cancel();
+    return null;
+  }
+  const manifest = await limitedText(response, MAX_ACTION_BYTES, "media validation");
+  if (!manifest.trimStart().startsWith("#EXTM3U")) return null;
+  // Audio-language proof: keep the detected languages on the variant so the
+  // router can prefer a lane that declares the requested language.
+  const audioLanguages = hlsAudioLanguages(manifest);
+  const quality = estimateManifestQuality(manifest);
+  const verified = {
+    ...variant,
+    laneId,
+    audioLanguages,
+    manifestHeight: quality.height,
+    manifestBandwidth: quality.bandwidth,
+    verifyLatencyMs: Math.round(performance.now() - startedAt),
+  };
+  return context.browserOrigin
+    ? proxyDiscoveredCineSrcCandidate(verified, context.browserOrigin)
+    : verified;
+}
+
+async function resolveProviderLane(context, provider, laneIndex, signal) {
+  const laneStartedAt = performance.now();
+  const throwIfAborted = () => {
+    if (context.signal?.aborted) {
+      throw context.signal.reason ?? new Error("aborted");
+    }
+    if (signal?.aborted) {
+      throw signal.reason ?? new Error("aborted");
+    }
+  };
   for (let attempt = 0; attempt < MAX_CHALLENGE_ATTEMPTS; attempt += 1) {
+    throwIfAborted();
     const challenge = await challengeProof(
       context.fetchImpl,
       context.media,
       context.pageUrl,
       context.runtimeScripts,
-      context.signal,
+      signal,
       context.runtimeFactory,
     );
     const action = await callAction(
@@ -519,7 +616,7 @@ async function resolveProvider(context, provider) {
       context.pageUrl,
       context.contract.streamAction,
       streamArgs(context.media, challenge.proof, provider.id),
-      context.signal,
+      signal,
       "stream action",
     );
     const cipher = parseCineSrcRscValue(action);
@@ -531,47 +628,48 @@ async function resolveProvider(context, provider) {
     } catch {
       break;
     }
-    const variants = variantsFromEnvelope(envelope, provider.id);
-    if (variants.length > 0) {
+    const candidates = variantsFromEnvelope(envelope, provider.id, provider.rank);
+    if (candidates.length > 0) {
       const verified = [];
-      for (const variant of variants) {
-        try {
-          const headers = {
-            accept: "application/vnd.apple.mpegurl,application/x-mpegURL,*/*",
-            referer: `${context.pageUrl.origin}/`,
-            origin: context.pageUrl.origin,
-            "user-agent": USER_AGENT,
-          };
-          const response = await context.fetchImpl(variant.url, {
-            headers,
-            redirect: "manual",
-            signal: context.signal,
-          });
-          if (!response.ok) {
-            response.body?.cancel();
-            continue;
-          }
-          const manifest = await limitedText(
-            response,
-            MAX_ACTION_BYTES,
-            "media validation",
+      const checks = await Promise.allSettled(
+        candidates.slice(0, 3).map(async (variant, index) => {
+          const laneId = cinesrcLaneId(provider.id, variant.url, laneIndex * 8 + index);
+          const proof = await verifyVariant(
+            context,
+            { ...variant, laneId },
+            laneId,
+            signal,
           );
-          if (manifest.trimStart().startsWith("#EXTM3U")) {
-            verified.push(
-              context.browserOrigin
-                ? proxyDiscoveredCineSrcCandidate(
-                    variant,
-                    context.browserOrigin,
-                  )
-                : variant,
-            );
-          }
-        } catch (error) {
-          if (context.signal?.aborted) throw error;
-        }
+          if (!proof) return null;
+          return proof;
+        }),
+      );
+      for (const check of checks) {
+        if (check.status === "fulfilled" && check.value) verified.push(check.value);
+        throwIfAborted();
       }
       if (verified.length > 0) {
-        return { variants: verified, subtitles: subtitlesFromEnvelope(envelope) };
+        const scored = verified.map((variant) => ({
+          variant,
+          score: laneScore({
+            quality: {
+              height: variant.manifestHeight ?? 0,
+              bandwidth: variant.manifestBandwidth ?? 0,
+            },
+            latencyMs: variant.verifyLatencyMs ?? 0,
+            providerRank: provider.rank,
+          }),
+        }));
+        scored.sort((a, b) => b.score - a.score);
+        return {
+          providerId: provider.id,
+          providerRank: provider.rank,
+          laneId: scored[0].variant.laneId,
+          variants: scored.map((entry) => entry.variant),
+          subtitles: subtitlesFromEnvelope(envelope),
+          latencyMs: Math.round(performance.now() - laneStartedAt),
+          score: scored[0].score,
+        };
       }
     }
     if (envelope?.error !== "invalid_challenge" && envelope?.error !== "missing_challenge") {
@@ -579,6 +677,66 @@ async function resolveProvider(context, provider) {
     }
   }
   return null;
+}
+
+function withLaneTimeout(parentSignal, timeoutMs) {
+  const controller = new AbortController();
+  const onParentAbort = () => controller.abort(parentSignal?.reason);
+  parentSignal?.addEventListener("abort", onParentAbort, { once: true });
+  const timer = setTimeout(() => controller.abort(new Error("lane timeout")), timeoutMs);
+  const cleanup = () => {
+    clearTimeout(timer);
+    parentSignal?.removeEventListener("abort", onParentAbort);
+  };
+  return { signal: controller.signal, cleanup };
+}
+
+// Race a bounded set of provider lanes in parallel, rank verified lanes by
+// quality/latency, return the best first but keep the rest for failover.
+export async function raceCineSrcLanes(context, providers, options = {}) {
+  const lanes = providers.slice(0, options.maxLanes ?? CINESRC_MAX_RACE_LANES);
+  const timeoutMs = options.laneTimeoutMs ?? CINESRC_LANE_TIMEOUT_MS;
+  const attempts = [];
+  const settled = await Promise.allSettled(
+    lanes.map(async (provider, index) => {
+      const lane = withLaneTimeout(context.signal, timeoutMs);
+      try {
+        debugEvent("route", "cinesrc.provider-attempt", { provider: provider.id });
+        const resolved = await resolveProviderLane(context, provider, index, lane.signal);
+        if (!resolved) {
+          attempts.push({ provider: provider.id, outcome: "empty" });
+          return null;
+        }
+        return resolved;
+      } catch (error) {
+        if (context.signal?.aborted) throw error;
+        attempts.push({
+          provider: provider.id,
+          outcome: "error",
+          stage: error?.details?.stage ?? null,
+          status: error?.status ?? null,
+        });
+        return null;
+      } finally {
+        lane.cleanup();
+      }
+    }),
+  );
+  const verified = [];
+  for (const entry of settled) {
+    if (entry.status === "fulfilled" && entry.value) verified.push(entry.value);
+    else if (entry.status === "rejected" && context.signal?.aborted) {
+      throw entry.reason;
+    }
+  }
+  verified.sort((a, b) => b.score - a.score || a.latencyMs - b.latencyMs);
+  return { lanes: verified, attempts };
+}
+
+// Back-compat alias for the previous sequential resolver.
+async function resolveProvider(context, provider) {
+  const lane = await resolveProviderLane(context, provider, 0, context.signal);
+  return lane ? { variants: lane.variants, subtitles: lane.subtitles } : null;
 }
 
 function cacheKey(media, origin) {
@@ -690,36 +848,39 @@ export async function resolveCineSrc(media, options = {}) {
     runtimeScripts: scripts,
     signal: options.signal,
   };
-  const attempts = [];
-  for (const provider of providers) {
-    try {
-      debugEvent("route", "cinesrc.provider-attempt", { provider: provider.id });
-      const resolved = await resolveProvider(context, provider);
-      if (!resolved) {
-        attempts.push({ provider: provider.id, outcome: "empty" });
-        continue;
-      }
-      const result = {
-        variants: resolved.variants,
-        subtitles: resolved.subtitles,
-        latencyMs: Math.round(performance.now() - startedAt),
-      };
-      CACHE.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, value: result });
-      return result;
-    } catch (error) {
-      if (options.signal?.aborted) throw error;
-      attempts.push({
-        provider: provider.id,
-        outcome: "error",
-        stage: error?.details?.stage ?? null,
-        status: error?.status ?? null,
-      });
-    }
-  }
-  throw new CineSrcError("CineSrc providers returned no playable stream", {
-    retryable: true,
-    details: { stage: "provider-fallback", attempts },
+  const { lanes, attempts } = await raceCineSrcLanes(context, providers, {
+    maxLanes: options.maxLanes ?? CINESRC_MAX_RACE_LANES,
+    laneTimeoutMs: options.laneTimeoutMs ?? CINESRC_LANE_TIMEOUT_MS,
   });
+  if (lanes.length === 0) {
+    throw new CineSrcError("CineSrc providers returned no playable stream", {
+      retryable: true,
+      details: { stage: "provider-fallback", attempts },
+    });
+  }
+  const [best, ...rest] = lanes;
+  const variants = lanes.flatMap((lane) => lane.variants);
+  const result = {
+    variants,
+    subtitles: best.subtitles,
+    latencyMs: Math.round(performance.now() - startedAt),
+    laneId: best.laneId,
+    lanes: lanes.map((lane) => ({
+      laneId: lane.laneId,
+      provider: lane.providerId,
+      latencyMs: lane.latencyMs,
+      variants: lane.variants.length,
+    })),
+    alternates: rest.flatMap((lane) =>
+      lane.variants.map((variant) => ({
+        laneId: lane.laneId,
+        provider: lane.providerId,
+        url: variant.url,
+      })),
+    ),
+  };
+  CACHE.set(key, { expiresAt: Date.now() + CACHE_TTL_MS, value: result });
+  return result;
 }
 
 export function createCineSrcResolver(id) {
@@ -729,6 +890,10 @@ export function createCineSrcResolver(id) {
       candidates: normalizeVariants(result.variants, id),
       subtitles: result.subtitles,
       latencyMs: result.latencyMs,
+      alternates: (result.alternates ?? []).slice(0, 8).map((entry) => ({
+        classification: "proxy",
+        reason: `lane:${entry.laneId ?? "unknown"}`,
+      })),
     };
   };
 }

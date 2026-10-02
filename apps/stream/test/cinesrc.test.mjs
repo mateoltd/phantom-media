@@ -2,12 +2,19 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   CINESRC_FAILURE_DOMAIN,
+  CINESRC_MAX_RACE_LANES,
+  cinesrcLaneId,
   assertCineSrcMediaUrl,
+  estimateManifestQuality,
   extractCineSrcContract,
   normalizeCineSrcProviders,
   parseCineSrcRscValue,
   resolveCineSrc,
 } from "../src/providers/cinesrc.mjs";
+import {
+  cinesrcCapacityDomains,
+  cinesrcMediaFailureDomain,
+} from "../src/failure-domain.mjs";
 import { decodeDiscoveredCineSrcMediaTarget } from "../src/providers/wrapper-media-proxy.mjs";
 
 const ORIGIN = "https://player.example";
@@ -153,14 +160,19 @@ test("resolver falls through the live provider index and verifies the HLS manife
     ).href,
     MASTER,
   );
-  assert.equal(result.variants[0].failureDomain, CINESRC_FAILURE_DOMAIN);
+  assert.equal(result.variants[0].failureDomain, cinesrcMediaFailureDomain(new URL(MASTER).hostname));
+  assert.ok(
+    (result.variants[0].capacityDomains ?? []).includes(CINESRC_FAILURE_DOMAIN),
+    "shared control-plane domain is retained for failover",
+  );
+  assert.match(result.variants[0].laneId, /^lane-[0-9a-f]{8}$/);
   assert.equal(result.variants[0].deliveryMode, "resolver-full-relay");
   const streamCalls = calls.filter(
     ({ init }) => init.headers?.["next-action"] === STREAM_ACTION,
   );
   assert.deepEqual(
-    streamCalls.map(({ init }) => JSON.parse(init.body)[5]),
-    ["offline-top", "brand-new-index-entry"],
+    streamCalls.map(({ init }) => JSON.parse(init.body)[5]).sort(),
+    ["brand-new-index-entry", "offline-top"],
   );
 });
 
@@ -217,4 +229,97 @@ test("remote resolver rejects malformed responses and preserves upstream failure
   await assert.rejects(resolveCineSrc({type:'movie',tmdbId:550}, {...options,
     fetchImpl: async () => Response.json({details:{stage:'provider-fallback'}}, {status:502}),
   }), error => error.status === 502 && error.details.upstream.stage === 'provider-fallback');
+});
+
+test("lane race is bounded, opaque, and keeps alternates for failover", async () => {
+  const many = Array.from({ length: 10 }, (_, i) => ({ id: `lane-${i}`, rank: i }));
+  const normalized = normalizeCineSrcProviders(many);
+  assert.ok(normalized.length <= 6, `expected bounded provider set, got ${normalized.length}`);
+  assert.ok(CINESRC_MAX_RACE_LANES >= 4 && CINESRC_MAX_RACE_LANES <= 6);
+  const first = cinesrcLaneId("nebula", "https://media.example/a.m3u8", 0);
+  const second = cinesrcLaneId("nebula", "https://media.example/a.m3u8", 0);
+  const other = cinesrcLaneId("other", "https://media.example/a.m3u8", 0);
+  assert.equal(first, second);
+  assert.match(first, /^lane-[0-9a-f]{8}$/);
+  assert.notEqual(first, other);
+  assert.ok(!first.includes("nebula"), "lane id must stay opaque");
+});
+
+test("each media host gets its own failure domain with shared control plane", () => {
+  const a = cinesrcMediaFailureDomain("cdn-a.example");
+  const b = cinesrcMediaFailureDomain("cdn-b.example");
+  assert.match(a, /^fd-[0-9a-f]{8}$/);
+  assert.notEqual(a, b);
+  assert.deepEqual(cinesrcCapacityDomains("cdn-a.example"), [a, CINESRC_FAILURE_DOMAIN]);
+});
+
+test("lane race verifies HLS audio proof and ranks quality first", async () => {
+  const hi = "https://cdn-hi.example/v/master.m3u8";
+  const lo = "https://cdn-lo.example/v/master.m3u8";
+  const fetchImpl = async (input, init = {}) => {
+    const url = new URL(input);
+    if (url.origin === ORIGIN && url.pathname === "/embed/movie/4242" && !init.method) {
+      return response('<script src="/assets/app-rotated.js"></script>', { contentType: "text/html" });
+    }
+    if (url.origin === ORIGIN && url.pathname === "/assets/app-rotated.js") {
+      return response(contractChunk(), { contentType: "text/javascript" });
+    }
+    if (url.origin === ORIGIN && ["/crypto-aug.js", "/proof-aug.js"].includes(url.pathname)) {
+      return response("runtime fixture", { contentType: "text/javascript" });
+    }
+    if (url.origin === ORIGIN && url.pathname === "/api/c/bootstrap") {
+      return response(JSON.stringify({ v: 1, r: "signed-rotation", p: "public-input" }), { contentType: "application/json" });
+    }
+    if (url.origin === ORIGIN && init.headers?.["next-action"] === PROVIDER_ACTION) {
+      return response(`0:{}\n1:${JSON.stringify([{ id: "slow-hi", rank: 1 }, { id: "fast-lo", rank: 0 }])}`);
+    }
+    if (url.origin === ORIGIN && init.headers?.["next-action"] === STREAM_ACTION) {
+      const args = JSON.parse(init.body);
+      return response(`0:{}\n1:${JSON.stringify(`cipher:${args[5]}`)}`);
+    }
+    if (url.href === hi) {
+      await new Promise((r) => setTimeout(r, 25));
+      return response(
+        '#EXTM3U\n#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="a",NAME="English",LANGUAGE="en"\n#EXT-X-STREAM-INF:BANDWIDTH=8000000,RESOLUTION=1920x1080\n1080/index.m3u8',
+        { contentType: "application/vnd.apple.mpegurl" },
+      );
+    }
+    if (url.href === lo) {
+      return response(
+        '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=640x480\n480/index.m3u8',
+        { contentType: "application/vnd.apple.mpegurl" },
+      );
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+  const runtimeFactory = () => ({
+    api: {
+      async gc() { return "primary"; },
+      async dr(cipher) {
+        const provider = cipher.replace("cipher:", "");
+        return {
+          error: null,
+          url: [{ source: "HLS", url: provider === "slow-hi" ? hi : lo }],
+          captions: [],
+        };
+      },
+    },
+    scope: { __ss2_challenge: { async gc() { return "stage2"; } } },
+  });
+  const result = await resolveCineSrc({ type: "movie", tmdbId: 4242 }, {
+    fetchImpl, fresh: true, origin: ORIGIN, runtimeFactory,
+  });
+  assert.ok(result.variants.length >= 2, "both verified lanes are kept");
+  const targets = result.variants.map((v) => v.url);
+  assert.ok(targets.includes(hi) && targets.includes(lo));
+  // Best lane (1080p with English proof) ranks first despite higher latency.
+  assert.equal(result.variants[0].url, hi);
+  assert.deepEqual(result.variants[0].audioLanguages, ["en"]);
+  assert.ok(Array.isArray(result.alternates) && result.alternates.length >= 1);
+  assert.ok(result.laneId, "best lane id is returned");
+  assert.ok(result.lanes.length >= 2);
+  assert.equal(
+    estimateManifestQuality('#EXT-X-STREAM-INF:BANDWIDTH=1000,RESOLUTION=1280x720').height,
+    720,
+  );
 });
