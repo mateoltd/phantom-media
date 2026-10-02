@@ -70,6 +70,19 @@ export interface PlayerController {
   subscribeAudio(listener: (state: AudioState) => void): () => void;
 }
 
+export interface PlaybackSnapshot {
+  currentTime: number;
+  paused: boolean;
+  selectedLevel: number;
+  selectedAudio: number;
+  selectedSubtitle?: number | null;
+}
+
+export {
+  applyPlaybackSnapshot,
+  capturePlaybackSnapshot,
+} from "../src/playback-handoff.mjs";
+
 export interface CandidateProbe {
   candidate: StreamCandidate;
   ok: boolean | null;

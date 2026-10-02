@@ -12,7 +12,10 @@ import {
 } from "@/src/router-policy.mjs";
 import {
   attachCandidate,
+  applyPlaybackSnapshot,
+  capturePlaybackSnapshot,
   type AudioState,
+  type PlaybackSnapshot,
   type PlayerController,
   type QualityLevel,
   type QualityState,
@@ -122,6 +125,7 @@ const MAX_AUTOMATIC_RACE_RETRIES = 1;
 interface StartOptions {
   pin?: string | null;
   recovery?: boolean;
+  handoff?: PlaybackSnapshot | null;
 }
 
 const isAutomaticSource = (source: SourceEntry) => source.automatic !== false;
@@ -200,6 +204,7 @@ export function useSourceRouter({
   );
 
   const coolingRef = useRef<Record<string, number>>({});
+  const handoffRef = useRef<PlaybackSnapshot | null>(null);
   const coolDomain = useCallback((sourceId: string, retryAfterMs: number | null) => {
     const domain = failureDomainFor(sourceId);
     const until = recordCooldown(domain, retryAfterMs, {
@@ -361,6 +366,7 @@ export function useSourceRouter({
       resumeFrom: number | null,
       timeoutMs: number,
       allowUnverifiedAudio = false,
+      handoff: PlaybackSnapshot | null = null,
     ) => {
       const video = videoRef.current;
       if (!video) throw new Error("The player is not mounted");
@@ -374,6 +380,16 @@ export function useSourceRouter({
           if (requestIdRef.current !== requestId) return;
           if (fatalHandledRequestRef.current === requestId) return;
           fatalHandledRequestRef.current = requestId;
+          // Snapshot the exact playhead before the controller is torn down
+          // so recovery restores it instead of the 5s-interval resume point.
+          try {
+            handoffRef.current = capturePlaybackSnapshot(
+              videoRef.current,
+              controllerRef.current,
+            );
+          } catch {
+            handoffRef.current = null;
+          }
           const stalled = Date.now() - attachedAtRef.current < STALL_WINDOW_MS;
           record(sourceId, "verified", { attached: true, stalled });
           if (pinnedRef.current === sourceId && !pinRetriedRef.current) {
@@ -385,7 +401,11 @@ export function useSourceRouter({
             }
             recoveryTimerRef.current = window.setTimeout(() => {
               recoveryTimerRef.current = null;
-              startRef.current({ pin: sourceId, recovery: true });
+              startRef.current({
+                pin: sourceId,
+                recovery: true,
+                handoff: handoffRef.current,
+              });
             }, RECOVERY_DELAY_MS);
             return;
           }
@@ -419,7 +439,7 @@ export function useSourceRouter({
           }
           recoveryTimerRef.current = window.setTimeout(() => {
             recoveryTimerRef.current = null;
-            startRef.current({ recovery: true });
+            startRef.current({ recovery: true, handoff: handoffRef.current });
           }, RECOVERY_DELAY_MS);
         },
       });
@@ -431,22 +451,46 @@ export function useSourceRouter({
 
       const audio = controller.audio();
       if (audio.tracks.length > 0 && !allowUnverifiedAudio) {
-        const matchingTrack = audio.tracks.find(
-          (track) =>
-            normalizeAudioLanguage(track.language) ===
-              normalizedAudioLanguage ||
-            normalizeAudioLanguage(track.label) === normalizedAudioLanguage,
-        );
-        if (!matchingTrack) {
-          controller.destroy();
-          throw new Error(
-            `This playback option did not contain ${selectedLanguageName} audio`,
+        const handoffTrack =
+          handoff && handoff.selectedAudio >= 0
+            ? audio.tracks.find((track) => track.index === handoff.selectedAudio)
+            : undefined;
+        const handoffMatches =
+          handoffTrack &&
+          (normalizeAudioLanguage(handoffTrack.language) === normalizedAudioLanguage ||
+            normalizeAudioLanguage(handoffTrack.label) === normalizedAudioLanguage);
+        if (handoffMatches) {
+          controller.setAudioTrack(handoffTrack.index);
+        } else {
+          const matchingTrack = audio.tracks.find(
+            (track) =>
+              normalizeAudioLanguage(track.language) ===
+                normalizedAudioLanguage ||
+              normalizeAudioLanguage(track.label) === normalizedAudioLanguage,
           );
+          if (!matchingTrack) {
+            controller.destroy();
+            throw new Error(
+              `This playback option did not contain ${selectedLanguageName} audio`,
+            );
+          }
+          controller.setAudioTrack(matchingTrack.index);
         }
-        controller.setAudioTrack(matchingTrack.index);
+      } else if (handoff && handoff.selectedAudio >= 0 && audio.tracks.length > 0) {
+        const track = audio.tracks.find((entry) => entry.index === handoff.selectedAudio);
+        if (track) controller.setAudioTrack(track.index);
       }
 
       adopt(controller);
+      // Restore the exact rendition selections that survived the handoff.
+      applyPlaybackSnapshot(null, controller, handoff);
+      if (handoff && handoff.selectedLevel >= 0) {
+        try {
+          controller.setLevel(handoff.selectedLevel);
+        } catch {
+          // ignore missing rendition
+        }
+      }
       attachedAtRef.current = Date.now();
       attachedSourceRef.current = sourceId;
       record(sourceId, "verified", {
@@ -454,14 +498,24 @@ export function useSourceRouter({
         ttffMs: performance.now() - startedAt,
       });
 
-      if (resumeFrom !== null) {
-        seekWhenReady(video, resumeFrom);
+      // Exact playhead wins over the stored resume point.
+      const exactTime = handoff?.currentTime ?? resumeFrom;
+      if (exactTime !== null && exactTime !== undefined) {
+        seekWhenReady(video, exactTime);
       }
-      await Promise.race([
-        video.play().catch(() => {
-        }),
-        delay(PLAY_TIMEOUT_MS),
-      ]);
+      if (handoff?.paused === true) {
+        try {
+          video.pause();
+        } catch {
+          // ignore
+        }
+      } else {
+        await Promise.race([
+          video.play().catch(() => {
+          }),
+          delay(PLAY_TIMEOUT_MS),
+        ]);
+      }
       return controller;
     },
     [
@@ -514,6 +568,23 @@ export function useSourceRouter({
       fetchControllerRef.current?.abort();
       const fetchController = new AbortController();
       fetchControllerRef.current = fetchController;
+      // Exact-playhead handoff: an explicit snapshot from a fatal error wins;
+      // otherwise fall back to the stored resume point. Fresh starts drop it.
+      const handoff = options.handoff ?? handoffRef.current ?? null;
+      if (!options.recovery) handoffRef.current = null;
+      // Capture the live playhead for mid-playback source switches when no
+      // fatal snapshot exists yet (e.g. manual recovery without onFatal).
+      if (options.recovery && !handoff && videoRef.current && controllerRef.current) {
+        try {
+          handoffRef.current = capturePlaybackSnapshot(
+            videoRef.current,
+            controllerRef.current,
+          );
+        } catch {
+          // ignore
+        }
+      }
+      const activeHandoff = options.recovery ? (handoff ?? handoffRef.current) : null;
       detach();
 
       const snapshot: ScoreSnapshot = readScores(currentTitleKey);
@@ -558,7 +629,8 @@ export function useSourceRouter({
       );
       dirtyRef.current = true;
 
-      const resumeFrom = resumableTime(readResumePoint(resumeKey));
+      const storedResume = resumableTime(readResumePoint(resumeKey));
+      const resumeFrom = activeHandoff?.currentTime ?? storedResume;
       setState((current) => ({
         ...current,
         phase: "racing",
@@ -721,6 +793,7 @@ export function useSourceRouter({
                   resumeFrom,
                   timeoutMs,
                   offer.audioVerified === false,
+                  activeHandoff,
                 );
                 if (requestIdRef.current !== requestId) {
                   throw new Error("superseded");
@@ -793,6 +866,7 @@ export function useSourceRouter({
 
       if (outcome.ok) {
         runGuardRef.current.finish(runKey);
+        handoffRef.current = null;
         automaticRaceRetriesRef.current = MAX_AUTOMATIC_RACE_RETRIES;
         waveRef.current = nextWaveSize(waveRef.current, false);
         fetchController.abort();
@@ -1006,7 +1080,13 @@ export function useSourceRouter({
       const candidate = state.candidates.find((item) => item.id === candidateId);
       const sourceId = state.activeSource;
       if (!candidate || !sourceId) return;
-      const resumeFrom = videoRef.current?.currentTime ?? 0;
+      // Exact handoff: keep the live playhead + rendition selections across
+      // the candidate switch instead of re-reading the resume point.
+      const handoff = capturePlaybackSnapshot(
+        videoRef.current,
+        controllerRef.current,
+      );
+      const resumeFrom = handoff?.currentTime ?? videoRef.current?.currentTime ?? 0;
       const requestId = ++requestIdRef.current;
       attachOne(
         candidate,
@@ -1015,6 +1095,7 @@ export function useSourceRouter({
         resumeFrom || null,
         STARTUP_TIMEOUT_MS,
         state.audioUnverified,
+        handoff,
       )
         .then(() => {
           patch({ activeCandidate: candidate });
