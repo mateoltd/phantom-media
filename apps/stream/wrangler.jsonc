@@ -3,17 +3,11 @@
   "name": "phantom-stream",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-07-25",
-  // `nodejs_compat` is required: the resolver decrypts upstream payloads with
-  // node:crypto, and `global_fetch_strictly_public` keeps the Worker from
+  // `nodejs_compat` supports server-side source resolution, and
+  // `global_fetch_strictly_public` keeps the Worker from
   // being able to call back into itself over the public hostname.
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": false,
-  "vars": {
-    "CINESRC_RELAY_URL": "https://phantommedia-phantomresolver-bpfqlq-c45848-91-134-141-104.sslip.io/v1/cinesrc/fetch",
-    "CINESRC_RESOLVER_URL": "https://phantommedia-phantomresolver-bpfqlq-c45848-91-134-141-104.sslip.io/v1/cinesrc/resolve",
-    "VIDEASY_RESOLVER_URL": "https://phantommedia-phantomresolver-bpfqlq-c45848-91-134-141-104.sslip.io/v1/resolve",
-    "VIDEASY_RELAY_URL": "https://phantommedia-phantomresolver-bpfqlq-c45848-91-134-141-104.sslip.io/v1/fetch"
-  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

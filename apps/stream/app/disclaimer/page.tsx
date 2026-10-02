@@ -41,9 +41,8 @@ export default function DisclaimerPage() {
           <p className="mt-6 text-[14px] leading-7 text-text-secondary">
             {siteConfig.name} is an independent search interface for publicly
             reachable media. It stores no media library and has no control over
-            the third-party services it connects to. Most playback is direct;
-            a constrained compatibility relay may transmit media bytes when a
-            public source cannot be requested by a browser. This page sets out
+            the third-party services it connects to. Playback media is requested
+            directly by your browser from the third party. This page sets out
             what the service does, what it does not do, and where responsibility
             sits.
           </p>
@@ -60,9 +59,6 @@ export default function DisclaimerPage() {
               When you ask for a title, the service queries publicly reachable
               third-party services and returns the addresses they publish.
               Browser-ready media is requested directly from the third party.
-              For a public source whose media endpoints reject ordinary browser
-              requests, the service may use a narrowly allowlisted compatibility
-              relay that streams responses without persistent storage.
             </p>
             <p>
               This project does not select, review, approve, or moderate what

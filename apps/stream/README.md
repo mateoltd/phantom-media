@@ -61,7 +61,7 @@ paper ground would have sat in front of the thing you came to look at.
 Upstream identifies each playback source by a short code and labels it with a
 third party's brand. This app keeps the codes, because the API needs them, and
 replaces every label with a fixed in-house alias from `Source 01` through
-`Source 28`. Retired and unconfigured slots remain hidden. The mapping lives in
+`Source 30`. Retired and unconfigured slots remain hidden. The mapping lives in
 `src/source-ids.mjs` and is the only place
 those names are decided, so no third-party brand reaches a response body, a
 screen or a log line. The aliases are positional and the order never changes,
@@ -86,10 +86,10 @@ rather than something each new provider has to remember.
 
 ### Adding one
 
-- **Another relay scraper.** Append its two-character code to `SOURCE_IDS` in
-  `src/source-ids.mjs`. The alias, catalog entry,
-  registry entry, roster and API route all follow.
-- **A different kind of source.** Append `{ id, kind }` to `DECLARED` in
+- **A browser-direct source.** Append its two-character code to `SOURCE_IDS`
+  and `ACTIVE_SOURCE_IDS` in `src/source-ids.mjs`. Verify that every playlist,
+  segment, and audio track loads in the browser without a Phantom media route.
+  Then append `{ id, kind }` to `DECLARED` in
   `src/providers/catalog.mjs`, write `src/providers/<kind>.mjs` exporting
   `create<Kind>Resolver(id)`, and add one line to `RESOLVERS` in
   `registry.mjs`. Resolvers are keyed by kind, so more sources of a kind that
@@ -120,59 +120,18 @@ native-media contract. Duplicate native routes remain useful; shared
 failure-domain fingerprints serialize them instead of deleting a route that
 may work better for a particular title or region.
 
-Only Source 28 and Source 04 are active during the focused reliability trial;
-the old resolvers remain checked in but cannot be selected or raced. Source 28
-follows CineSrc's public player bootstrap without embedding its player. It
-discovers the current Next action ids, challenge runtimes, and ranked provider
-index from the live application bundle on every cold resolution. Provider ids
-and media origins are data from that index, not an allowlist in Phantom. A
-decoded endpoint is cached only after it returns a valid HLS manifest with
-the source's current player headers; failed providers fall through in the
-index's advertised order.
-Source 04 follows Videasy's public seed contract and asks only its Breach and
-Yoru server families, decrypting the public response into native HLS instead of
-loading Videasy's player. Breach advertises its English alternate-audio track;
-Yoru remains an unverified-audio fallback.
-
-CineSrc's provider index is fallback capacity inside one source and therefore
-shares one failure fingerprint. Source 28 mints a short-lived capability for
-the exact media root returned by the index, keeps every same-origin HLS child
-behind another signed capability, and preserves CineSrc's player headers across
-the full playlist chain. Manifest detection reads the HLS signature rather than
-trusting file extensions because child playlists may be disguised as images.
-The browser cannot select a target or delegate a manifest to another origin, so
-rotating hostnames do not turn the compatibility path into an open relay.
-
-Videasy's Breach worker also requires its public player Origin/Referer contract.
-The compatibility relay accepts only that exact worker hostname and its signed
-`payload`, `headers` and optional `type=m3u8` query shape. It rewrites child
-audio, quality and segment requests through the same constraint and briefly
-caches successful manifests so probing and attachment do not duplicate the
-slowest public request. Yoru now enforces the same public player headers. Its
-legacy paths remain explicitly allowlisted; newly discovered `moon.*` CDN
-contracts use short-lived HMAC capabilities bound to the exact media URL and
-its constrained HLS path. That lets the upstream rotate CDN hostnames and path
-families without a code change, while requests that did not come from the
-trusted resolver still cannot turn the relay into a general-purpose proxy.
-Set `SOURCE_PROXY_SECRET` to at least 32 random bytes in every deployment.
-Direct 1080p, 720p and 480p Yoru renditions are retained ahead of its slower
-adaptive master when advertised.
-
-When Videasy rate-limits Cloudflare Worker egress, `VIDEASY_RESOLVER_URL` can
-name a temporary trusted server-side resolver hop. Authenticate that endpoint
-with the `VIDEASY_RESOLVER_SECRET` deployment secret. The hop returns only
-validated resolution data; the Cloudflare Worker still mints the exact-URL
-media capability and remains the only video relay.
-
-If the provider also blocks Cloudflare on the final media hosts,
-`VIDEASY_RELAY_URL` can point at the same authenticated hop's `/v1/fetch`
-endpoint. Cloudflare validates each exact signed capability first; the VPS then
-streams only the constrained Videasy URL and never accepts a browser-selected
-target.
-
-CineSrc keeps successful results for only fifteen seconds. Automatic playback
-recovery bypasses that cache so a rotated provider index, challenge runtime, or
-signed media route is discovered again.
+Sources 29 and 31 are active. Source 29 follows VixSrc's public episode lookup to a native
+HLS playlist, checks the playlist before offering it, and plays media directly
+from VixSrc in the browser. Source 31 follows VidZee's episode lookup to a
+browser-readable HLS playlist on an independent CDN. Some of its transport
+streams contain multiple embedded audio tracks; the browser reorders the
+program map to select English when requested. The resolver fetches only API
+data and the playlist, while the viewer fetches all video segments directly.
+Sources 28 (CineSrc) and 30 (VidNest) require video
+to pass through Phantom and are retired. Source 04 was retired after Videasy's
+September 2026 shutdown. Historical aliases remain stable, but inactive
+providers cannot be selected or raced. The media proxy routes have been removed
+so the app cannot transfer video for these providers.
 
 ## Routing
 
@@ -388,9 +347,7 @@ pnpm --filter @phantom/stream exec wrangler deploy --domain your-host.example --
 ```
 
 Runtime secrets, including `SUBDL_API_KEY`, are stored in Worker secrets and
-must never be committed to Git. CineSrc and Videasy need
-`VIDEASY_RESOLVER_SECRET` to match the resolver's
-`PHANTOM_RESOLVER_SECRET`.
+must never be committed to Git.
 
 Cloudflare Builds deploys this Worker from `main` with `/apps/stream` as its root.
 The build installs the workspace dependencies and runs OpenNext; Wrangler then
@@ -398,23 +355,14 @@ deploys to the configured custom domain. Build caching is enabled and preview
 builds are disabled. The Worker watches this app, shared packages, and workspace
 dependency files, so changes confined to other apps do not rebuild it.
 
-The Videasy resolver runs in Dokploy's `phantom-media` project as
-`phantom-resolver`, built from `main` using `apps/stream/Dockerfile.resolver`
-and Docker context `apps/stream`. Its generated HTTPS hostname is configured
-in `wrangler.jsonc`. The container's `PHANTOM_RESOLVER_SECRET` must match the
-Worker's `VIDEASY_RESOLVER_SECRET`. `/health` is public; `/v1/resolve` and
-`/v1/fetch` require that bearer secret. Video still passes through the Worker
-and this constrained relay when upstream headers require it.
+The old Dokploy `phantom-resolver` service is not part of the active playback
+path and is not needed for a frontend-only deployment.
 
 ## Legal
 
 Phantom Stream stores no media library and is affiliated with none of the
-catalogs or playback providers it talks to. Browser-ready streams play directly
-from third-party hosts. A narrowly allowlisted compatibility relay is used for
-the public VidSrc source because its media endpoints reject normal browser
-requests; relayed bytes are streamed through without persistent storage. The
-same constrained relay pattern is used for Videasy's public Breach and Yoru
-contracts.
+catalogs or playback providers it talks to. Media streams play directly from
+third-party hosts in the browser.
 
 `/disclaimer` states that in full: no stored media library, no affiliation,
 authorized use only, no warranty, and a limitation of liability. It is linked
@@ -424,5 +372,3 @@ Set `NEXT_PUBLIC_NOTICE_EMAIL` before deploying. Until it is set, the page
 omits its infringement-reporting section, because a takedown route with no
 address behind it is worse than none. A reachable takedown route is the
 most useful thing on a page like this.
-
-CineSrc resolution uses the same Dokploy Node service at `/v1/cinesrc/resolve`, configured with `CINESRC_RESOLVER_URL` and the existing `VIDEASY_RESOLVER_SECRET`. This keeps its `node:vm` runtime out of Workers execution. Returned stream URLs are validated and signed by the Worker; CineSrc media uses the constrained Worker relay with an authenticated VPS hop at `/v1/cinesrc/fetch` (`CINESRC_RELAY_URL`), because the tested media host redirects Cloudflare egress. Both providers therefore consume VPS transfer for video.
