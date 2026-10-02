@@ -808,7 +808,7 @@ export function Player({
           onSeekForward={canSeek ? () => seekWithFeedback(1) : undefined}
         />
         <StageChrome
-          ready={!loading}
+          ready={hasTimeline || !loading}
           title={title}
           playing={playing}
           muted={muted}

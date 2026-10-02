@@ -30,6 +30,13 @@ The `www` host permanently redirects to the apex while preserving paths and
 query strings. Production hostnames are supplied at deploy time and are kept out
 of this repository.
 
+The custom `worker.js` entry point streams `/api/proxy` media requests directly
+through the Fetch API. All other requests use the generated OpenNext handler.
+This keeps multi-megabyte video segments out of Next's Node response adapter;
+the Next dev route shares the same proxy implementation. Server-rendered pages
+and playlist resolution can exceed Workers Free's 10 ms CPU budget, so a free
+account can still return Cloudflare error 1102 even with this media fast path.
+
 Cloudflare Builds deploys this Worker from `main` with `/apps/twitch` as its root.
 The build installs the workspace dependencies and runs OpenNext; Wrangler then
 deploys to both custom domains. Build caching is enabled and preview builds are
