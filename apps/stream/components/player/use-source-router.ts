@@ -35,6 +35,10 @@ import type {
 } from "@/lib/types";
 import { failureDomainFor } from "@/src/failure-domain.mjs";
 import {
+  coolingMapFor,
+  recordCooldown,
+} from "@/src/source-health.mjs";
+import {
   UNVERIFIED_AUDIO_LANGUAGE,
   audioLanguageName,
   normalizeAudioLanguage,
@@ -196,6 +200,29 @@ export function useSourceRouter({
   );
 
   const coolingRef = useRef<Record<string, number>>({});
+  const coolDomain = useCallback((sourceId: string, retryAfterMs: number | null) => {
+    const domain = failureDomainFor(sourceId);
+    const until = recordCooldown(domain, retryAfterMs, {
+      fallbackMs: SOURCE_COOLDOWN_MS,
+      capMs: SOURCE_COOLDOWN_MS,
+    });
+    // Local mirror keeps the existing per-instance behaviour in sync with
+    // the shared breaker so concurrent hook instances observe each other.
+    coolingRef.current[domain] = until;
+    return until;
+  }, []);
+  const coolingFor = useCallback(
+    (ids: readonly string[]) => {
+      const shared = coolingMapFor(ids, failureDomainFor);
+      const merged: Record<string, number> = { ...shared };
+      for (const id of ids) {
+        const local = coolingRef.current[failureDomainFor(id)] ?? 0;
+        if (local > (merged[id] ?? 0)) merged[id] = local;
+      }
+      return merged;
+    },
+    [],
+  );
   const waveRef = useRef(MAX_WAVE);
   const pinnedRef = useRef<string | null>(null);
   const pinRetriedRef = useRef(false);
@@ -373,8 +400,7 @@ export function useSourceRouter({
           delete sourceAudioLanguagesRef.current[sourceId];
           setProgress(sourceId, { status: "unreachable" });
           publishAudioAvailability();
-          coolingRef.current[failureDomainFor(sourceId)] =
-            Date.now() + SOURCE_COOLDOWN_MS;
+          coolDomain(sourceId, SOURCE_COOLDOWN_MS);
           if (!playbackRecoveryRef.current.recordFailure(sourceId, stalled)) {
             detach();
             patch({
@@ -440,6 +466,7 @@ export function useSourceRouter({
     },
     [
       adopt,
+      coolDomain,
       detach,
       labelOf,
       normalizedAudioLanguage,
@@ -502,12 +529,7 @@ export function useSourceRouter({
         snapshot,
         {
           pinned,
-          cooling: Object.fromEntries(
-            sources.map((entry) => [
-              entry.id,
-              coolingRef.current[failureDomainFor(entry.id)] ?? 0,
-            ]),
-          ),
+          cooling: coolingFor(sources.map((entry) => entry.id)),
           now: Date.now(),
           preferredAudioLanguage: normalizedAudioLanguage,
         },
@@ -567,20 +589,15 @@ export function useSourceRouter({
         pinned: pinned ? labelOf(pinned) : null,
         wave,
         order: order.map(labelOf),
-        cooling: sources
-          .filter(
-            (entry) =>
-              (coolingRef.current[failureDomainFor(entry.id)] ?? 0) >
-              Date.now(),
-          )
-          .map(
-            (entry) =>
-              `${entry.label}:${Math.round(
-                ((coolingRef.current[failureDomainFor(entry.id)] ?? 0) -
-                  Date.now()) /
-                  1_000,
-              )}s`,
-          ),
+        cooling: (() => {
+          const snapshotCooling = coolingFor(sources.map((entry) => entry.id));
+          return sources
+            .filter((entry) => (snapshotCooling[entry.id] ?? 0) > Date.now())
+            .map(
+              (entry) =>
+                `${entry.label}:${Math.round(((snapshotCooling[entry.id] ?? 0) - Date.now()) / 1_000)}s`,
+            );
+        })(),
         scores: order.map((id) => ({
           source: labelOf(id),
           score: Math.round(snapshot.score(id) * 1_000) / 1_000,
@@ -682,14 +699,11 @@ export function useSourceRouter({
             }
             record(sourceId, failure.kind);
             if (failure.kind === "unreachable" && failure.retryable) {
-              const hint = failure.retryAfterMs ?? SOURCE_COOLDOWN_MS;
-              const cooldown = Math.min(Math.max(hint, 0), SOURCE_COOLDOWN_MS);
-              coolingRef.current[failureDomainFor(sourceId)] =
-                Date.now() + cooldown;
+              const until = coolDomain(sourceId, failure.retryAfterMs);
               debug("router", "cooling", {
                 traceId,
                 source: labelOf(sourceId),
-                ms: cooldown,
+                ms: Math.max(0, until - Date.now()),
                 hinted: failure.retryAfterMs,
               });
             }
@@ -735,8 +749,7 @@ export function useSourceRouter({
             setProgress(offer.sourceId, { status: "unreachable" });
             delete sourceAudioLanguagesRef.current[offer.sourceId];
             publishAudioAvailability();
-            coolingRef.current[failureDomainFor(offer.sourceId)] =
-              Date.now() + SOURCE_COOLDOWN_MS;
+            coolDomain(offer.sourceId, SOURCE_COOLDOWN_MS);
             throw new Error(`${offer.label} would not start`);
           },
         });
@@ -835,6 +848,8 @@ export function useSourceRouter({
     },
     [
       attachOne,
+      coolDomain,
+      coolingFor,
       currentTitleKey,
       detach,
       episode,

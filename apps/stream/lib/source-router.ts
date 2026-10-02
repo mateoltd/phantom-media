@@ -13,7 +13,13 @@ import {
   type SourceOffer,
 } from "../src/router-policy.mjs";
 import type { MediaResult, ResolverResponse } from "./types";
-import { asSettledByFailureDomain } from "../src/failure-domain.mjs";
+import { asSettledByFailureDomain, failureDomainFor } from "../src/failure-domain.mjs";
+import {
+  applyCooldownHeaders,
+  recordCooldown,
+  resolveKeyFor,
+  singleflight,
+} from "../src/source-health.mjs";
 import {
   UNVERIFIED_AUDIO_LANGUAGE,
   normalizeAudioLanguage,
@@ -91,6 +97,23 @@ export async function askSource(
   sourceId: string,
   context: AskContext,
 ): Promise<SourceOffer> {
+  const key = resolveKeyFor({
+    sourceId,
+    type: context.media.mediaType,
+    tmdbId: context.media.tmdbId ?? 0,
+    season: context.season,
+    episode: context.episode,
+    audioLanguage: context.preferredAudioLanguage,
+    fresh: context.fresh,
+  });
+  // Singleflight: concurrent races for the same title share one resolve.
+  return singleflight(key, () => askSourceUncached(sourceId, context));
+}
+
+async function askSourceUncached(
+  sourceId: string,
+  context: AskContext,
+): Promise<SourceOffer> {
   const label = context.label(sourceId);
   const startedAt = performance.now();
 
@@ -143,6 +166,12 @@ export async function askSource(
     window.clearTimeout(timeout);
     context.signal.removeEventListener("abort", abort);
   }
+  // Header propagation: the resolve route may broadcast a domain cooldown.
+  try {
+    applyCooldownHeaders(response.headers);
+  } catch {
+    // never break playback on telemetry
+  }
 
   if (!response.ok) {
     const timedOut =
@@ -158,6 +187,15 @@ export async function askSource(
       status: response.status,
       retryAfterMs: payload.retryAfterMs ?? null,
     });
+    if (!timedOut && (payload.retryable || response.status === 429)) {
+      try {
+        recordCooldown(failureDomainFor(sourceId), payload.retryAfterMs ?? null, {
+          fallbackMs: limited ? 30_000 : 60_000,
+        });
+      } catch {
+        // ignore
+      }
+    }
     throw new SourceFailure(
       payload.error || `${label} returned HTTP ${response.status}`,
       timedOut ? "slow" : limited ? "limited" : "unreachable",

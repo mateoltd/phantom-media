@@ -7,6 +7,16 @@ import {
   normalizeTraceId,
   withServerDebugTrace,
 } from "../../../../src/debug-server.mjs";
+import {
+  COOLDOWN_DOMAIN_HEADER,
+  COOLDOWN_MS_HEADER,
+  isCooling,
+  normalizeRetryAfterMs,
+  readCooldown,
+  recordCooldown,
+  resolveKeyFor,
+  singleflight,
+} from "../../../../src/source-health.mjs";
 
 export const runtime = "nodejs";
 
@@ -56,13 +66,20 @@ function readMedia(params) {
   return media;
 }
 
-function failure(status, body, retryAfterMs) {
+function failure(status, body, retryAfterMs, domain = null) {
+  const headers =
+    retryAfterMs && retryAfterMs > 0
+      ? { "retry-after": String(Math.ceil(retryAfterMs / 1_000)) }
+      : undefined;
+  if (domain && retryAfterMs > 0) {
+    headers[COOLDOWN_DOMAIN_HEADER] = String(domain);
+    headers[COOLDOWN_MS_HEADER] = String(
+      normalizeRetryAfterMs(retryAfterMs),
+    );
+  }
   return NextResponse.json(body, {
     status,
-    headers:
-      retryAfterMs && retryAfterMs > 0
-        ? { "retry-after": String(Math.ceil(retryAfterMs / 1_000)) }
-        : undefined,
+    headers,
   });
 }
 
@@ -117,12 +134,39 @@ export async function GET(request) {
     });
 
     try {
-      const result = await provider.resolve(media, {
-        signal: deadlineSignal(request, provider),
-        abandoned: request.signal,
+      // Shared breaker: fail fast when the failure domain is cooling.
+      const domain = provider.failureDomain ?? null;
+      if (domain && isCooling(domain)) {
+        const remaining = Math.max(0, readCooldown(domain) - Date.now());
+        return failure(
+          429,
+          {
+            error: `${provider.label} is cooling off`,
+            retryable: true,
+            retryAfterMs: remaining,
+            server: provider.id,
+            details: { stage: "shared-cooldown" },
+          },
+          remaining,
+        );
+      }
+      const key = resolveKeyFor({
+        sourceId: provider.id,
+        type: media.type,
+        tmdbId: media.tmdbId,
+        season: media.season,
+        episode: media.episode,
+        audioLanguage: media.audioLanguage,
         fresh: params.get("fresh") === "1",
-        proxyOrigin: new URL(request.url).origin,
       });
+      const result = await singleflight(key, () =>
+        provider.resolve(media, {
+          signal: deadlineSignal(request, provider),
+          abandoned: request.signal,
+          fresh: params.get("fresh") === "1",
+          proxyOrigin: new URL(request.url).origin,
+        }),
+      );
       const headers = { "cache-control": "no-store" };
       if (wantsTiming) {
         headers[DEBUG_HEADER] = timing({
@@ -188,7 +232,16 @@ export async function GET(request) {
       const status =
         known && error.status >= 400 ? error.status : aborted ? 504 : 502;
       const retryAfterMs = known ? error.retryAfterMs : null;
-
+      const retryable = aborted ? true : known ? Boolean(error.retryable) : false;
+      // Shared breaker: persist retryable domain failures for other edges.
+      const domain = provider.failureDomain ?? null;
+      if (domain && retryable && !aborted) {
+        try {
+          recordCooldown(domain, retryAfterMs, { fallbackMs: 60_000 });
+        } catch {
+          // ignore persistence failures
+        }
+      }
       log.event("route", "resolve.end", {
         traceId,
         source: provider.label,
@@ -213,6 +266,7 @@ export async function GET(request) {
           details: known ? error.details : null,
         },
         retryAfterMs,
+        domain,
       );
     }
   });
