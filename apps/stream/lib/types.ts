@@ -53,6 +53,7 @@ export interface StreamCandidate {
     | "native-direct"
     | "resolver"
     | "resolver-full-relay";
+  embeddedAudioLanguage?: "en";
   expiresAt?: number | null;
   audioTracks?: readonly AudioTrack[];
   audioLanguages?: readonly string[];

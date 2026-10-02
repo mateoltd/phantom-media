@@ -76,12 +76,23 @@ test("the evidenced Source 03/05 duplicate stays retired without shifting aliase
   assert.ok(!ACTIVE_SOURCE_IDS.includes("p6"));
 });
 
-test("the temporary production roster contains only native CineSrc and Videasy", () => {
-  assert.deepEqual(ACTIVE_SOURCE_IDS, ["u9", "b5"]);
+test("the production roster contains only browser-direct playback", () => {
+  assert.deepEqual(ACTIVE_SOURCE_IDS, ["y8", "e3"]);
+  assert.equal(sourceAlias("y8"), "Source 29");
+  assert.equal(sourceAlias("h6"), "Source 30");
+  assert.equal(sourceAlias("e3"), "Source 31");
   assert.equal(sourceAlias("u9"), "Source 28");
   assert.equal(sourceAlias("b5"), "Source 04");
-  assert.equal(providerDescriptor("u9")?.kind, "cinesrc");
-  assert.equal(providerDescriptor("b5")?.kind, "videasy");
+  assert.equal(providerDescriptor("y8")?.kind, "vixsrc");
+  assert.equal(providerDescriptor("e3")?.kind, "vidzee");
+  assert.equal(providerDescriptor("h6"), null);
+  assert.equal(providerDescriptor("u9"), null);
+  assert.equal(providerDescriptor("y8")?.deliveryMode, "native-direct");
+  assert.equal(providerDescriptor("e3")?.deliveryMode, "native-direct");
+  assert.ok(RETIRED_SOURCE_IDS.has("h6"));
+  assert.ok(RETIRED_SOURCE_IDS.has("u9"));
+  assert.equal(providerDescriptor("b5"), null);
+  assert.ok(RETIRED_SOURCE_IDS.has("b5"));
 });
 
 test("embed-only research ids are retired without renumbering the roster", () => {

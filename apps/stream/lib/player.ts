@@ -1,6 +1,14 @@
 "use client";
 
-import Hls, { type ErrorData, type Events } from "hls.js";
+import Hls, {
+  FetchLoader,
+  type ErrorData,
+  type Events,
+  type FragmentLoaderConstructor,
+  type LoaderCallbacks,
+  type LoaderConfiguration,
+  type LoaderContext,
+} from "hls.js";
 import type {
   ErrorEvent as DashErrorEvent,
   MediaInfo,
@@ -24,6 +32,37 @@ import {
   HLS_STALL_RECOVERY_LIMIT,
   hlsStallRecoveryAction,
 } from "../src/hls-recovery.mjs";
+import { preferEnglishAudioInTs } from "../src/embedded-audio.mjs";
+
+class EnglishAudioFragmentLoader extends FetchLoader {
+  override load(
+    context: LoaderContext,
+    config: LoaderConfiguration,
+    callbacks: LoaderCallbacks<LoaderContext>,
+  ): void {
+    // Wait for a complete TS fragment so the PMT can be edited before hls.js
+    // demuxes any bytes. The underlying fetch still goes straight to the CDN.
+    super.load(context, config, {
+      ...callbacks,
+      onProgress: undefined,
+      onSuccess: (response, stats, loadedContext, networkDetails) => {
+        if (response.data instanceof ArrayBuffer) {
+          const audio = preferEnglishAudioInTs(response.data);
+          if (audio.found && !audio.english) {
+            callbacks.onError(
+              { code: 422, text: "English audio is unavailable" },
+              loadedContext,
+              networkDetails,
+              stats,
+            );
+            return;
+          }
+        }
+        callbacks.onSuccess(response, stats, loadedContext, networkDetails);
+      },
+    });
+  }
+}
 
 function hostOf(url: string): string {
   try {
@@ -257,6 +296,49 @@ async function readManifestSample(response: Response): Promise<string> {
   return sample;
 }
 
+async function probeEmbeddedEnglish(
+  manifest: string,
+  playlistUrl: string,
+  signal: AbortSignal,
+): Promise<boolean | null> {
+  if (!manifest.includes("#EXTINF:")) return null;
+  const segment = manifest.split(/\r?\n/).find((line) =>
+    line.trim() && !line.trimStart().startsWith("#"));
+  if (!segment) return null;
+  const url = new URL(segment.trim(), playlistUrl);
+  const response = await fetch(url, {
+    credentials: "omit",
+    mode: "cors",
+    headers: { range: "bytes=0-6015" },
+    signal,
+  });
+  if (response.status !== 206) {
+    await response.body?.cancel().catch(() => {});
+    throw new Error("The audio sample was not available to the browser");
+  }
+  if (Number(response.headers.get("content-length")) > 6_016) {
+    await response.body?.cancel().catch(() => {});
+    return null;
+  }
+  const reader = response.body?.getReader();
+  if (!reader) return null;
+  const sample = new Uint8Array(6_016);
+  let bytes = 0;
+  try {
+    while (bytes < sample.length) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (value.byteLength > sample.length - bytes) return null;
+      sample.set(value, bytes);
+      bytes += value.byteLength;
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
+  }
+  const audio = preferEnglishAudioInTs(sample.buffer.slice(0, bytes));
+  return audio.found ? audio.english : null;
+}
+
 async function probeOne(
   candidate: StreamCandidate,
   timeoutMs: number,
@@ -283,7 +365,11 @@ async function probeOne(
       (candidate.type === "hls"
         ? sample.trimStart().startsWith("#EXTM3U")
         : /<MPD(?:\s|>)/i.test(sample));
-    const audioLanguages = candidateAudioLanguages(candidate, sample);
+    let audioLanguages = candidateAudioLanguages(candidate, sample);
+    if (manifestOk && candidate.embeddedAudioLanguage === "en") {
+      const english = await probeEmbeddedEnglish(sample, candidate.url, controller.signal);
+      if (english !== null) audioLanguages = english ? ["en"] : ["hi"];
+    }
     const preferred = normalizeAudioLanguage(preferredAudioLanguage);
     const languageMatch =
       preferred === UNVERIFIED_AUDIO_LANGUAGE
@@ -541,8 +627,12 @@ async function attachHls(
   url: string,
   timeoutMs: number,
   onFatal: (error: Error) => void,
+  embeddedAudioLanguage?: "en",
 ): Promise<PlayerController> {
   const hls = new Hls({
+    ...(embeddedAudioLanguage === "en"
+      ? { fLoader: EnglishAudioFragmentLoader as unknown as FragmentLoaderConstructor }
+      : {}),
     enableWorker: true,
     lowLatencyMode: false,
     backBufferLength: 60,
@@ -1028,7 +1118,17 @@ export async function attachCandidate(
 
   if (candidate.type === "hls") {
     if (Hls.isSupported()) {
-      return finish(attachHls(video, candidate.url, timeoutMs, options.onFatal));
+      return finish(attachHls(
+        video,
+        candidate.url,
+        timeoutMs,
+        options.onFatal,
+        candidate.embeddedAudioLanguage,
+      ));
+    }
+    if (candidate.embeddedAudioLanguage) {
+      done({ ok: false, message: "embedded audio requires MSE" });
+      throw new Error("This browser cannot select the requested audio track");
     }
     if (!video.canPlayType("application/vnd.apple.mpegurl")) {
       done({ ok: false, message: "no HLS support" });

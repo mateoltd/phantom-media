@@ -5,6 +5,8 @@ import { createRelayResolver } from "./relay.mjs";
 import { createStremioResolver } from "./stremio.mjs";
 import { createVideasyResolver } from "./videasy.mjs";
 import { createVidsrcResolver } from "./vidsrc.mjs";
+import { createVixsrcResolver } from "./vixsrc.mjs";
+import { createVidzeeResolver } from "./vidzee.mjs";
 
 const RESOLVERS = Object.freeze({
   relay: (descriptor) => createRelayResolver(descriptor.id),
@@ -15,6 +17,8 @@ const RESOLVERS = Object.freeze({
   vidsrc: (descriptor) => createVidsrcResolver(descriptor.id),
   videasy: (descriptor) => createVideasyResolver(descriptor.id),
   cinesrc: (descriptor) => createCineSrcResolver(descriptor.id),
+  vixsrc: (descriptor) => createVixsrcResolver(descriptor.id),
+  vidzee: (descriptor) => createVidzeeResolver(descriptor.id),
 });
 
 const PROVIDERS = new Map(

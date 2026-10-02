@@ -29,12 +29,17 @@ export const SOURCE_IDS = Object.freeze([
   "c2",
   "l5",
   "u9",
+  "y8",
+  "h6",
+  "e3",
 ]);
 
 export const RETIRED_SOURCE_IDS = Object.freeze(
   new Set([
     // Duplicate of Source 03. Retained to preserve positional aliases.
     "p6",
+    // Videasy shut down in September 2026. Preserve its historical alias.
+    "b5",
     // Embed-only research targets. Retained so Source aliases never shift.
     "r6",
     "m8",
@@ -45,6 +50,9 @@ export const RETIRED_SOURCE_IDS = Object.freeze(
     "j7",
     "c2",
     "l5",
+    // These media paths require Phantom to transfer the video bytes.
+    "u9",
+    "h6",
   ]),
 );
 
@@ -53,6 +61,8 @@ export const RESERVED_SOURCE_IDS = Object.freeze(new Set());
 export const STREMIO_SOURCE_IDS = Object.freeze(["t0", "t1", "t2"]);
 export const VIDEASY_SOURCE_ID = "b5";
 export const CINESRC_SOURCE_ID = "u9";
+export const VIXSRC_SOURCE_ID = "y8";
+export const VIDZEE_SOURCE_ID = "e3";
 // Kept as a compatibility alias for persisted code that imports Source 28 by
 // its previous implementation name.
 export const VIDFAST_SOURCE_ID = CINESRC_SOURCE_ID;
@@ -60,7 +70,8 @@ export const NON_RELAY_SOURCE_IDS = Object.freeze([
   ...STREMIO_SOURCE_IDS,
   "n1",
   VIDEASY_SOURCE_ID,
-  CINESRC_SOURCE_ID,
+  VIXSRC_SOURCE_ID,
+  VIDZEE_SOURCE_ID,
 ]);
 
 const STREMIO_ENV_KEYS = Object.freeze([
@@ -130,11 +141,10 @@ export const SOURCE_ALIASES = Object.freeze(
   ),
 );
 
-// Temporary two-provider roster while the native CineSrc and Videasy
-// integrations are validated. Append-only aliases stay intact for rollback.
+// Keep aliases append-only even when an upstream source is retired.
 export const ACTIVE_SOURCE_IDS = Object.freeze([
-  CINESRC_SOURCE_ID,
-  VIDEASY_SOURCE_ID,
+  VIXSRC_SOURCE_ID,
+  VIDZEE_SOURCE_ID,
 ]);
 
 export const AUTOMATIC_SOURCE_IDS = Object.freeze(

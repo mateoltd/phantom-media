@@ -224,6 +224,8 @@ export async function GET(request) {
           "VideasyError",
           "CineSrcError",
           "VidfastError",
+          "VixsrcError",
+          "VidzeeError",
         ].includes(error?.name);
       const aborted =
         error?.name === "AbortError" ||

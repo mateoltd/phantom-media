@@ -4,6 +4,8 @@ export declare const RESERVED_SOURCE_IDS: ReadonlySet<string>;
 export declare const STREMIO_SOURCE_IDS: readonly string[];
 export declare const VIDEASY_SOURCE_ID: string;
 export declare const CINESRC_SOURCE_ID: string;
+export declare const VIXSRC_SOURCE_ID: string;
+export declare const VIDZEE_SOURCE_ID: string;
 export declare const VIDFAST_SOURCE_ID: string;
 export declare const NON_RELAY_SOURCE_IDS: readonly string[];
 export declare const STREMIO_ADDON_URLS: Readonly<Record<string, string>>;

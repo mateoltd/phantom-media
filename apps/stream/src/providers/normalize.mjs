@@ -77,6 +77,8 @@ export function normalizeVariants(variants, sourceId) {
         (variant.delivery === "full-relay"
           ? "resolver-full-relay"
           : descriptor?.deliveryMode ?? "resolver"),
+      embeddedAudioLanguage:
+        variant.embeddedAudioLanguage === "en" ? "en" : undefined,
       expiresAt:
         Number.isFinite(Number(variant.expiresAt))
           ? Number(variant.expiresAt)

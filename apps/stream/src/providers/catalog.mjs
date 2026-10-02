@@ -5,6 +5,8 @@ import {
   RELAY_SOURCE_IDS,
   STREMIO_ADDON_URLS,
   VIDEASY_SOURCE_ID,
+  VIXSRC_SOURCE_ID,
+  VIDZEE_SOURCE_ID,
   sourceAlias,
 } from "../source-ids.mjs";
 import {
@@ -57,6 +59,26 @@ const DECLARED = Object.freeze([
           id: CINESRC_SOURCE_ID,
           kind: "cinesrc",
           deliveryMode: "resolver-full-relay",
+          autoRace: true,
+        }),
+      ]
+    : []),
+  ...(ACTIVE_SOURCE_IDS.includes(VIXSRC_SOURCE_ID)
+    ? [
+        Object.freeze({
+          id: VIXSRC_SOURCE_ID,
+          kind: "vixsrc",
+          deliveryMode: "native-direct",
+          autoRace: true,
+        }),
+      ]
+    : []),
+  ...(ACTIVE_SOURCE_IDS.includes(VIDZEE_SOURCE_ID)
+    ? [
+        Object.freeze({
+          id: VIDZEE_SOURCE_ID,
+          kind: "vidzee",
+          deliveryMode: "native-direct",
           autoRace: true,
         }),
       ]
