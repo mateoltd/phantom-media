@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 import path from "node:path";
+import { networkInterfaces } from "node:os";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: Object.values(networkInterfaces()).flatMap((addresses) =>
+    (addresses ?? []).filter((address) => !address.internal && address.family === "IPv4").map((address) => address.address),
+  ),
   reactCompiler: true,
   poweredByHeader: false,
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
