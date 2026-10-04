@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { DebugVideoScript } from "@/components/DebugVideoScript";
 import { VodApp } from "@/components/VodApp";
+import { VodLoading } from "@/components/VodLoading";
 import { ChannelContent } from "@/components/ChannelContent";
 import { StructuredData } from "@/components/structured-data";
 import {
@@ -96,7 +97,7 @@ export default async function ChannelPage({ params }: ChannelPageProps) {
   return (
     <>
       {debugEnabled && <DebugVideoScript />}
-      <Suspense fallback={null}>
+      <Suspense fallback={<VodLoading />}>
         <VodApp />
       </Suspense>
       {result.status === "ok" ? (

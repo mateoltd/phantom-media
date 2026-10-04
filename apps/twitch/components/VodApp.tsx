@@ -9,7 +9,7 @@ import {
 import Image from "next/image";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Broadcast, ChatCircle, VideoCamera } from "@phosphor-icons/react/ssr";
-import { MediaTile, Button, ProgressRail } from "@phantom/ui";
+import { MediaTile, Button } from "@phantom/ui";
 import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { addToHistory } from "@/components/History";
 import { Player } from "@/components/Player";
@@ -19,6 +19,7 @@ import { WatchLayout } from "@/components/WatchLayout";
 import { DownloadButton } from "@/components/DownloadButton";
 import { ShareButton } from "@/components/ShareButton";
 import { VodInfo } from "@/components/VodInfo";
+import { VodLoading } from "@/components/VodLoading";
 import { Footer } from "@/components/Footer";
 import { formatTime } from "@/lib/format";
 import {
@@ -222,10 +223,10 @@ export function VodApp() {
     [vodData]
   );
 
+  if (state === "loading") return <VodLoading />;
+
   return (
     <main className="workspace-canvas twitch-main relative">
-      {state === "loading" && <LoadingView />}
-
       {state === "error" && (
         <div className="media-content relative pt-20">
           <ErrorDisplay message={error} onRetry={() => router.push("/")} />
@@ -250,15 +251,6 @@ export function VodApp() {
         />
       )}
     </main>
-  );
-}
-
-function LoadingView() {
-  return (
-    <div className="relative mx-auto flex min-h-[calc(100svh-var(--media-header-height))] max-w-sm flex-col items-center justify-center px-4">
-      <ProgressRail percent={0} indeterminate label="Loading Twitch source" className="w-full" />
-      <p className="mt-4 text-sm text-text-tertiary">Loading Twitch source...</p>
-    </div>
   );
 }
 

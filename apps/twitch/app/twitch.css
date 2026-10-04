@@ -21,6 +21,12 @@
 }
 
 .twitch-main { min-height: calc(100svh - var(--media-header-height)); }
+.twitch-vod-loading .job-rail { background: var(--color-surface-hover); }
+/* Start inside the track so the first frame already shows the loading indicator. */
+.twitch-vod-loading .job-rail-indeterminate { animation-delay: -0.4s; }
+@media (prefers-reduced-motion: reduce) {
+  .twitch-vod-loading .job-rail-indeterminate { animation: none; transform: translateX(110%); }
+}
 /* The shared navbar remains the single search entry point. */
 .twitch-home { min-height: calc(100svh - var(--media-header-height)); }
 .twitch-home-bottom { min-height: inherit; display: flex; flex-direction: column; }
