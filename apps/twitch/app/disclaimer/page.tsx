@@ -45,7 +45,7 @@ export default function DisclaimerPage() {
         }}
       />
 
-      <div className="mx-auto max-w-3xl px-5 pb-16 pt-4 sm:px-6 lg:px-8">
+      <div className="media-content pb-16 pt-4">
         <header>
           <h1 className="text-3xl font-semibold tracking-tight text-text sm:text-4xl">
             Legal disclaimer
@@ -59,7 +59,7 @@ export default function DisclaimerPage() {
           </p>
         </header>
 
-        <div className="mt-8 space-y-6">
+        <div className="mt-8 max-w-3xl space-y-6">
           <Section title="No affiliation">
             <p>
               Phantom Twitch is an independent project and is not affiliated

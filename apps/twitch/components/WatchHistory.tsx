@@ -33,7 +33,7 @@ export function WatchHistory() {
   }, [channelKey]);
 
   return <div className="twitch-home twitch-home-bottom">
-    <section className="twitch-page" aria-labelledby="history-heading">
+    <section className="media-content twitch-page" aria-labelledby="history-heading">
       <div className="twitch-home-feed-heading twitch-history-heading">
         <div>
           <h1 id="history-heading">Watch history</h1>

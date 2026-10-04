@@ -15,6 +15,7 @@ export function GlobalSearch() {
     key={pathname}
     routeKey={pathname}
     floating={false}
+    contentAligned
     brand={<Link href="/" aria-label="Phantom Twitch home">
       <Wordmark service="Twitch" tone="chalk" className="hidden sm:flex" />
       <Wordmark tone="chalk" className="sm:hidden" />

@@ -121,6 +121,9 @@ media header, and media tiles come from `@phantom/ui`. Stream and Twitch also
 use the shared player controls; app-specific catalog, channel, playback, and
 download workflows stay with their apps.
 
+The [media layout and size reference](packages/theme/README.md) records the
+shared content frame, spacing, type, and element variants used by Twitch.
+
 ## Deployment
 
 All three apps have Cloudflare deployment configuration. Downloader uses a

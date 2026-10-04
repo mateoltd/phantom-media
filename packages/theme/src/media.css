@@ -78,6 +78,10 @@ body,
 .app-shell {
   width: min(100% - var(--page-gutter) * 2, 1440px);
 }
+.media-content {
+  width: var(--media-content-width);
+  margin-inline: auto;
+}
 button:focus-visible,
 a:focus-visible,
 select:focus-visible {
@@ -314,6 +318,7 @@ select:focus-visible {
 .media-header-actions:empty { display: none; }
 @media (min-width: 1024px) { .media-header-actions:empty { display: block; } }
 @media (max-width: 640px) { .media-header[data-search-open="true"] .media-header-actions { display: none; } }
+.media-header-inner[data-content-aligned] { width: var(--media-content-width); padding-inline: 0; }
 
 /* Shared media content follows Stream's unboxed artwork and pill actions. */
 :root { --media-header-height: calc(var(--app-header-h) + 1rem); }
@@ -324,10 +329,11 @@ select:focus-visible {
 .media-tile-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #0004; color: white; opacity: 0; transition: opacity 160ms; }
 .media-tile-hit:hover .media-tile-play, .media-tile-hit:focus-visible .media-tile-play,
 .tile-hit:hover .media-tile-play, .tile-hit:focus-visible .media-tile-play { opacity: 1; }
-.media-tile-badge { position: absolute; right: 8px; top: 8px; border-radius: 6px; padding: 3px 6px; background: #000b; color: white; font: 11px var(--font-mono); }
-.media-tile-art.aspect-video .media-tile-badge { top: auto; bottom: 8px; }
-.media-tile-caption { display: block; padding: 0.8rem 0.1rem 0.2rem; }
-.media-tile-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem; font-weight: 500; }
+.media-tile-badge { position: absolute; right: var(--media-tile-badge-inset, 8px); top: var(--media-tile-badge-inset, 8px); border-radius: 6px; padding: var(--media-tile-badge-padding, 3px 6px); background: #000b; color: white; font: var(--media-tile-badge-size, 11px) var(--font-mono); }
+.media-tile-art.aspect-video { aspect-ratio: var(--media-thumbnail-ratio); }
+.media-tile-art.aspect-video .media-tile-badge { top: auto; bottom: var(--media-tile-badge-inset, 8px); }
+.media-tile-caption { display: block; padding: var(--media-tile-caption-padding, 0.8rem 0.1rem 0.2rem); }
+.media-tile-title { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--media-tile-title-size, 0.85rem); font-weight: 500; line-height: var(--media-tile-line-height, 1.5); }
 .media-tile-title.line-clamp-2 { white-space: normal; }
-.media-tile-meta { display: flex; flex-wrap: wrap; gap: 0.35rem 0.65rem; margin-top: 0.35rem; font-size: 0.7rem; color: var(--color-text-tertiary); }
+.media-tile-meta { display: flex; flex-wrap: wrap; gap: var(--media-tile-meta-gap, 0.35rem 0.65rem); margin-top: var(--media-tile-meta-spacing, 0.35rem); font-size: var(--media-tile-meta-size, 0.7rem); line-height: var(--media-tile-line-height, 1.5); color: var(--color-text-tertiary); }
 @media (prefers-reduced-motion: reduce) { .media-tile-art, .media-tile-play { transition: none; } }

@@ -38,7 +38,7 @@ export function ChannelDiscovery({ entries, pending = false, onVideo }: { entrie
 
   function refreshFeed() { setFailure(null); setRefresh((value) => value + 1); }
   // The search stays mounted while the feed under it is replaced, so what has been typed survives a refresh.
-  return <div className="twitch-home-layout">
+  return <div className="media-content twitch-home-layout">
     <h2 id="home-search-heading" className="twitch-home-prompt"><label htmlFor="home-search-input">What do you want to watch?</label></h2>
     <HomeSearch />
     <Feed key={result?.request || "loading"} entries={entries} pending={pending} onVideo={onVideo} data={result?.data} loading={loading} refresh={refreshFeed} error={error} />
