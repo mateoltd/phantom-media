@@ -269,7 +269,7 @@ function VideoView({ vodData, masterUrl, startTime, playerTime, onTimeUpdate }: 
   playerTime: number;
   onTimeUpdate: (time: number) => void;
 }) {
-  const [chatOpen, setChatOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(true);
   const toggleChat = () => setChatOpen((open) => !open);
   const closeChat = () => {
     setChatOpen(false);
@@ -309,7 +309,7 @@ function ChannelView({ channel, masterUrl, onVideo }: {
   masterUrl: string;
   onVideo: (vodId: string) => void;
 }) {
-  const [chatOpen, setChatOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(Boolean(channel.stream));
   const [unlistedArchive, setUnlistedArchive] = useState<{ login: string; masterUrl: string } | null>(null);
   const [watchingArchive, setWatchingArchive] = useState(false);
   const stream = channel.stream;
