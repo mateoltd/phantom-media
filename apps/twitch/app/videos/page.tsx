@@ -55,7 +55,7 @@ export default function VideosPage() {
 
       <main className="min-h-screen">
         <div className="twitch-seo">
-          <div className="twitch-seo-inner">
+          <div className="media-content twitch-seo-inner">
             <header>
               <h1 className="twitch-seo-title">Twitch VODs and past broadcasts</h1>
               <p className="twitch-seo-lede">

@@ -9,7 +9,7 @@ import {
 import Image from "next/image";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Broadcast, ChatCircle, VideoCamera } from "@phosphor-icons/react/ssr";
-import { MediaTile, Button, ProgressRail } from "@phantom/ui";
+import { MediaTile, Button } from "@phantom/ui";
 import { ErrorDisplay } from "@/components/ErrorDisplay";
 import { addToHistory } from "@/components/History";
 import { Player } from "@/components/Player";
@@ -19,6 +19,7 @@ import { WatchLayout } from "@/components/WatchLayout";
 import { DownloadButton } from "@/components/DownloadButton";
 import { ShareButton } from "@/components/ShareButton";
 import { VodInfo } from "@/components/VodInfo";
+import { VodLoading } from "@/components/VodLoading";
 import { Footer } from "@/components/Footer";
 import { formatTime } from "@/lib/format";
 import {
@@ -222,12 +223,12 @@ export function VodApp() {
     [vodData]
   );
 
+  if (state === "loading") return <VodLoading />;
+
   return (
     <main className="workspace-canvas twitch-main relative">
-      {state === "loading" && <LoadingView />}
-
       {state === "error" && (
-        <div className="app-shell relative pt-20">
+        <div className="media-content relative pt-20">
           <ErrorDisplay message={error} onRetry={() => router.push("/")} />
         </div>
       )}
@@ -253,15 +254,6 @@ export function VodApp() {
   );
 }
 
-function LoadingView() {
-  return (
-    <div className="relative mx-auto flex min-h-[calc(100svh-var(--media-header-height))] max-w-sm flex-col items-center justify-center px-4">
-      <ProgressRail percent={0} indeterminate label="Loading Twitch source" className="w-full" />
-      <p className="mt-4 text-sm text-text-tertiary">Loading Twitch source...</p>
-    </div>
-  );
-}
-
 function VideoView({ vodData, masterUrl, startTime, playerTime, onTimeUpdate }: {
   vodData: VodData;
   masterUrl: string;
@@ -280,7 +272,7 @@ function VideoView({ vodData, masterUrl, startTime, playerTime, onTimeUpdate }: 
     });
   };
   return (
-    <div className="app-shell twitch-watch relative pb-8">
+    <div className="media-content twitch-watch relative pb-8">
       <div className="pt-2">
         <WatchLayout chatOpen={chatOpen}
           video={<Player src={masterUrl} title={vodData.title || `Video ${vodData.vodId}`} subtitle={vodData.channelDisplayName || vodData.channel}
@@ -349,7 +341,7 @@ function ChannelView({ channel, masterUrl, onVideo }: {
   );
 
   return (
-    <div className={`app-shell ${stream ? "twitch-watch" : ""} relative pb-8`}>
+    <div className={`media-content ${stream ? "twitch-watch" : ""} relative pb-8`}>
       <section className="pt-2">
         {stream && masterUrl && <WatchLayout chatOpen={chatOpen}
           video={<Player key={showingArchive ? "archive" : "live"} src={showingArchive && archiveUrl ? archiveUrl : masterUrl} qualities={LIVE_QUALITIES} isLive dvrMode={showingArchive} title={stream.title} subtitle={channel.displayName} chatOpen={chatOpen} onChatToggle={toggleChat} />}
@@ -365,8 +357,8 @@ function ChannelView({ channel, masterUrl, onVideo }: {
         {!stream && chatOpen && <div id="channel-chat" className="twitch-standalone-chat">{chat}</div>}
       </section>
       {channel.videos.length > 0 && <section className="mt-8">
-        <h2 className="mb-4 text-2xl font-semibold tracking-tight text-text">Recent broadcasts</h2>
-        <div className="grid gap-x-5 gap-y-7 sm:grid-cols-2 xl:grid-cols-3">
+        <h2 className="twitch-broadcast-heading">Recent broadcasts</h2>
+        <div className="twitch-broadcast-grid sm:grid-cols-2 xl:grid-cols-3">
           {channel.videos.map((video) => <button key={video.id} onClick={() => onVideo(video.id)} className="media-tile-hit group min-w-0 text-left">
             <MediaTile title={video.title || `Video ${video.id}`} imageUrl={video.previewThumbnailURL} sizes="(max-width: 640px) 100vw, 33vw" badge={formatTime(video.lengthSeconds)}
               meta={<><span>{video.viewCount.toLocaleString()} views</span><span>{new Date(video.createdAt).toLocaleDateString()}</span></>} />
@@ -393,7 +385,7 @@ function ChannelHeader({
         width={compact ? 48 : 56}
         height={compact ? 48 : 56}
         unoptimized
-        className={compact ? "h-12 w-12 rounded-2xl" : "h-14 w-14 rounded-2xl"}
+        className={compact ? "h-12 w-12 rounded-2xl" : "h-[var(--media-avatar-profile)] w-[var(--media-avatar-profile)] rounded-2xl"}
       />
       <div className="min-w-0">
         <h2 className={compact ? "truncate text-lg font-semibold text-text" : "truncate text-2xl font-semibold text-text"}>

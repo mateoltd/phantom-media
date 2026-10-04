@@ -14,7 +14,7 @@ export function ChannelContent({ channel }: { channel: TwitchChannelData }) {
 
   return (
     <section className="twitch-seo" aria-labelledby="twitch-channel-heading">
-      <div className="twitch-seo-inner">
+      <div className="media-content twitch-seo-inner">
         <header className="twitch-seo-channel-head">
           {channel.profileImageURL ? (
             <Image

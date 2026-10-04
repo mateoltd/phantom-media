@@ -9,7 +9,7 @@ const FACTS = [
 
 export function HomeContent() {
   return (
-    <section className="twitch-about" aria-labelledby="twitch-seo-heading">
+    <section className="media-content twitch-about" aria-labelledby="twitch-seo-heading">
       <div className="twitch-about-inner">
         <header className="twitch-about-head">
           <h1 id="twitch-seo-heading" className="twitch-seo-title">

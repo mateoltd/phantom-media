@@ -9,12 +9,13 @@ export interface MediaHeaderLabels {
 }
 
 /** Shared navigation shell for the media apps. */
-export function MediaHeader({ brand, search, actions, notice, floating = false, routeKey, labels }: {
+export function MediaHeader({ brand, search, actions, notice, floating = false, contentAligned = false, routeKey, labels }: {
   brand: ReactNode;
   search: ReactNode;
   actions?: ReactNode;
   notice?: ReactNode;
   floating?: boolean;
+  contentAligned?: boolean;
   routeKey?: string;
   labels?: MediaHeaderLabels;
 }) {
@@ -44,7 +45,7 @@ export function MediaHeader({ brand, search, actions, notice, floating = false, 
 
   return (
     <header ref={headerRef} className={`media-header ${floating ? "media-header-over-art" : ""}`} data-search-open={searchOpen}>
-      <div className="app-shell media-header-inner">
+      <div className="app-shell media-header-inner" data-content-aligned={contentAligned || undefined}>
         <div className="media-header-brand shrink-0 justify-self-start">{brand}</div>
         <button ref={triggerRef} type="button" data-open-search className="media-header-search-trigger" aria-label={labels?.openSearch ?? "Open search"} aria-expanded={searchOpen} aria-controls={searchId} onClick={() => setSearchOpen(true)}>
           <MagnifyingGlass weight="regular" size={21} aria-hidden="true" />

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { DebugVideoScript } from "@/components/DebugVideoScript";
 import { VodApp } from "@/components/VodApp";
+import { VodLoading } from "@/components/VodLoading";
 import { isDebugEnabled } from "@/lib/debug";
 import { buildMetadata, getBaseUrl, siteConfig } from "@/lib/seo";
 
@@ -44,7 +45,7 @@ export default async function VideoPage({ params }: VideoPageProps) {
     <>
       <StructuredDataVod pageUrl={pageUrl} videoId={videoId} />
       {debugEnabled && <DebugVideoScript />}
-      <Suspense fallback={null}>
+      <Suspense fallback={<VodLoading />}>
         <VodApp />
       </Suspense>
     </>
