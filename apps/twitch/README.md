@@ -44,7 +44,7 @@ disabled. The Worker watches this app, shared packages, and workspace dependency
 files, so changes confined to other apps do not rebuild it.
 
 Playback opens with chat visible. Hide or show chat in the player controls or
-the channel sidebar. On narrow screens, chat appears
+the channel controls. On narrow screens, chat appears
 below the video details. VODs offer synchronized replay and the channel's live
 chat as separate sources. Replay follows pauses and seeks, fetches overlapping
 timestamp windows on demand, and deduplicates messages by ID. Live chat uses a
