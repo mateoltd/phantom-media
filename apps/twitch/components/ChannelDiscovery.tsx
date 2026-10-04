@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import Link from "next/link";
 import Skeleton from "react-loading-skeleton";
 import { IconButton } from "@phantom/ui";
@@ -11,39 +11,32 @@ import { HomeAvatar, HomeTileSkeleton, RecommendedTile, ResumeTile } from "./Hom
 import { HomeSearch } from "./HomeSearch";
 import { isCurrentBroadcast, uniqueChannels } from "@/lib/home-feed";
 import { buildChannelPath } from "@/lib/validation";
-
-type LoadError = { message: string; retryAt: number; terminal?: boolean };
-async function discoveryResponse(response: Response) {
-  if (!response.ok) {
-    const delay = Number(response.headers.get("Retry-After"));
-    throw { message: response.status === 429 ? "Taking a short break. More streams will be available shortly." : "More streams couldn’t be loaded.",
-      retryAt: Date.now() + (Number.isFinite(delay) && delay > 0 ? delay : 15) * 1000, terminal: response.status === 403 } satisfies LoadError;
-  }
-  return response.json();
-}
+import { discoveryRequestBody, discoveryRequestKey, discoveryResponse, type LoadError } from "@/lib/discovery-request";
 
 /** `pending` is the time before the browser's history has been read: `entries` is empty then because it is unknown, not because there is none. */
 export function ChannelDiscovery({ entries, pending = false, onVideo }: { entries: HistoryEntry[]; pending?: boolean; onVideo: (vodId: string) => void }) {
-  const channelKey = recentChannelLogins(entries).join(",");
-  const historyKey = JSON.stringify(entries.slice(0, 30).map(({ channel, vodId, timestamp, title }) => ({ channel, vodId, timestamp, title })));
   const [refresh, setRefresh] = useState(0);
-  const requestKey = `${channelKey}:${historyKey}:${refresh}`;
+  const requestKey = `${discoveryRequestKey(entries)}:${refresh}`;
   const [result, setResult] = useState<{ request: string; data: ChannelDiscoveryData } | null>(null);
-  const [error, setError] = useState<LoadError | null>(null);
-  const loading = !error && result?.request !== requestKey;
+  const [failure, setFailure] = useState<{ request: string; error: LoadError } | null>(null);
+  const error = failure?.request === requestKey ? failure.error : null;
+  const loading = pending || (!error && result?.request !== requestKey);
+  // Read the latest titles when a visit or explicit refresh starts a request.
+  const requestBody = useEffectEvent(() => discoveryRequestBody(entries));
 
   useEffect(() => {
+    if (pending) return;
     const controller = new AbortController();
-    fetch(`/api/channel/discovery?channels=${encodeURIComponent(channelKey)}&history=${encodeURIComponent(historyKey)}`, { signal: controller.signal, cache: "no-store" })
+    fetch("/api/channel/discovery", { method: "POST", headers: { "Content-Type": "application/json" }, body: requestBody(), signal: controller.signal, cache: "no-store" })
       .then(discoveryResponse).then((data: ChannelDiscoveryData) => {
-        if (!controller.signal.aborted) { setResult({ request: requestKey, data }); setError(null); }
+        if (!controller.signal.aborted) { setResult({ request: requestKey, data }); setFailure(null); }
       }).catch((reason) => {
-        if (!controller.signal.aborted) setError({ message: "Streams couldn’t be loaded. Your watch history is still here.", retryAt: Date.now() + 15000, ...reason });
+        if (!controller.signal.aborted) setFailure({ request: requestKey, error: { message: "Streams couldn’t be loaded. Your watch history is still here.", retryAt: Date.now() + 15000, ...reason } });
       });
     return () => controller.abort();
-  }, [channelKey, historyKey, requestKey]);
+  }, [pending, requestKey]);
 
-  function refreshFeed() { setError(null); setRefresh((value) => value + 1); }
+  function refreshFeed() { setFailure(null); setRefresh((value) => value + 1); }
   // The search stays mounted while the feed under it is replaced, so what has been typed survives a refresh.
   return <div className="twitch-home-layout">
     <h2 id="home-search-heading" className="twitch-home-prompt"><label htmlFor="home-search-input">What do you want to watch?</label></h2>
@@ -142,5 +135,5 @@ function Feed({ entries, pending, onVideo, data, loading, refresh, error }: {
 function RetryNotice({ error, retry }: { error: LoadError; retry: () => void }) {
   const [ready, setReady] = useState(false);
   useEffect(() => { const timer = setTimeout(() => setReady(true), Math.max(0, error.retryAt - Date.now())); return () => clearTimeout(timer); }, [error.retryAt]);
-  return <p role="status">{error.message} {!error.terminal && <button type="button" disabled={!ready} onClick={retry}>Try again</button>}</p>;
+  return <p role="alert" className="twitch-home-feed-error">{error.message} {!error.terminal && <button type="button" disabled={!ready} onClick={retry}>Try again</button>}</p>;
 }
