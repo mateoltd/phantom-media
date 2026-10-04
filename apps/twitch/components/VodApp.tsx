@@ -11,8 +11,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Broadcast, ChatCircle, VideoCamera } from "@phosphor-icons/react/ssr";
 import { MediaTile, Button, ProgressRail } from "@phantom/ui";
 import { ErrorDisplay } from "@/components/ErrorDisplay";
-import { addToHistory, useHistory } from "@/components/History";
-import { ChannelDiscovery } from "@/components/ChannelDiscovery";
+import { addToHistory } from "@/components/History";
 import { Player } from "@/components/Player";
 import { ChatPanel } from "@/components/ChatPanel";
 import { WatchRail } from "@/components/WatchRail";
@@ -82,7 +81,7 @@ interface ChannelData {
   videos: ChannelVideo[];
 }
 
-type AppState = "home" | "loading" | "video" | "channel" | "error";
+type AppState = "loading" | "video" | "channel" | "error";
 function playbackKey(vodId: string) {
   return `phantom-playback:${vodId}`;
 }
@@ -110,16 +109,14 @@ export function VodApp() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const routeVodId = params.videoId ?? searchParams.get("v") ?? "";
+  const routeVodId = params.videoId ?? "";
   const routeChannel = params.channelName ?? "";
   const routeStartTime = useMemo(
     () => parseStartTime(searchParams.get("t")),
     [searchParams]
   );
 
-  const [state, setState] = useState<AppState>(
-    routeVodId || routeChannel ? "loading" : "home"
-  );
+  const [state, setState] = useState<AppState>("loading");
   const [vodData, setVodData] = useState<VodData | null>(null);
   const [channelData, setChannelData] = useState<ChannelData | null>(null);
   const [error, setError] = useState("");
@@ -212,15 +209,8 @@ export function VodApp() {
       return;
     }
 
-    if (routeChannel) {
-      void loadChannel(routeChannel);
-      return;
-    }
-
-    resetPlayback();
-    setError("");
-    setState("home");
-  }, [loadChannel, loadVod, resetPlayback, routeChannel, routeStartTime, routeVodId]);
+    if (routeChannel) void loadChannel(routeChannel);
+  }, [loadChannel, loadVod, routeChannel, routeStartTime, routeVodId]);
 
   const onVodTimeUpdate = useCallback(
     (time: number) => {
@@ -234,12 +224,6 @@ export function VodApp() {
 
   return (
     <main className="workspace-canvas twitch-main relative">
-      {state === "home" && (
-        <HomeView
-          onVideo={(vodId) => router.push(buildVodPath(vodId))}
-        />
-      )}
-
       {state === "loading" && <LoadingView />}
 
       {state === "error" && (
@@ -266,22 +250,6 @@ export function VodApp() {
         />
       )}
     </main>
-  );
-}
-
-function HomeView({
-  onVideo,
-}: {
-  onVideo: (vodId: string) => void;
-}) {
-  const history = useHistory();
-
-  return (
-    <div className="twitch-home" data-has-history={history.length > 0}>
-      <div className="twitch-home-bottom">
-        <ChannelDiscovery entries={history} onVideo={onVideo} footer={<Footer />} />
-      </div>
-    </div>
   );
 }
 

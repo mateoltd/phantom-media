@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowClockwise } from "@phosphor-icons/react/ssr";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import Skeleton from "react-loading-skeleton";
 import { IconButton } from "@phantom/ui";
+import { ArrowClockwise } from "@phosphor-icons/react/ssr";
 import { recentChannelLogins, type ChannelDiscoveryData, type DiscoveryChannel } from "@/lib/discovery";
 import type { HistoryEntry } from "./History";
-import { HomeTileSkeleton, RecommendedTile, ResumeTile } from "./HomeMediaTile";
-import { ChannelRail } from "./ChannelRail";
-import { isCurrentBroadcast, uniqueChannels, watchFeed } from "@/lib/home-feed";
+import { HomeAvatar, HomeTileSkeleton, RecommendedTile, ResumeTile } from "./HomeMediaTile";
+import { HomeSearch } from "./HomeSearch";
+import { isCurrentBroadcast, uniqueChannels } from "@/lib/home-feed";
+import { buildChannelPath } from "@/lib/validation";
 
 type LoadError = { message: string; retryAt: number; terminal?: boolean };
 async function discoveryResponse(response: Response) {
@@ -19,7 +22,8 @@ async function discoveryResponse(response: Response) {
   return response.json();
 }
 
-export function ChannelDiscovery({ entries, onVideo, footer }: { entries: HistoryEntry[]; onVideo: (vodId: string) => void; footer?: ReactNode }) {
+/** `pending` is the time before the browser's history has been read: `entries` is empty then because it is unknown, not because there is none. */
+export function ChannelDiscovery({ entries, pending = false, onVideo }: { entries: HistoryEntry[]; pending?: boolean; onVideo: (vodId: string) => void }) {
   const channelKey = recentChannelLogins(entries).join(",");
   const historyKey = JSON.stringify(entries.slice(0, 30).map(({ channel, vodId, timestamp, title }) => ({ channel, vodId, timestamp, title })));
   const [refresh, setRefresh] = useState(0);
@@ -40,83 +44,99 @@ export function ChannelDiscovery({ entries, onVideo, footer }: { entries: Histor
   }, [channelKey, historyKey, requestKey]);
 
   function refreshFeed() { setError(null); setRefresh((value) => value + 1); }
-  return <Feed key={result?.request || "loading"} entries={entries} onVideo={onVideo} data={result?.data} loading={loading} refresh={refreshFeed} error={error} footer={footer} />;
+  // The search stays mounted while the feed under it is replaced, so what has been typed survives a refresh.
+  return <div className="twitch-home-layout">
+    <h2 id="home-search-heading" className="twitch-home-prompt"><label htmlFor="home-search-input">What do you want to watch?</label></h2>
+    <HomeSearch />
+    <Feed key={result?.request || "loading"} entries={entries} pending={pending} onVideo={onVideo} data={result?.data} loading={loading} refresh={refreshFeed} error={error} />
+  </div>;
 }
 
-function Feed({ entries, onVideo, data, loading, refresh, error, footer }: {
-  entries: HistoryEntry[]; onVideo: (id: string) => void; data?: ChannelDiscoveryData; loading: boolean; refresh: () => void; error: LoadError | null; footer?: ReactNode;
+const PAGE = 12;
+
+function Feed({ entries, pending, onVideo, data, loading, refresh, error }: {
+  entries: HistoryEntry[]; pending: boolean; onVideo: (id: string) => void; data?: ChannelDiscoveryData; loading: boolean; refresh: () => void; error: LoadError | null;
 }) {
   const [pool, setPool] = useState(() => uniqueChannels(data?.sections.flatMap((section) => section.channels) ?? []));
   const [next, setNext] = useState(data?.next);
-  const [visible, setVisible] = useState(6);
+  const [visible, setVisible] = useState(PAGE);
   const [fetching, setFetching] = useState(false);
   const [moreError, setMoreError] = useState<LoadError | null>(null);
-  const sentinel = useRef<HTMLDivElement>(null);
-  const inFlight = useRef(false);
-  const lastRequest = useRef(0);
-  const recent = recentChannelLogins(entries).map((login) => data?.recent.find((channel) => channel.login.toLowerCase() === login) ?? { id: login, login, displayName: login });
-  const activeHistory = new Set(entries.filter((entry) => isCurrentBroadcast(entry, recent.find((channel) => channel.login.toLowerCase() === entry.channel.toLowerCase()))).map((entry) => entry.channel.toLowerCase()));
-  const suggestions = pool.filter((channel) => channel.stream && !activeHistory.has(channel.login.toLowerCase()));
-  const feed = watchFeed(entries, suggestions);
-  const hasMore = visible < feed.length || Boolean(next);
-
+  const moreRequest = useRef<AbortController | null>(null);
   useEffect(() => {
-    const target = sentinel.current;
-    if (!target || loading || !data || moreError || !hasMore) return;
     const controller = new AbortController();
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    // Prefetch half a viewport ahead so the end of the feed never comes into view.
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting || inFlight.current) return;
-      observer.disconnect();
-      if (visible < feed.length) { setVisible((count) => count + 6); return; }
-      if (!next) return;
-      inFlight.current = true;
-      setFetching(true);
-      // Cached candidates are exhausted. Serialize remote expansion, with a minimum gap.
-      timer = setTimeout(async () => {
-        lastRequest.current = Date.now();
-        try {
-          const query = new URLSearchParams({ cursor: next.cursor, languages: next.languages.join(",") });
-          const response = await fetch(`/api/channel/discovery/more?${query}`, { signal: controller.signal, cache: "no-store" });
-          const page: { channels: DiscoveryChannel[]; next?: ChannelDiscoveryData["next"] } = await discoveryResponse(response);
-          if (controller.signal.aborted) return;
-          setPool((channels) => uniqueChannels([...channels, ...page.channels]));
-          setNext(page.next?.cursor === next.cursor ? undefined : page.next);
-          setVisible((count) => count + 6);
-        } catch (reason) {
-          if (!controller.signal.aborted) setMoreError({ message: "More streams couldn’t be loaded.", retryAt: Date.now() + 15000, ...(reason as Partial<LoadError>) });
-        } finally {
-          inFlight.current = false;
-          if (!controller.signal.aborted) setFetching(false);
-        }
-      }, Math.max(0, 2000 - (Date.now() - lastRequest.current)));
-    }, { rootMargin: "0px 0px 50% 0px" });
-    observer.observe(target);
-    return () => { observer.disconnect(); controller.abort(); clearTimeout(timer); inFlight.current = false; };
-  }, [data, feed.length, hasMore, loading, moreError, next, visible]);
+    moreRequest.current = controller;
+    setFetching(false);
+    return () => controller.abort();
+  }, [loading]);
+  const recent = recentChannelLogins(entries).map((login) => data?.recent.find((channel) => channel.login.toLowerCase() === login) ?? { id: login, login, displayName: login });
+  // Live channels first: the row answers "is anyone I watch on right now" before anything else.
+  const yours = [...recent.filter((channel) => channel.stream), ...recent.filter((channel) => !channel.stream)];
+  const activeHistory = new Set(entries.filter((entry) => isCurrentBroadcast(entry, recent.find((channel) => channel.login.toLowerCase() === entry.channel.toLowerCase()))).map((entry) => entry.channel.toLowerCase()));
+  const live = pool.filter((channel) => channel.stream && !activeHistory.has(channel.login.toLowerCase()));
+  const resume = entries.slice(0, 4);
+  const waiting = loading && !data;
+  const hasMore = visible < live.length || Boolean(next);
 
-  return <div className="twitch-home-layout">
-    <ChannelRail recent={recent} suggestions={pool} loading={loading && !data} />
-    <section className="twitch-home-feed" aria-labelledby="home-feed-heading">
+  async function showMore() {
+    const controller = moreRequest.current;
+    if (loading || fetching || !controller || controller.signal.aborted) return;
+    setMoreError(null);
+    // Show what is already here before asking Twitch for another page.
+    if (visible < live.length || !next) { setVisible((count) => count + PAGE); return; }
+    setFetching(true);
+    try {
+      const query = new URLSearchParams({ cursor: next.cursor, languages: next.languages.join(",") });
+      const page: { channels: DiscoveryChannel[]; next?: ChannelDiscoveryData["next"] } = await discoveryResponse(await fetch(`/api/channel/discovery/more?${query}`, { signal: controller.signal, cache: "no-store" }));
+      if (controller.signal.aborted) return;
+      setPool((channels) => uniqueChannels([...channels, ...page.channels]));
+      setNext(page.next?.cursor === next.cursor ? undefined : page.next);
+      setVisible((count) => count + PAGE);
+    } catch (reason) {
+      if (!controller.signal.aborted) setMoreError({ message: "More streams couldn’t be loaded.", retryAt: Date.now() + 15000, ...(reason as Partial<LoadError>) });
+    } finally {
+      if (!controller.signal.aborted) setFetching(false);
+    }
+  }
+
+  // Until the history is read, skeletons stand where it will go. They only show to someone who has one (see lib/history-hint.ts).
+  return <>
+    {pending ? <div className="twitch-channels" data-pending="" aria-hidden="true">
+      {Array.from({ length: 6 }, (_, index) => <Skeleton key={index} width={108} height={40} borderRadius={999} />)}
+    </div> : yours.length > 0 && <nav className="twitch-channels" aria-label="Channels you have watched">
+      {yours.map((channel) => {
+        const status = channel.stream ? `live${channel.stream.game?.name ? `, ${channel.stream.game.name}` : ""}` : channel.stream === null ? "offline" : "recently watched";
+        return <Link key={channel.login} href={buildChannelPath(channel.login)} className="twitch-channel" data-live={channel.stream ? "" : undefined} aria-label={`${channel.displayName}, ${status}`} title={`${channel.displayName}: ${status}`}>
+          <HomeAvatar channel={channel} />
+          {channel.displayName}
+          {channel.stream && <span className="twitch-channel-live" aria-hidden="true" />}
+        </Link>;
+      })}
+    </nav>}
+    {(pending || resume.length > 0) && <section className="twitch-home-section" aria-labelledby="home-resume-heading" data-pending={pending ? "" : undefined} aria-hidden={pending || undefined}>
+      <div className="twitch-home-feed-heading"><h2 id="home-resume-heading">Continue watching</h2></div>
+      <div className="twitch-home-media-grid twitch-home-resume-grid">
+        {pending ? Array.from({ length: 4 }, (_, index) => <HomeTileSkeleton key={index} compact />)
+          : resume.map((entry) => <ResumeTile key={entry.vodId} entry={entry} channel={recent.find((channel) => channel.login.toLowerCase() === entry.channel.toLowerCase())} onSelect={onVideo} compact />)}
+      </div>
+    </section>}
+    <section className="twitch-home-section" aria-labelledby="home-feed-heading" aria-busy={loading || fetching}>
       <div className="twitch-home-feed-heading">
-        <h2 id="home-feed-heading">{entries.length ? "Your next watch" : "Find your next stream"}</h2>
+        <h2 id="home-feed-heading">Live now</h2>
         <IconButton label="Refresh streams" disabled={loading || fetching || Boolean(error)} onClick={refresh}><ArrowClockwise size={18} /></IconButton>
       </div>
-      <div className="twitch-home-media-grid" aria-busy={loading || fetching}>
-        {(data || error ? feed.slice(0, visible) : []).map((item) => item.kind === "history"
-          ? <ResumeTile key={`video:${item.entry.vodId}`} entry={item.entry} channel={recent.find((channel) => channel.login.toLowerCase() === item.entry.channel.toLowerCase())} onSelect={onVideo} />
-          : <RecommendedTile key={`channel:${item.channel.login}`} channel={item.channel} />)}
-        {((loading && !data) || fetching) && Array.from({ length: fetching ? 3 : 6 }, (_, index) => <HomeTileSkeleton key={`loading:${index}`} />)}
+      <div className="twitch-home-media-grid">
+        {waiting ? Array.from({ length: PAGE }, (_, index) => <HomeTileSkeleton key={index} />)
+          : live.slice(0, visible).map((channel) => <RecommendedTile key={channel.login} channel={channel} />)}
       </div>
-      <div ref={sentinel} className="twitch-home-feed-end">
+      <div className="twitch-home-feed-end">
         {(loading || fetching) && <span className="sr-only" role="status">Loading streams</span>}
-        {error ? <RetryNotice key={error.retryAt} error={error} retry={refresh} /> : moreError ? <RetryNotice key={moreError.retryAt} error={moreError} retry={() => setMoreError(null)} />
-          : !loading && !hasMore && <p role="status">{feed.length ? "You’re all caught up." : "No streams available right now."}</p>}
+        {error ? <RetryNotice key={error.retryAt} error={error} retry={refresh} /> : moreError ? <RetryNotice key={moreError.retryAt} error={moreError} retry={showMore} />
+          : !waiting && (live.length === 0 ? <p role="status">No streams available right now.</p>
+            : hasMore && <button type="button" className="cinema-button" disabled={loading || fetching} onClick={showMore}>{fetching ? "Loading…" : "Show more"}</button>)}
       </div>
     </section>
-    {footer}
-  </div>;
+  </>;
 }
 
 function RetryNotice({ error, retry }: { error: LoadError; retry: () => void }) {
