@@ -160,11 +160,12 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
   .twitch-home-resume-grid > :nth-child(n + 4) { display: none; }
 }
 @media (max-width: 1000px) {
+  .twitch-home-layout { --cols: 2; }
   .twitch-home-media-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .twitch-home-resume-grid > :nth-child(n + 3) { display: none; }
 }
 @media (max-width: 900px) {
   .twitch-home-layout, .twitch-about { --cols: 2; }
-  .twitch-home-resume-grid > :nth-child(n + 3) { display: none; }
 }
 @media (max-width: 640px) {
   .twitch-page { padding-top: var(--space-3); }
