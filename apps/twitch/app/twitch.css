@@ -594,13 +594,6 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
   color: var(--color-text-tertiary);
 }
 .twitch-seo-status.is-live { border-color: var(--color-error); color: var(--color-error); }
-.twitch-seo-features {
-  display: grid;
-  /* min() keeps the track from forcing horizontal overflow on very narrow screens */
-  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
-  gap: 1.5rem 2rem;
-  margin: 1rem 0 0;
-}
 .twitch-seo-feature-title { font-size: 0.9375rem; font-weight: 600; color: var(--color-text); }
 .twitch-seo-feature-body { margin: 0.375rem 0 0; font-size: 0.875rem; line-height: 1.7; color: var(--color-text-secondary); }
 .twitch-seo-links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0 0; padding: 0; list-style: none; }
@@ -615,58 +608,43 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
   transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
 }
 .twitch-seo-link:hover { border-color: var(--color-phantom); background: var(--color-surface-hover); }
-.twitch-seo-faq { margin: 1rem 0 0; }
-.twitch-seo-faq-item { padding: 1.125rem 0; border-top: 1px solid var(--color-border); }
-.twitch-seo-faq-item:last-child { border-bottom: 1px solid var(--color-border); }
-.twitch-seo-faq-question { font-size: 0.9375rem; font-weight: 600; color: var(--color-text); }
-.twitch-seo-faq-answer { margin: 0.5rem 0 0; font-size: 0.9375rem; line-height: 1.75; color: var(--color-text-secondary); }
 .twitch-seo-vods { margin: 1rem 0 0; padding: 0; list-style: none; }
 .twitch-seo-vod { padding: 0.875rem 0; border-top: 1px solid var(--color-border); }
 .twitch-seo-vod-link { font-size: 0.9375rem; color: var(--color-text); text-decoration: none; }
 .twitch-seo-vod-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 .twitch-seo-vod-meta { display: block; margin-top: 0.25rem; font-size: 0.8125rem; color: var(--color-text-tertiary); }
 
-/* The home page's about block. It keeps the feed's frame and columns, and nothing in it is boxed or ruled off:
-   one hairline ends the app, and after that space does the separating. */
+/* The home page's about block: a statement on the left half of the feed's columns, four facts on the right half.
+   One hairline ends the app above it. Nothing inside is boxed or ruled off. */
 .twitch-about { margin-top: 72px; padding: 0 calc(var(--navigation-gutter) + 1.5rem) 24px; }
-.twitch-about-inner { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 56px var(--gap); padding-top: 56px; border-top: 1px solid var(--color-border); }
+.twitch-about-inner { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); align-items: baseline; gap: 56px var(--gap); padding-top: 56px; border-top: 1px solid var(--color-border); }
 .twitch-about-inner > * { grid-column: 1 / -1; margin: 0; }
-.twitch-about-head, .twitch-about-features, .twitch-about-row { display: grid; grid-template-columns: subgrid; }
-.twitch-about-head { align-items: baseline; row-gap: 1rem; }
-.twitch-about-head .twitch-seo-title { grid-column: 1 / span 2; }
-.twitch-about-head .twitch-seo-lede { grid-column: 3 / -1; margin: 0; }
-.twitch-about-features { row-gap: 32px; }
-.twitch-about-feature svg { display: block; margin-bottom: 14px; color: var(--color-text); }
-.twitch-about-row { align-items: baseline; row-gap: 1rem; }
-.twitch-about-row > :first-child { grid-column: 1; }
-.twitch-about-row > :last-child { grid-column: 2 / span 2; min-width: 0; }
-.twitch-about-row .twitch-seo-body, .twitch-about-row .twitch-seo-links { margin-top: 0; }
-.twitch-about-row .twitch-seo-links { margin-top: 1rem; }
-/* Questions open in place, so the answers are in the page without all being on screen at once. */
-.twitch-about-faq { margin-block: -0.5rem; }
-.twitch-about-faq summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 0.5rem; list-style: none; cursor: pointer; font-size: 0.9375rem; font-weight: 600; color: var(--color-text); }
-.twitch-about-faq summary::-webkit-details-marker { display: none; }
-.twitch-about-faq summary svg { flex: none; color: var(--color-text-tertiary); transition: transform 0.15s ease, color 0.15s ease; }
-.twitch-about-faq summary:hover svg { color: var(--color-text); }
-.twitch-about-faq details[open] summary svg { transform: rotate(45deg); }
-.twitch-about-faq summary:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 6px; }
-.twitch-about-faq .twitch-seo-faq-answer { margin: 0; padding: 0 2rem 0.75rem 0; font-size: 0.875rem; line-height: 1.7; }
+.twitch-about-head { grid-column: 1 / span 2; }
+.twitch-about-head .twitch-seo-lede { max-width: 32rem; }
+/* Each fact is a row: its name on the feed's third column, its line on the fourth. */
+.twitch-about-facts { grid-column: 3 / -1; display: grid; grid-template-columns: subgrid; row-gap: 12px; }
+.twitch-about-fact { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; }
+.twitch-about-fact .twitch-seo-feature-body { margin: 0; }
 .twitch-about-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem 1.5rem; font-size: 11px; color: var(--color-text-tertiary); }
 .twitch-about-foot nav { display: flex; gap: 1.25rem; }
 .twitch-about-foot a { text-decoration: underline; text-underline-offset: 4px; transition: color 0.15s ease; }
 .twitch-about-foot a:hover { color: var(--color-text); }
 /* "/" can also be showing a video (?v=), which brings its own footer. The about block's closing line replaces it. */
 .twitch-main:has(+ .twitch-about) .twitch-footer { display: none; }
+/* Narrower than four columns, the statement takes the full width and the facts become one row under it. */
 @media (max-width: 1399px) {
-  .twitch-about-head .twitch-seo-title, .twitch-about-head .twitch-seo-lede { grid-column: 1 / -1; }
-  .twitch-about-features { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--gap); }
+  .twitch-about-inner { row-gap: 40px; }
+  .twitch-about-head { grid-column: 1 / -1; }
+  .twitch-about-facts { grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px var(--gap); }
+  .twitch-about-fact { grid-column: auto; display: block; }
+  .twitch-about-fact .twitch-seo-feature-body { margin-top: 0.25rem; }
 }
-@media (max-width: 900px) {
-  .twitch-about-row > :first-child, .twitch-about-row > :last-child { grid-column: 1 / -1; }
+@media (max-width: 1100px) {
+  .twitch-about-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 640px) {
   .twitch-about { margin-top: 48px; padding-inline: calc(var(--navigation-gutter) + 0.75rem); }
-  .twitch-about-inner { row-gap: 40px; padding-top: 40px; }
-  .twitch-about-features { grid-template-columns: minmax(0, 1fr); row-gap: 28px; }
+  .twitch-about-inner { padding-top: 40px; }
+  .twitch-about-facts { grid-template-columns: minmax(0, 1fr); row-gap: 20px; }
 }
-@media (prefers-reduced-motion: reduce) { .twitch-about-faq summary svg, .twitch-about-foot a { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .twitch-about-foot a { transition: none; } }

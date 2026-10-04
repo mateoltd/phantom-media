@@ -48,38 +48,6 @@ export default function Home() {
           offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
         }}
       />
-      <StructuredData
-        data={{
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: [
-            {
-              "@type": "Question",
-              name: "What can Phantom Twitch do?",
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: "Phantom Twitch lets you search Twitch channels, watch live streams, browse recent VODs, and play Twitch videos in a modern adaptive web player.",
-              },
-            },
-            {
-              "@type": "Question",
-              name: "Which video formats are supported?",
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: "Phantom Twitch supports HLS adaptive streaming with multiple quality options including 1080p60, 720p60, 480p, 360p, and 160p, with both H.264 and H.265 codec support where available.",
-              },
-            },
-            {
-              "@type": "Question",
-              name: "Is Phantom Twitch affiliated with Twitch?",
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: "No. Phantom Twitch is an independent tool and is not endorsed by or affiliated with Twitch or Amazon.",
-              },
-            },
-          ],
-        }}
-      />
       {debugEnabled && <DebugVideoScript />}
       <Suspense fallback={null}>
         <VodApp />
