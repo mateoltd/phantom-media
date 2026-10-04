@@ -1,21 +1,26 @@
 import Link from "next/link";
+import { Broadcast, Browser, ChatCircle, HighDefinition, Plus } from "@phosphor-icons/react/ssr";
 import { FEATURED_CHANNELS } from "@/lib/featured-channels";
 import { buildChannelPath } from "@/lib/validation";
 
 const FEATURES = [
   {
+    icon: HighDefinition,
     title: "Adaptive quality up to 1080p60",
     body: "Pick a quality yourself or let the player ride the bandwidth. H.264 and H.265 sources are both handled where Twitch offers them.",
   },
   {
+    icon: Broadcast,
     title: "Live and past broadcasts",
     body: "Open a live channel, or work through a channel's recent broadcasts and past broadcasts without hunting for a player.",
   },
   {
+    icon: ChatCircle,
     title: "Chat and playback memory",
     body: "Live chat sits next to the player, and your position is remembered per video so you can pick a long stream back up where you stopped.",
   },
   {
+    icon: Browser,
     title: "No install, no account",
     body: "Everything runs in the browser tab you already have open. There is nothing to sign up for and nothing to configure.",
   },
@@ -41,9 +46,9 @@ const FAQ = [
 
 export function HomeContent() {
   return (
-    <section className="twitch-seo twitch-seo-home" aria-labelledby="twitch-seo-heading">
-      <div className="twitch-seo-inner">
-        <header>
+    <section className="twitch-about" aria-labelledby="twitch-seo-heading">
+      <div className="twitch-about-inner">
+        <header className="twitch-about-head">
           <h1 id="twitch-seo-heading" className="twitch-seo-title">
             Watch Twitch without the baggage
           </h1>
@@ -55,59 +60,60 @@ export function HomeContent() {
           </p>
         </header>
 
-        <div className="twitch-seo-block">
-          <h3 className="twitch-seo-subheading">What you get</h3>
-          <dl className="twitch-seo-features">
-            {FEATURES.map((feature) => (
-              <div key={feature.title} className="twitch-seo-feature">
-                <dt className="twitch-seo-feature-title">{feature.title}</dt>
-                <dd className="twitch-seo-feature-body">{feature.body}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
+        <dl className="twitch-about-features" aria-label="What you get">
+          {FEATURES.map((feature) => (
+            <div key={feature.title} className="twitch-about-feature">
+              <feature.icon size={24} aria-hidden="true" />
+              <dt className="twitch-seo-feature-title">{feature.title}</dt>
+              <dd className="twitch-seo-feature-body">{feature.body}</dd>
+            </div>
+          ))}
+        </dl>
 
-        <div className="twitch-seo-block">
-          <h3 className="twitch-seo-subheading">Popular channels</h3>
-          <p className="twitch-seo-body">
-            Every channel has a Phantom Twitch page. Open one to watch it live or to
-            work through its recent broadcasts.
-          </p>
-          <ul className="twitch-seo-links">
-            {FEATURED_CHANNELS.map((channel) => (
-              <li key={channel.login}>
-                <Link
-                  href={buildChannelPath(channel.login)}
-                  className="twitch-seo-link"
-                >
-                  {channel.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="twitch-seo-block">
-          <h3 className="twitch-seo-subheading">Common questions</h3>
-          <dl className="twitch-seo-faq">
+        <div className="twitch-about-row">
+          <h2 className="twitch-seo-subheading">Common questions</h2>
+          <div className="twitch-about-faq">
             {FAQ.map((item) => (
-              <div key={item.question} className="twitch-seo-faq-item">
-                <dt className="twitch-seo-faq-question">{item.question}</dt>
-                <dd className="twitch-seo-faq-answer">{item.answer}</dd>
-              </div>
+              <details key={item.question}>
+                <summary>
+                  {item.question}
+                  <Plus size={16} aria-hidden="true" />
+                </summary>
+                <p className="twitch-seo-faq-answer">{item.answer}</p>
+              </details>
             ))}
-          </dl>
+          </div>
         </div>
 
-        <p className="twitch-seo-body">
-          <Link href="/videos" className="twitch-seo-link">
-            Watch Twitch VODs
-          </Link>
-          {" · "}
-          <Link href="/disclaimer" className="twitch-seo-link">
-            Legal disclaimer
-          </Link>
-        </p>
+        <div className="twitch-about-row">
+          <h2 className="twitch-seo-subheading">Popular channels</h2>
+          <div>
+            <p className="twitch-seo-body">
+              Every channel has a Phantom Twitch page. Open one to watch it live or to
+              work through its recent broadcasts.
+            </p>
+            <ul className="twitch-seo-links">
+              {FEATURED_CHANNELS.map((channel) => (
+                <li key={channel.login}>
+                  <Link
+                    href={buildChannelPath(channel.login)}
+                    className="twitch-seo-link"
+                  >
+                    {channel.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <footer className="twitch-about-foot">
+          <p>Not affiliated with Twitch. For authorized use only.</p>
+          <nav aria-label="Site">
+            <Link href="/videos">Watch Twitch VODs</Link>
+            <Link href="/disclaimer">Legal disclaimer</Link>
+          </nav>
+        </footer>
       </div>
     </section>
   );

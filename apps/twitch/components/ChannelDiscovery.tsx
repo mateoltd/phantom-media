@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { IconButton } from "@phantom/ui";
 import { ArrowClockwise } from "@phosphor-icons/react/ssr";
 import { recentChannelLogins, type ChannelDiscoveryData, type DiscoveryChannel } from "@/lib/discovery";
 import type { HistoryEntry } from "./History";
@@ -20,7 +21,7 @@ async function discoveryResponse(response: Response) {
   return response.json();
 }
 
-export function ChannelDiscovery({ entries, onVideo, footer }: { entries: HistoryEntry[]; onVideo: (vodId: string) => void; footer?: ReactNode }) {
+export function ChannelDiscovery({ entries, onVideo }: { entries: HistoryEntry[]; onVideo: (vodId: string) => void }) {
   const channelKey = recentChannelLogins(entries).join(",");
   const historyKey = JSON.stringify(entries.slice(0, 30).map(({ channel, vodId, timestamp, title }) => ({ channel, vodId, timestamp, title })));
   const [refresh, setRefresh] = useState(0);
@@ -41,13 +42,13 @@ export function ChannelDiscovery({ entries, onVideo, footer }: { entries: Histor
   }, [channelKey, historyKey, requestKey]);
 
   function refreshFeed() { setError(null); setRefresh((value) => value + 1); }
-  return <Feed key={result?.request || "loading"} entries={entries} onVideo={onVideo} data={result?.data} loading={loading} refresh={refreshFeed} error={error} footer={footer} />;
+  return <Feed key={result?.request || "loading"} entries={entries} onVideo={onVideo} data={result?.data} loading={loading} refresh={refreshFeed} error={error} />;
 }
 
 const PAGE = 12;
 
-function Feed({ entries, onVideo, data, loading, refresh, error, footer }: {
-  entries: HistoryEntry[]; onVideo: (id: string) => void; data?: ChannelDiscoveryData; loading: boolean; refresh: () => void; error: LoadError | null; footer?: ReactNode;
+function Feed({ entries, onVideo, data, loading, refresh, error }: {
+  entries: HistoryEntry[]; onVideo: (id: string) => void; data?: ChannelDiscoveryData; loading: boolean; refresh: () => void; error: LoadError | null;
 }) {
   const [pool, setPool] = useState(() => uniqueChannels(data?.sections.flatMap((section) => section.channels) ?? []));
   const [next, setNext] = useState(data?.next);
@@ -83,15 +84,15 @@ function Feed({ entries, onVideo, data, loading, refresh, error, footer }: {
 
   return <div className="twitch-home-layout">
     <section className="twitch-home-hero" aria-labelledby="home-search-heading">
-      <h2 id="home-search-heading" className="twitch-home-prompt"><label htmlFor="home-search-input">What do you want to <em>watch?</em></label></h2>
+      <h2 id="home-search-heading" className="twitch-home-prompt"><label htmlFor="home-search-input">What do you want to watch?</label></h2>
       <HomeSearch />
       {yours.length > 0 && <nav className="twitch-channels" aria-label="Channels you have watched">
         {yours.map((channel) => {
           const status = channel.stream ? `live${channel.stream.game?.name ? `, ${channel.stream.game.name}` : ""}` : channel.stream === null ? "offline" : "recently watched";
           return <Link key={channel.login} href={buildChannelPath(channel.login)} className="twitch-channel" data-live={channel.stream ? "" : undefined} aria-label={`${channel.displayName}, ${status}`} title={`${channel.displayName}: ${status}`}>
             <HomeAvatar channel={channel} />
-            <span className="twitch-channel-name">{channel.displayName}</span>
-            {channel.stream && <span className="twitch-live-dot" aria-hidden="true" />}
+            {channel.displayName}
+            {channel.stream && <span className="twitch-channel-live" aria-hidden="true" />}
           </Link>;
         })}
       </nav>}
@@ -104,8 +105,8 @@ function Feed({ entries, onVideo, data, loading, refresh, error, footer }: {
     </section>}
     <section className="twitch-home-section" aria-labelledby="home-feed-heading" aria-busy={loading || fetching}>
       <div className="twitch-home-feed-heading">
-        <h2 id="home-feed-heading"><span className="twitch-live-dot" aria-hidden="true" />Live now</h2>
-        <button type="button" className="twitch-home-refresh" aria-label="Refresh streams" title="Refresh streams" data-busy={loading} disabled={loading || fetching || Boolean(error)} onClick={refresh}><ArrowClockwise size={18} aria-hidden="true" /></button>
+        <h2 id="home-feed-heading">Live now</h2>
+        <IconButton label="Refresh streams" disabled={loading || fetching || Boolean(error)} onClick={refresh}><ArrowClockwise size={18} /></IconButton>
       </div>
       <div className="twitch-home-media-grid">
         {waiting ? Array.from({ length: PAGE }, (_, index) => <HomeTileSkeleton key={index} />)
@@ -118,12 +119,11 @@ function Feed({ entries, onVideo, data, loading, refresh, error, footer }: {
             : hasMore && <button type="button" className="cinema-button" disabled={fetching} onClick={showMore}>{fetching ? "Loading…" : "Show more"}</button>)}
       </div>
     </section>
-    {footer}
   </div>;
 }
 
 function RetryNotice({ error, retry }: { error: LoadError; retry: () => void }) {
   const [ready, setReady] = useState(false);
   useEffect(() => { const timer = setTimeout(() => setReady(true), Math.max(0, error.retryAt - Date.now())); return () => clearTimeout(timer); }, [error.retryAt]);
-  return <p role="status">{error.message} {!error.terminal && <button type="button" className="twitch-home-text-button" disabled={!ready} onClick={retry}>Try again</button>}</p>;
+  return <p role="status">{error.message} {!error.terminal && <button type="button" disabled={!ready} onClick={retry}>Try again</button>}</p>;
 }

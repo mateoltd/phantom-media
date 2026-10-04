@@ -284,7 +284,7 @@ function HomeView({
   return (
     <div className="twitch-home" data-has-history={history.length > 0}>
       <div className="twitch-home-bottom">
-        <ChannelDiscovery entries={history} onVideo={onVideo} footer={<Footer />} />
+        <ChannelDiscovery entries={history} onVideo={onVideo} />
       </div>
     </div>
   );

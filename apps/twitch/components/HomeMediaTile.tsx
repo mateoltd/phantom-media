@@ -40,7 +40,7 @@ function Thumbnail({ image, channel }: { image?: string; channel: DiscoveryChann
     <span className="t-skel-skeleton" aria-hidden="true"><Skeleton height="100%" borderRadius={0} enableAnimation={!ready} /></span>
     <span className="t-skel-content">
       {image && !failed ? <Image src={image} alt="" fill unoptimized sizes="(max-width: 640px) 90vw, (max-width: 1280px) 43vw, 578px" onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />
-        : <span className="twitch-home-art-fallback">{channel.profileImageURL && <Image src={channel.profileImageURL} alt="" fill unoptimized sizes="120px" />}<HomeAvatar channel={channel} /></span>}
+        : <span className="twitch-home-art-fallback"><HomeAvatar channel={channel} /></span>}
     </span>
   </span>;
 }
@@ -61,7 +61,7 @@ function TileContents({ channel, title, image, live = false, progress, resumeLab
     <span className="media-tile-art twitch-home-art">
       <Thumbnail key={image || "fallback"} image={image} channel={channel} />
       <span className="media-tile-play twitch-home-play" aria-hidden="true"><Play size={32} weight="fill" /></span>
-      {live && channel.stream && <span className="twitch-home-live" aria-label={`Live, ${channel.stream.viewersCount.toLocaleString("en")} viewers`}>{viewerCount.format(channel.stream.viewersCount)}</span>}
+      {live && channel.stream && <span className="twitch-home-live" aria-label={`Live, ${channel.stream.viewersCount.toLocaleString("en")} viewers`}>Live <span>{viewerCount.format(channel.stream.viewersCount)}</span></span>}
       {position && !compact && <span className="twitch-home-position">{position}</span>}
       {progress !== undefined && <ProgressRail slim percent={progress} label={resumeLabel || "Watch progress"} className="twitch-resume-progress" />}
     </span>
