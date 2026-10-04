@@ -14,48 +14,114 @@
 .twitch-home { min-height: calc(100svh - var(--media-header-height)); }
 .twitch-home-bottom { min-height: inherit; display: flex; flex-direction: column; }
 /* Same frame as .media-header-inner, so page content starts under the logo and ends where the header ends. */
-.twitch-home-layout, .twitch-page {
-  --rail-avatar: 46px;
+.twitch-page {
   --feed-heading-height: 40px;
-  --feed-heading-gap: 24px;
+  --feed-heading-gap: 20px;
   flex: 1;
+  display: flex;
+  flex-direction: column;
   width: calc(100% - var(--navigation-gutter) * 2);
   margin-inline: auto;
   padding: clamp(24px, 4vh, 44px) 1.5rem 0;
 }
+/* The home page is a launcher: people arrive knowing what they want, so search is the page and everything
+   else is a shortcut or a suggestion underneath it. */
 .twitch-home-layout {
-  display: grid;
-  grid-template-columns: var(--rail-avatar) minmax(0, 1fr);
-  grid-template-rows: 1fr auto;
-  gap: 24px 32px;
+  --cols: 4;
+  --gap: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0 calc(var(--navigation-gutter) + 1.5rem);
 }
-.twitch-page { display: flex; flex-direction: column; }
-.twitch-home-channel-rail { display: flex; flex-direction: column; gap: 13px; align-items: center; align-self: start; margin-top: calc(var(--feed-heading-height) + var(--feed-heading-gap)); position: sticky; top: calc(var(--media-header-height) + 24px); z-index: 5; }
-.twitch-home-rail-channel { position: relative; display: block; flex: none; border-radius: 50%; }
-.twitch-home-avatar-wrap { position: relative; display: block; flex: none; width: var(--rail-avatar); height: var(--rail-avatar); }
+.twitch-home-section { margin-top: 56px; }
+.twitch-home-feed-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: var(--feed-heading-height, 40px); margin-bottom: var(--feed-heading-gap, 14px); }
+/* Section headings are h2: the page h1 lives in the server-rendered .twitch-seo block. */
+.twitch-home-feed-heading h1, .twitch-home-feed-heading h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(1.15rem, 1.5vw, 1.3rem); line-height: 1.35; font-weight: 500; letter-spacing: -0.025em; margin: 0; }
+.twitch-page .twitch-home-feed-heading h1 { font-size: clamp(1.4rem, 2vw, 1.75rem); }
+/* Same quiet control as the rail arrows in Stream. The negative margin puts the glyph, not its hit area, on the frame edge. */
+.twitch-home-refresh { display: flex; flex: none; align-items: center; justify-content: center; width: 40px; height: 40px; margin-right: -11px; border-radius: 50%; color: #c3c6cb; }
+.twitch-home-refresh:hover:not(:disabled) { color: #fff; }
+.twitch-home-refresh:disabled { opacity: 0.25; cursor: default; }
+.twitch-home-refresh[data-busy="true"] { opacity: 1; }
+.twitch-home-refresh[data-busy="true"] svg { animation: twitch-refresh-spin 900ms linear infinite; }
+@keyframes twitch-refresh-spin { to { transform: rotate(360deg); } }
+
+/* Search, and under it the channels you go back to. Centred, like a browser's new tab: one field, then your shortcuts. */
+/* The hero is its own layer above the sections after it, or their tiles would paint over the open suggestion list. */
+.twitch-home-hero { position: relative; z-index: 20; isolation: isolate; display: flex; flex-direction: column; align-items: center; padding-block: clamp(44px, 12svh, 124px) clamp(12px, 4svh, 40px); }
+/* A little light behind the field, warm like the mark in the logo, so the page has a centre instead of a flat black wall. */
+.twitch-home-hero::before { content: ""; position: absolute; z-index: -1; top: calc(-1 * var(--media-header-height)); left: 50%; width: min(1100px, 100vw); height: 620px; translate: -50% 0; background: radial-gradient(50% 55% at 50% 38%, #ffffff0b, transparent 70%), radial-gradient(38% 42% at 50% 44%, #ff5a360d, transparent 72%); pointer-events: none; }
+.twitch-home-prompt { margin: 0 0 32px; font-size: clamp(1.75rem, 3.6vw, 2.9rem); font-weight: 600; line-height: 1.1; letter-spacing: -0.04em; text-align: center; color: var(--color-text-tertiary); animation: var(--animate-slide-up); }
+.twitch-home-prompt em { font-style: normal; color: var(--color-text); }
+.twitch-home-search { position: relative; z-index: 20; width: min(100%, 660px); animation: var(--animate-slide-up); animation-delay: 60ms; }
+/* The field is the one object on the page that should feel made: a lit top edge, a soft fill, and a focus state you cannot miss. */
+.twitch-home-search .search-pill { height: 64px; padding-left: 24px; padding-right: 9px; border-color: #ffffff1c; background: linear-gradient(#1d1f23, #17191c); box-shadow: inset 0 1px 0 #ffffff12, 0 1px 2px #0006; backdrop-filter: none; transition: border-color 180ms ease, box-shadow 180ms ease; }
+.twitch-home-search .search-pill:hover { border-color: #ffffff2e; }
+.twitch-home-search .search-pill:focus-within { border-color: #ffffff5c; box-shadow: inset 0 1px 0 #ffffff12, 0 0 0 5px #ffffff0d, 0 1px 2px #0006; }
+.twitch-home-search .search-pill > svg { color: var(--color-text-tertiary); }
+.twitch-home-search .search-pill input { padding-inline: 14px; font-size: 17px; font-weight: 400; letter-spacing: -0.01em; }
+.twitch-home-search .search-pill input::placeholder { color: var(--color-text-tertiary); }
+.twitch-home-search .search-pill-submit { width: 46px; height: 46px; }
+/* Shortcuts are pills, like the field they sit under, and small enough that one or two do not look stranded. */
+.twitch-channels { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: min(100%, 760px); margin-top: 24px; animation: var(--animate-slide-up); animation-delay: 120ms; }
+.twitch-channel { display: flex; flex: none; align-items: center; gap: 9px; height: 40px; padding: 0 14px 0 4px; border: 1px solid #ffffff14; border-radius: 999px; background: #ffffff08; transition: background 160ms ease, border-color 160ms ease; }
+.twitch-channel:hover { border-color: #ffffff26; background: #ffffff12; }
+.twitch-channel .twitch-home-avatar-wrap { width: 30px; height: 30px; }
+.twitch-channel-name { font-size: 13px; font-weight: 500; line-height: 1; color: var(--color-text-secondary); transition: color 160ms ease; }
+.twitch-channel:hover .twitch-channel-name, .twitch-channel[data-live] .twitch-channel-name { color: var(--color-text); }
+.twitch-live-dot { position: relative; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--color-error); }
+/* The heading's dot breathes, slowly, once it is the thing saying "these are on air". */
+.twitch-home-feed-heading .twitch-live-dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: inherit; animation: twitch-live-pulse 2.4s ease-out infinite; }
+@keyframes twitch-live-pulse { from { opacity: 0.55; scale: 1; } 70%, to { opacity: 0; scale: 3.2; } }
+/* The pulse spreads past the dot, so this heading cannot clip its overflow the way a long one does. */
+.twitch-home-feed-heading h2:has(.twitch-live-dot) { display: flex; align-items: center; gap: 12px; overflow: visible; padding-left: 3px; }
+
+/* One search on screen at a time: the header's stays out until the home search has scrolled away. */
+.media-header:has(.twitch-header-search[data-home]) :is(.media-header-search, .media-header-search-trigger) { transition: opacity 180ms ease, visibility 180ms; }
+html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[data-home]) :is(.media-header-search, .media-header-search-trigger) { opacity: 0; visibility: hidden; pointer-events: none; }
+
+.twitch-home-avatar-wrap { position: relative; display: block; flex: none; width: 46px; height: 46px; }
 .twitch-home-avatar { position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; width: 100%; height: 100%; border-radius: 50%; background: var(--color-surface-light); font-size: 16px; color: var(--color-text-secondary); }
-.twitch-home-rail-mobile-name { display: none; }
-.twitch-home-feed { min-width: 0; width: 100%; }
-.twitch-home-feed-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: var(--feed-heading-height); margin-bottom: var(--feed-heading-gap); }
-/* The feed heading is an h2: the page h1 lives in the server-rendered .twitch-seo block. */
-.twitch-home-feed-heading h1, .twitch-home-feed-heading h2 { font-size: 26px; line-height: 1.35; font-weight: 600; margin: 0; }
-.twitch-home-feed-heading > button { margin-right: -9px; }
-.twitch-home-media-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 24px; }
+/* A hairline gives every avatar and thumbnail the same edge, however dark its artwork is. */
+.twitch-home-avatar::after, .twitch-home-art::after { content: ""; position: absolute; inset: 0; z-index: 3; border-radius: inherit; box-shadow: inset 0 0 0 1px #ffffff14; pointer-events: none; }
+
+.twitch-home-media-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 36px 24px; }
+.twitch-home-layout .twitch-home-media-grid { grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 32px var(--gap); }
 .twitch-home-tile { display: block; min-width: 0; width: 100%; text-align: left; border-radius: 16px; container-type: inline-size; }
+/* Tiles arrive a column at a time rather than all at once. */
+.twitch-home-layout .twitch-home-media-grid > * { animation: stagger-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.twitch-home-layout .twitch-home-media-grid > :nth-child(4n + 2) { animation-delay: 40ms; }
+.twitch-home-layout .twitch-home-media-grid > :nth-child(4n + 3) { animation-delay: 80ms; }
+.twitch-home-layout .twitch-home-media-grid > :nth-child(4n + 4) { animation-delay: 120ms; }
 .twitch-home-art { width: 100%; aspect-ratio: 16 / 9; isolation: isolate; }
-.twitch-home-tile-meta { display: flex; align-items: flex-start; gap: 12px; padding-top: 12px; }
-.twitch-home-tile-meta .twitch-home-avatar-wrap { width: 36px; height: 36px; }
-.twitch-home-tile-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; }
-.twitch-home-art-title { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: var(--color-text); font-size: 14px; font-weight: 500; line-height: 1.4; }
-.twitch-home-live { position: absolute; top: 12px; right: 12px; z-index: 2; display: flex; flex: none; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px; background: #08090bcc; font-size: 12px; line-height: 1.4; color: #ffacac; white-space: nowrap; }
-.twitch-home-live span { color: #f4f4f8; font-variant-numeric: tabular-nums; }
-.twitch-home-tile-channel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; line-height: 1.4; color: var(--color-text-secondary); }
-.twitch-home-art-fallback { display: flex; height: 100%; align-items: center; justify-content: center; gap: 16px; color: var(--color-text-tertiary); }
+/* The channel leads and the stream title sits under it in a quieter voice: titles are written to shout, and the page should not shout with them. */
+.twitch-home-tile-meta { display: block; padding: 12px 0 0; }
+.twitch-home-tile-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.twitch-home-tile-channel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 500; line-height: 1.4; letter-spacing: -0.01em; color: var(--color-text); }
+.twitch-home-tile-detail { flex: 0 1 auto; min-width: 0; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; line-height: 1.4; color: var(--color-text-secondary); }
+.twitch-home-art-title { display: block; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; line-height: 1.5; color: var(--color-text-tertiary); }
+.twitch-home-live, .twitch-home-position { position: absolute; right: 10px; z-index: 2; display: flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px; background: #0b0c0ec7; backdrop-filter: blur(10px) saturate(1.4); color: #fff; font: 11px/1.4 var(--font-mono); white-space: nowrap; pointer-events: none; }
+.twitch-home-live { top: 10px; }
+.twitch-home-live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--color-error); }
+.twitch-home-position { bottom: 10px; }
+/* Continue watching is a reminder, not the main event: a small picture with the text beside it. */
+.twitch-home-tile.twitch-home-tile-compact { display: flex; gap: 14px; }
+.twitch-home-tile-compact .twitch-home-art { flex: none; width: auto; height: 84px; border-radius: 10px; }
+.twitch-home-tile-compact .twitch-home-tile-meta { display: flex; flex: 1; min-width: 0; flex-direction: column; padding: 0; }
+.twitch-home-tile-compact .twitch-home-tile-channel { font-size: 14px; }
+.twitch-home-tile-compact .twitch-home-art-title { display: -webkit-box; margin-top: 2px; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; overflow-wrap: anywhere; line-height: 1.45; }
+.twitch-home-tile-time { margin-top: auto; font: 11px/1.3 var(--font-mono); color: var(--color-text-tertiary); }
+/* No thumbnail: the avatar fills the frame as a soft wash, so the tile still reads as a picture instead of an empty box. */
+.twitch-home-art-fallback { position: relative; display: flex; height: 100%; align-items: center; justify-content: center; overflow: hidden; color: var(--color-text-tertiary); }
+.twitch-home-art-fallback > img { object-fit: cover; transform: scale(1.6); filter: blur(36px) saturate(0.9); opacity: 0.5; }
+.twitch-home-art-fallback .twitch-home-avatar-wrap { width: auto; height: 36%; aspect-ratio: 1; }
 .twitch-home-art .twitch-resume-progress { position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; margin: 0; border-radius: 0; background: #ffffff40; }
 .twitch-resume-progress .job-fill { border-radius: 0; background: var(--color-phantom); box-shadow: none; }
 .twitch-discovery-empty { padding-block: 24px; font-size: 13px; color: var(--color-text-secondary); }
 .twitch-footer { margin-top: 2rem; }
-.twitch-home .twitch-footer { grid-column: 2; margin: 0; padding: 12px 0 20px; }
+.twitch-home .twitch-footer { margin: 0; padding: 24px 0 20px; }
 .twitch-page .twitch-footer { margin-top: auto; }
 .twitch-history-heading { height: auto; align-items: flex-end; }
 .twitch-history-note { margin-top: 4px; font-size: 13px; color: var(--color-text-secondary); }
@@ -67,7 +133,7 @@
 .twitch-history-confirm .twitch-history-clear { margin-right: 0; }
 .twitch-history-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .twitch-history-item { position: relative; min-width: 0; container-type: inline-size; }
-.twitch-history-item .twitch-home-tile-copy { padding-right: 28px; }
+.twitch-history-item .twitch-home-tile-meta { padding-right: 28px; }
 /* The tile is itself a button or link, so the remove control sits beside it and is placed over the title row. */
 .twitch-history-remove { position: absolute; top: calc(100cqw * 9 / 16 + 6px); right: -8px; z-index: 3; }
 .twitch-history-empty { display: flex; flex-direction: column; align-items: center; padding: 72px 0; text-align: center; color: var(--color-text-secondary); }
@@ -78,17 +144,33 @@
 @media (max-width: 1280px) {
   .twitch-history-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+/* Continue watching stays one row, whatever the column count. */
+.twitch-home-resume-grid > :nth-child(n + 5) { display: none; }
+@media (max-width: 1399px) {
+  .twitch-home-layout { --cols: 3; }
+  .twitch-home-resume-grid > :nth-child(n + 4) { display: none; }
+}
 @media (max-width: 1000px) {
-  .twitch-home-layout { --rail-avatar: 42px; column-gap: 24px; }
-  .twitch-home-media-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 18px; }
+  .twitch-home-media-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px 18px; }
+}
+@media (max-width: 900px) {
+  .twitch-home-layout { --cols: 2; --gap: 16px; }
+  .twitch-home-resume-grid > :nth-child(n + 3) { display: none; }
 }
 @media (max-width: 640px) {
-  .twitch-home-layout, .twitch-page { --feed-heading-gap: 18px; padding: 12px 0.75rem 0; }
-  .twitch-home-layout { display: flex; flex-direction: column; gap: 22px; }
-  .twitch-home-channel-rail { flex-direction: row; position: static; width: 100%; margin-top: 0; gap: 16px; padding: 4px 2px; }
-  .twitch-home-rail-channel { flex: none; width: 52px; display: flex; flex-direction: column; align-items: center; gap: 7px; border-radius: 10px; }
-  .twitch-home-rail-mobile-name { display: block; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; font-size: 10px; color: var(--color-text-secondary); }
-  .twitch-home-feed-heading h1 { font-size: 23px; }
+  .twitch-page { --feed-heading-gap: 18px; padding: 12px 0.75rem 0; }
+  .twitch-home-layout { --cols: 1; padding-inline: calc(var(--navigation-gutter) + 0.75rem); }
+  .twitch-home-section { margin-top: 40px; }
+  .twitch-home-hero { padding-block: 32px 8px; }
+  .twitch-home-prompt { margin-bottom: 22px; }
+  .twitch-home-search .search-pill { height: 56px; padding-left: 14px; }
+  /* The placeholder needs the room more than the field needs a second magnifier. */
+  .twitch-home-search .search-pill > svg { display: none; }
+  .twitch-home-search .search-pill input { padding-inline: 6px; font-size: 16px; }
+  .twitch-home-search .search-pill-submit { width: 40px; height: 40px; }
+  .twitch-channels { margin-top: 18px; }
+  .twitch-home-layout .twitch-home-media-grid { row-gap: 24px; }
+  .twitch-home-resume-grid > :nth-child(-n + 3) { display: flex; }
   .twitch-home-media-grid { grid-template-columns: minmax(0, 1fr); gap: 24px; }
   .twitch-home .twitch-footer { margin-top: auto; }
 }
@@ -169,47 +251,29 @@
 .twitch-home-thumbnail { position: absolute; inset: 0; display: block; z-index: 0; }
 .twitch-home-thumbnail img { object-fit: cover; }
 .twitch-home-thumbnail .t-skel-skeleton > span, .twitch-home-tile-skeleton .twitch-home-art > span { display: block; height: 100%; }
-.twitch-home-feed-end { min-height: 24px; margin-top: 28px; color: var(--color-text-tertiary); font-size: 12px; text-align: center; }
-.twitch-home-feed-end button { margin-left: 8px; text-decoration: underline; text-underline-offset: 4px; }
-.twitch-home-feed-end button:disabled { opacity: .45; cursor: wait; }
-.twitch-home-tile:focus-visible, .twitch-home-rail-channel:focus-visible { outline: 1px solid var(--color-text-secondary); outline-offset: -2px; }
+.twitch-home-feed-end { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 20px; margin-top: 44px; color: var(--color-text-tertiary); font-size: 13px; text-align: center; }
+.twitch-home-feed-end:empty { display: none; }
+.twitch-home-feed-end .cinema-button:disabled { opacity: 0.5; cursor: wait; }
+.twitch-home-text-button { margin-left: 8px; color: var(--color-text-secondary); text-decoration: underline; text-underline-offset: 4px; }
+.twitch-home-text-button:hover:not(:disabled) { color: var(--color-text); }
+.twitch-home-text-button:disabled { opacity: 0.45; cursor: wait; }
+.twitch-home-tile:focus-visible, .twitch-channel:focus-visible { outline: 2px solid var(--color-text); outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .twitch-home .react-loading-skeleton::after { animation: none; } }
 
-.twitch-home-channel-rail.t-tt-group { display: flex; position: sticky; }
-.twitch-home-channel-rail .twitch-home-rail-tooltip { --tt-bg: #242629; --tt-fg: #c2c5cc; display: block; left: calc(100% + 14px); bottom: auto; width: 258px; max-width: calc(100vw - 110px); padding: 10px 12px; border-radius: 10px; transform: translateY(-50%); transform-origin: left center; white-space: normal; text-align: left; font-size: 12px; z-index: 10; }
-.twitch-home-channel-rail .twitch-home-rail-tooltip .t-tt-text { position: relative; z-index: 1; display: block; white-space: normal; }
-.twitch-home-tooltip-art { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
-.twitch-home-tooltip-art img { position: absolute; top: 0; right: 0; display: block; width: 155px; height: 100%; object-fit: cover; object-position: center 28%; opacity: .9; filter: blur(1px) saturate(.85); mask-image: linear-gradient(90deg, transparent, #000 54%); }
-.twitch-home-tooltip-art::after { position: absolute; inset: 0; content: ""; background: linear-gradient(90deg, #242629f8 4%, #242629e6 52%, #24262920), linear-gradient(0deg, #242629aa, transparent 48%); }
-.twitch-home-rail-tooltip[data-has-reason="true"] .twitch-home-tooltip-art { mask-image: linear-gradient(180deg, #000 0%, #000 45%, transparent 76%); }
-.twitch-home-tooltip-name { display: block; margin-bottom: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text); font-size: 14px; line-height: 1.25; font-weight: 600; }
-.twitch-home-tooltip-status { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 3px 7px; border-radius: 6px; background: #323438; color: #c6c8ce; font-size: 11px; line-height: 1.3; }
-.twitch-home-tooltip-status[data-live="true"] { background: #49292e; color: #ffc1c4; }
-.twitch-home-tooltip-status-dot { width: 6px; height: 6px; flex: none; border-radius: 50%; background: #92959d; }
-.twitch-home-tooltip-status[data-live="true"] .twitch-home-tooltip-status-dot { background: #ff6471; box-shadow: 0 0 0 2px #ff64712c; }
-.twitch-home-tooltip-viewers { margin-left: 2px; color: #e2c4c7; font-variant-numeric: tabular-nums; }
-.twitch-home-tooltip-game-fallback { display: block; margin-top: 5px; color: #a7aab2; font-size: 10px; }
-.twitch-home-tooltip-reason { display: flex; align-items: flex-start; gap: 7px; margin-top: 9px; color: #a7aab2; font-size: 10px; line-height: 1.45; }
-.twitch-home-tooltip-reason > svg { flex: none; margin-top: 1px; color: #a7aab2; }
 .twitch-home-avatar-content { display: flex; align-items: center; justify-content: center; }
 .twitch-home-avatar-content img { object-fit: cover; }
 .twitch-home-avatar .t-skel-skeleton > span, .twitch-home-avatar-wrap > span:not(.twitch-home-avatar) { display: block; height: 100%; }
-.twitch-home-avatar-wrap[data-offline] .twitch-home-avatar { filter: grayscale(1); }
-.twitch-home-rail-channel .twitch-home-avatar-wrap { transition: transform 180ms ease; }
-.twitch-home-rail-channel:hover .twitch-home-avatar-wrap, .twitch-home-rail-channel:focus-visible .twitch-home-avatar-wrap { transform: translateY(-2px) scale(1.05); }
+.twitch-home-avatar-wrap[data-offline] .twitch-home-avatar { filter: grayscale(1); opacity: 0.7; }
 .twitch-home-play { z-index: 1; background: transparent; pointer-events: none; }
-.twitch-home-live { pointer-events: none; }
 .twitch-home-tile .twitch-resume-progress { z-index: 2; }
-.twitch-home-tile-channel { transition: color 160ms ease; }
-.twitch-home-tile:hover .twitch-home-tile-channel { color: var(--color-text); }
+.twitch-home-art-title { transition: color 160ms ease; }
+.twitch-home-tile:hover .twitch-home-art-title { color: var(--color-text); }
 .twitch-home-tile:focus-visible .twitch-home-art { transform: translateY(-3px); }
-@media (max-width: 640px) {
-  .twitch-home-channel-rail.t-tt-group { position: static; justify-content: space-between; }
-  .twitch-home-channel-rail .twitch-home-rail-tooltip { display: none; }
-}
 @media (prefers-reduced-motion: reduce) {
-  .twitch-home-rail-channel .twitch-home-avatar-wrap, .twitch-home-tile-channel { transition: none; }
-  .twitch-home-rail-channel:hover .twitch-home-avatar-wrap, .twitch-home-rail-channel:focus-visible .twitch-home-avatar-wrap, .twitch-home-tile:is(:hover,:focus-visible) .twitch-home-art { transform: none; }
+  .twitch-channel, .twitch-channel-name, .twitch-home-art-title, .twitch-home-search .search-pill { transition: none; }
+  .twitch-home-prompt, .twitch-home-search, .twitch-channels, .twitch-home-layout .twitch-home-media-grid > *, .twitch-home-feed-heading .twitch-live-dot::after { animation: none; }
+  .twitch-home-refresh[data-busy="true"] svg { animation: none; }
+  .twitch-home-tile:is(:hover,:focus-visible) .twitch-home-art { transform: none; }
 }
 
 /* Reserve one viewing area, including the title, regardless of chat state. */
@@ -520,6 +584,10 @@
   margin-inline: auto;
   padding: clamp(2.5rem, 6vw, 4.5rem) 1.5rem clamp(3rem, 7vw, 5rem);
 }
+/* On the home page the copy shares the feed's left edge instead of re-centring under it. */
+.twitch-seo-home { margin-top: 32px; }
+.twitch-seo-home .twitch-seo-inner { max-width: none; }
+.twitch-seo-home .twitch-seo-inner > * { max-width: 62rem; }
 .twitch-seo-title {
   margin: 0;
   font-size: clamp(1.6rem, 3.4vw, 2.25rem);

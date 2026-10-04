@@ -41,7 +41,7 @@ const FAQ = [
 
 export function HomeContent() {
   return (
-    <section className="twitch-seo" aria-labelledby="twitch-seo-heading">
+    <section className="twitch-seo twitch-seo-home" aria-labelledby="twitch-seo-heading">
       <div className="twitch-seo-inner">
         <header>
           <h1 id="twitch-seo-heading" className="twitch-seo-title">

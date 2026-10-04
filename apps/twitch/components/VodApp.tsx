@@ -222,6 +222,11 @@ export function VodApp() {
     setState("home");
   }, [loadChannel, loadVod, resetPlayback, routeChannel, routeStartTime, routeVodId]);
 
+  // "/" can also play a video (?v=). The header hides its search on "/" until the home search says otherwise, and here there is none.
+  useEffect(() => {
+    if (state !== "home") document.documentElement.dataset.homeSearch = "hidden";
+  }, [state]);
+
   const onVodTimeUpdate = useCallback(
     (time: number) => {
       setPlayerTime(time);

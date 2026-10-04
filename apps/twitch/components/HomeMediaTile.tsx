@@ -32,10 +32,6 @@ function AvatarImage({ channel }: { channel: DiscoveryChannel }) {
   </span>;
 }
 
-export function HomeAvatarSkeleton() {
-  return <span className="twitch-home-avatar-wrap" aria-hidden="true"><Skeleton circle height="100%" /></span>;
-}
-
 function Thumbnail({ image, channel }: { image?: string; channel: DiscoveryChannel }) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -44,7 +40,7 @@ function Thumbnail({ image, channel }: { image?: string; channel: DiscoveryChann
     <span className="t-skel-skeleton" aria-hidden="true"><Skeleton height="100%" borderRadius={0} enableAnimation={!ready} /></span>
     <span className="t-skel-content">
       {image && !failed ? <Image src={image} alt="" fill unoptimized sizes="(max-width: 640px) 90vw, (max-width: 1280px) 43vw, 578px" onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />
-        : <span className="twitch-home-art-fallback"><HomeAvatar channel={channel} /></span>}
+        : <span className="twitch-home-art-fallback">{channel.profileImageURL && <Image src={channel.profileImageURL} alt="" fill unoptimized sizes="120px" />}<HomeAvatar channel={channel} /></span>}
     </span>
   </span>;
 }
@@ -52,47 +48,49 @@ function Thumbnail({ image, channel }: { image?: string; channel: DiscoveryChann
 export function HomeTileSkeleton() {
   return <div className="twitch-home-tile twitch-home-tile-skeleton" aria-hidden="true">
     <span className="media-tile-art twitch-home-art"><Skeleton height="100%" borderRadius={0} /></span>
-    <span className="twitch-home-tile-meta">
-      <span className="twitch-home-avatar-wrap"><Skeleton circle height="100%" /></span>
-      <span className="twitch-home-tile-copy"><Skeleton width="88%" height={15} /><Skeleton width="42%" height={12} /></span>
-    </span>
+    <span className="twitch-home-tile-meta"><Skeleton width="38%" height={15} /><Skeleton width="82%" height={12} /></span>
   </div>;
 }
 
-function TileContents({ channel, title, image, live = false, progress, resumeLabel }: {
-  channel: DiscoveryChannel; title: string; image?: string; live?: boolean; progress?: number; resumeLabel?: string;
+const viewerCount = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
+
+function TileContents({ channel, title, image, live = false, progress, resumeLabel, position, detail, compact = false }: {
+  channel: DiscoveryChannel; title: string; image?: string; live?: boolean; progress?: number; resumeLabel?: string; position?: string; detail?: string; compact?: boolean;
 }) {
   return <>
     <span className="media-tile-art twitch-home-art">
       <Thumbnail key={image || "fallback"} image={image} channel={channel} />
       <span className="media-tile-play twitch-home-play" aria-hidden="true"><Play size={32} weight="fill" /></span>
-      {live && channel.stream && <span className="twitch-home-live" aria-label={`Live, ${channel.stream.viewersCount.toLocaleString("en")} viewers`}>Live <span>{new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(channel.stream.viewersCount)}</span></span>}
+      {live && channel.stream && <span className="twitch-home-live" aria-label={`Live, ${channel.stream.viewersCount.toLocaleString("en")} viewers`}>{viewerCount.format(channel.stream.viewersCount)}</span>}
+      {position && !compact && <span className="twitch-home-position">{position}</span>}
       {progress !== undefined && <ProgressRail slim percent={progress} label={resumeLabel || "Watch progress"} className="twitch-resume-progress" />}
     </span>
     <span className="twitch-home-tile-meta">
-      <HomeAvatar channel={channel} />
-      <span className="twitch-home-tile-copy">
-        <span className="twitch-home-art-title">{title}</span>
+      <span className="twitch-home-tile-head">
         <span className="twitch-home-tile-channel">{channel.displayName}</span>
+        {detail && <span className="twitch-home-tile-detail">{detail}</span>}
       </span>
+      {title !== channel.displayName && <span className="twitch-home-art-title">{title}</span>}
+      {position && compact && <span className="twitch-home-tile-time">{position}</span>}
     </span>
   </>;
 }
 
-export function ResumeTile({ entry, channel, onSelect }: { entry: HistoryEntry; channel?: DiscoveryChannel; onSelect: (id: string) => void }) {
+export function ResumeTile({ entry, channel, onSelect, compact = false }: { entry: HistoryEntry; channel?: DiscoveryChannel; onSelect: (id: string) => void; compact?: boolean }) {
   const [seconds] = useLocalStorage<number>(`phantom-playback:${entry.vodId}`, 0);
   const resume = typeof seconds === "number" && Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
   const progress = resume && entry.lengthSeconds && entry.lengthSeconds > 0 ? Math.min(100, resume / entry.lengthSeconds * 100) : undefined;
   const resumeLabel = resume ? `Resume at ${formatTime(resume)}` : "Resume watching";
   const owner = channel ?? { id: entry.channel, login: entry.channel, displayName: entry.channel };
   const live = isCurrentBroadcast(entry, channel);
-  return <button type="button" className="twitch-home-tile media-tile-hit" onClick={() => onSelect(entry.vodId)} aria-label={`${entry.title || entry.channel}, ${live ? "live, " : ""}${resumeLabel}`} title={`${entry.title || entry.channel}: ${resumeLabel}`}>
-    <TileContents channel={owner} title={entry.title || entry.channel} image={historyPreview(entry, channel)} live={live} progress={progress} resumeLabel={resumeLabel} />
+  const position = resume ? entry.lengthSeconds ? `${formatTime(resume)} / ${formatTime(entry.lengthSeconds)}` : formatTime(resume) : undefined;
+  return <button type="button" className={`twitch-home-tile media-tile-hit${compact ? " twitch-home-tile-compact" : ""}`} onClick={() => onSelect(entry.vodId)} aria-label={`${entry.title || entry.channel}, ${live ? "live, " : ""}${resumeLabel}`} title={`${entry.title || entry.channel}: ${resumeLabel}`}>
+    <TileContents channel={owner} title={entry.title || entry.channel} image={historyPreview(entry, channel)} live={live} progress={progress} resumeLabel={resumeLabel} position={position} detail={live && !compact ? channel?.stream?.game?.name : undefined} compact={compact} />
   </button>;
 }
 
 export function RecommendedTile({ channel }: { channel: DiscoveryChannel }) {
   return <Link className="twitch-home-tile media-tile-hit" href={buildChannelPath(channel.login)} title={`${channel.stream?.title || channel.displayName}\n${channel.recommendation?.reason || ""}`} aria-label={`${channel.displayName}, live, ${channel.stream?.title || ""}. ${channel.recommendation?.reason || ""}`}>
-    <TileContents channel={channel} title={channel.stream?.title || channel.displayName} image={channel.stream?.previewImageURL} live />
+    <TileContents channel={channel} title={channel.stream?.title || channel.displayName} image={channel.stream?.previewImageURL} live detail={channel.stream?.game?.name} />
   </Link>;
 }
