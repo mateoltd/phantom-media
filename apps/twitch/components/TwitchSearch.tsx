@@ -43,8 +43,11 @@ export function TwitchSearch({ inputId = "global-search-input", size = "compact"
         const response = await fetch(vodId
           ? `/api/vod/metadata?vodId=${encodeURIComponent(vodId)}`
           : `/api/channel/search?q=${encodeURIComponent(term)}`, { signal: controller.signal });
+        if (!response.ok) {
+          const data = await response.json().catch(() => null);
+          throw new Error(typeof data?.error === "string" && data.error ? data.error : "Search unavailable. Try again.");
+        }
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Search unavailable. Try again.");
         if (controller.signal.aborted) return;
         const found: SearchSuggestion[] = vodId ? [{
           id: `vod:${vodId}`, title: data.title || `Video ${vodId}`, subtitle: data.channel,

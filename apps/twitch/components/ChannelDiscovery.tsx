@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Skeleton from "react-loading-skeleton";
 import { IconButton } from "@phantom/ui";
@@ -62,6 +62,13 @@ function Feed({ entries, pending, onVideo, data, loading, refresh, error }: {
   const [visible, setVisible] = useState(PAGE);
   const [fetching, setFetching] = useState(false);
   const [moreError, setMoreError] = useState<LoadError | null>(null);
+  const moreRequest = useRef<AbortController | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    moreRequest.current = controller;
+    setFetching(false);
+    return () => controller.abort();
+  }, [loading]);
   const recent = recentChannelLogins(entries).map((login) => data?.recent.find((channel) => channel.login.toLowerCase() === login) ?? { id: login, login, displayName: login });
   // Live channels first: the row answers "is anyone I watch on right now" before anything else.
   const yours = [...recent.filter((channel) => channel.stream), ...recent.filter((channel) => !channel.stream)];
@@ -72,20 +79,23 @@ function Feed({ entries, pending, onVideo, data, loading, refresh, error }: {
   const hasMore = visible < live.length || Boolean(next);
 
   async function showMore() {
+    const controller = moreRequest.current;
+    if (loading || fetching || !controller || controller.signal.aborted) return;
     setMoreError(null);
     // Show what is already here before asking Twitch for another page.
     if (visible < live.length || !next) { setVisible((count) => count + PAGE); return; }
     setFetching(true);
     try {
       const query = new URLSearchParams({ cursor: next.cursor, languages: next.languages.join(",") });
-      const page: { channels: DiscoveryChannel[]; next?: ChannelDiscoveryData["next"] } = await discoveryResponse(await fetch(`/api/channel/discovery/more?${query}`, { cache: "no-store" }));
+      const page: { channels: DiscoveryChannel[]; next?: ChannelDiscoveryData["next"] } = await discoveryResponse(await fetch(`/api/channel/discovery/more?${query}`, { signal: controller.signal, cache: "no-store" }));
+      if (controller.signal.aborted) return;
       setPool((channels) => uniqueChannels([...channels, ...page.channels]));
       setNext(page.next?.cursor === next.cursor ? undefined : page.next);
       setVisible((count) => count + PAGE);
     } catch (reason) {
-      setMoreError({ message: "More streams couldn’t be loaded.", retryAt: Date.now() + 15000, ...(reason as Partial<LoadError>) });
+      if (!controller.signal.aborted) setMoreError({ message: "More streams couldn’t be loaded.", retryAt: Date.now() + 15000, ...(reason as Partial<LoadError>) });
     } finally {
-      setFetching(false);
+      if (!controller.signal.aborted) setFetching(false);
     }
   }
 
@@ -123,7 +133,7 @@ function Feed({ entries, pending, onVideo, data, loading, refresh, error }: {
         {(loading || fetching) && <span className="sr-only" role="status">Loading streams</span>}
         {error ? <RetryNotice key={error.retryAt} error={error} retry={refresh} /> : moreError ? <RetryNotice key={moreError.retryAt} error={moreError} retry={showMore} />
           : !waiting && (live.length === 0 ? <p role="status">No streams available right now.</p>
-            : hasMore && <button type="button" className="cinema-button" disabled={fetching} onClick={showMore}>{fetching ? "Loading…" : "Show more"}</button>)}
+            : hasMore && <button type="button" className="cinema-button" disabled={loading || fetching} onClick={showMore}>{fetching ? "Loading…" : "Show more"}</button>)}
       </div>
     </section>
   </>;

@@ -49,6 +49,8 @@ export function HomeSearch() {
     const frame = requestAnimationFrame(measure);
     const resized = new ResizeObserver(measure);
     resized.observe(header);
+    const prompt = element.previousElementSibling;
+    if (prompt) resized.observe(prompt);
     window.addEventListener("scroll", track, { passive: true });
     // Typing is the reason to be here. Touch screens are left alone: focusing would throw a keyboard over the page.
     if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) document.getElementById(INPUT_ID)?.focus({ preventScroll: true });

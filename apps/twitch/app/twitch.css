@@ -168,7 +168,7 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
   .twitch-home-search .search-pill > svg { display: none; }
   .twitch-home-search .search-pill input { padding-inline: 4px; text-overflow: ellipsis; }
   .twitch-home-feed-heading h1, .twitch-home-feed-heading h2 { font-size: 23px; }
-  .twitch-home-resume-grid > :nth-child(-n + 3) { display: flex; }
+  .twitch-home-resume-grid > :nth-child(n + 2) { display: none; }
   .twitch-home-media-grid { grid-template-columns: minmax(0, 1fr); gap: 24px; }
   .twitch-home .twitch-footer { margin-top: auto; }
 }
