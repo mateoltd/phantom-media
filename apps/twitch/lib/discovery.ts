@@ -79,6 +79,19 @@ export interface DiscoveryHistory {
   timestamp: number;
   title?: string;
 }
+
+/** Invalid advisory entries must never prevent discovery for the remaining history. */
+export function parseDiscoveryHistory(value: unknown, now = Date.now()): DiscoveryHistory[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 30).flatMap((entry): DiscoveryHistory[] => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)
+      || typeof entry.channel !== "string" || !/^[a-z0-9_]{3,25}$/i.test(entry.channel)
+      || typeof entry.timestamp !== "number" || !Number.isFinite(entry.timestamp) || entry.timestamp < 0
+      || (entry.vodId !== undefined && (typeof entry.vodId !== "string" || !/^\d{1,20}$/.test(entry.vodId)))
+      || (entry.title !== undefined && (typeof entry.title !== "string" || entry.title.length > 500))) return [];
+    return [{ channel: entry.channel.toLowerCase(), timestamp: Math.min(now, entry.timestamp), vodId: entry.vodId, title: entry.title }];
+  }).sort((a, b) => b.timestamp - a.timestamp);
+}
 export interface WatchedVideo { id: string; title?: string; game?: { name: string } | null; owner?: { login: string } }
 export interface DiscoveryProfile {
   channels: Map<string, number>;
