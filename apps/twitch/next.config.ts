@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@phantom/ui"],
   async redirects() {
     return [
+      // Videos once lived at /?v=. The home page no longer reads its URL, so it can be served whole.
+      {
+        source: "/",
+        has: [{ type: "query", key: "v", value: "(?<video>\\d+)" }],
+        destination: "/videos/:video",
+        permanent: true,
+      },
       {
         source: "/",
         has: [{ type: "host", value: "www.notwitch.tv" }],

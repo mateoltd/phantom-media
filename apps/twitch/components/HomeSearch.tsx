@@ -1,29 +1,68 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, ViewTransition } from "react";
 import { TwitchSearch } from "./TwitchSearch";
 
 const INPUT_ID = "home-search-input";
 
 /**
- * The home page's own search. It tells the document whether it is on screen, so the header can keep its copy
- * hidden until this one has scrolled away and there is never a second search field in view.
+ * The home page's own search, and the only one on the page. It scrolls with the page until it reaches the header,
+ * then stays in the header's search slot at the header's size, so there is never a second field to swap to.
+ * Leaving the page, it travels to the header's field as one element (see ::view-transition-group in twitch.css).
  */
 export function HomeSearch() {
   const root = useRef<HTMLDivElement>(null);
+  const [docked, setDocked] = useState(false);
 
   useEffect(() => {
     const element = root.current;
-    if (!element) return;
     const header = document.querySelector<HTMLElement>(".media-header");
-    const observer = new IntersectionObserver(([entry]) => {
-      document.documentElement.dataset.homeSearch = entry.isIntersecting ? "visible" : "hidden";
-    }, { rootMargin: `-${header?.offsetHeight ?? 0}px 0px 0px 0px` });
-    observer.observe(element);
+    const slot = header?.querySelector<HTMLElement>(".media-header-search");
+    if (!element || !header || !slot) return;
+    const page = document.documentElement;
+    // Narrow screens have no field in the header, only a button that opens one, so there is nothing to dock into.
+    const narrow = window.matchMedia("(max-width: 640px)");
+    let top = 0;
+
+    const track = () => {
+      const box = element.getBoundingClientRect();
+      if (narrow.matches) {
+        setDocked(false);
+        page.dataset.homeSearch = box.bottom <= header.offsetHeight ? "hidden" : "visible";
+        return;
+      }
+      page.dataset.homeSearch = "visible";
+      setDocked(box.top <= top + 0.5);
+    };
+    const measure = () => {
+      if (!narrow.matches) {
+        const target = slot.getBoundingClientRect();
+        const box = element.getBoundingClientRect();
+        top = target.top - header.getBoundingClientRect().top;
+        element.style.setProperty("--dock-top", `${top}px`);
+        element.style.setProperty("--dock-width", `${target.width}px`);
+        element.style.setProperty("--dock-shift", `${target.left + target.width / 2 - (box.left + box.width / 2)}px`);
+      }
+      track();
+    };
+
+    const frame = requestAnimationFrame(measure);
+    const resized = new ResizeObserver(measure);
+    resized.observe(header);
+    window.addEventListener("scroll", track, { passive: true });
     // Typing is the reason to be here. Touch screens are left alone: focusing would throw a keyboard over the page.
     if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) document.getElementById(INPUT_ID)?.focus({ preventScroll: true });
-    return () => { observer.disconnect(); document.documentElement.dataset.homeSearch = "hidden"; };
+    return () => {
+      cancelAnimationFrame(frame);
+      resized.disconnect();
+      window.removeEventListener("scroll", track);
+      page.dataset.homeSearch = "hidden";
+    };
   }, []);
 
-  return <div ref={root} className="twitch-home-search"><TwitchSearch inputId={INPUT_ID} size="default" /></div>;
+  return <div ref={root} className="twitch-home-search" role="search" aria-labelledby="home-search-heading" data-docked={docked || undefined}>
+    <ViewTransition name="twitch-search" share="twitch-search" default="none">
+      <div className="twitch-home-search-field"><TwitchSearch inputId={INPUT_ID} size={docked ? "compact" : "default"} /></div>
+    </ViewTransition>
+  </div>;
 }

@@ -41,21 +41,55 @@
 .twitch-home-feed-heading > button { margin-right: -9px; }
 
 /* Search, and under it the channels you go back to. Centred, like a browser's new tab: one field, then your shortcuts. */
-/* The hero is its own layer above the sections after it, or their tiles would paint over the open suggestion list. */
-.twitch-home-hero { position: relative; z-index: 20; display: flex; flex-direction: column; align-items: center; padding-block: clamp(44px, 12svh, 124px) clamp(12px, 4svh, 40px); }
-.twitch-home-prompt { margin: 0 0 28px; font-size: clamp(1.6rem, 3.4vw, 2.25rem); line-height: 1.2; font-weight: 600; letter-spacing: -0.02em; text-align: center; }
-/* The field itself is the shared search pill, untouched. */
-.twitch-home-search { width: min(100%, 640px); }
-.twitch-channels { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; max-width: min(100%, 760px); margin-top: 20px; }
+.twitch-home-prompt { margin: clamp(44px, 12svh, 124px) 0 28px; font-size: clamp(1.6rem, 3.4vw, 2.25rem); line-height: 1.2; font-weight: 600; letter-spacing: -0.02em; text-align: center; }
+/* The field is the shared search pill. It scrolls with the page until it meets the header, then holds the header's
+   search slot (--dock-* are measured from that slot), above the header and above the tiles its suggestions open over.
+   This box keeps the field's place in the page; the field inside it is what changes size, so nothing below moves. */
+.twitch-home-search { position: sticky; top: var(--dock-top, 20px); z-index: 41; display: flex; align-items: flex-start; align-self: center; justify-content: center; width: min(100%, 640px); height: 56px; pointer-events: none; }
+.twitch-home-search-field { flex: none; width: 100%; pointer-events: auto; transition: width 0.24s cubic-bezier(0.22, 1, 0.36, 1), transform 0.24s cubic-bezier(0.22, 1, 0.36, 1); }
+.twitch-home-search .search-pill { transition: height 0.24s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.24s ease, border-color 0.16s ease; }
+.twitch-home-search[data-docked] .twitch-home-search-field { width: var(--dock-width); transform: translateX(var(--dock-shift)); }
+/* Docked, it is the header's field: the same values as .media-header .search-pill. */
+.twitch-home-search[data-docked] .search-pill { background: #101113e6; border-color: #ffffff24; }
+.twitch-home-search[data-docked] .search-pill input::placeholder, .twitch-home-search[data-docked] .text-text-tertiary { color: #bfc3c9; }
+.twitch-channels { display: flex; flex-wrap: wrap; align-self: center; justify-content: center; gap: 0.5rem; max-width: min(100%, 760px); margin-top: 20px; }
+:is(.twitch-home-search, .twitch-channels) + .twitch-home-section { margin-top: calc(56px + clamp(12px, 4svh, 40px)); }
+/* The server cannot know your history, so its HTML holds skeletons for the channels and the videos it will add.
+   They show only where a history exists, and only as many as it has: both are known before the first paint. */
+html:not([data-history]) .twitch-home [data-pending] { display: none; }
+html:not([data-history]) .twitch-home-section[data-pending] + .twitch-home-section { margin-top: calc(56px + clamp(12px, 4svh, 40px)); }
+.twitch-channels[data-pending] > span { display: flex; height: 40px; }
+.twitch-channels[data-pending] br { display: none; }
+html[data-history-channels="1"] .twitch-channels[data-pending] > :nth-child(n + 2),
+html[data-history-channels="2"] .twitch-channels[data-pending] > :nth-child(n + 3),
+html[data-history-channels="3"] .twitch-channels[data-pending] > :nth-child(n + 4),
+html[data-history-channels="4"] .twitch-channels[data-pending] > :nth-child(n + 5),
+html[data-history-channels="5"] .twitch-channels[data-pending] > :nth-child(n + 6),
+html[data-history="1"] .twitch-home-section[data-pending] .twitch-home-tile:nth-child(n + 2),
+html[data-history="2"] .twitch-home-section[data-pending] .twitch-home-tile:nth-child(n + 3),
+html[data-history="3"] .twitch-home-section[data-pending] .twitch-home-tile:nth-child(n + 4) { display: none; }
 /* Same pill as .twitch-seo-link, with the avatar in front. */
 .twitch-channel { display: flex; flex: none; align-items: center; gap: 0.5rem; height: 40px; padding: 0 0.875rem 0 5px; border: 1px solid var(--color-border); border-radius: 999px; font-size: 0.875rem; color: var(--color-text); transition: border-color 0.15s ease, background-color 0.15s ease; }
 .twitch-channel:hover { border-color: var(--color-phantom); background: var(--color-surface-hover); }
 .twitch-channel .twitch-home-avatar-wrap { width: 28px; height: 28px; }
 .twitch-channel-live { flex: none; width: 6px; height: 6px; border-radius: 50%; background: #ff6471; }
 
-/* One search on screen at a time: the header's stays out until the home search has scrolled away. */
+/* One search on screen at a time. The header keeps its slot, empty, for the home search to dock into; on narrow
+   screens, where the header has a button instead of a field, the button waits until the home search has scrolled away. */
 .media-header:has(.twitch-header-search[data-home]) :is(.media-header-search, .media-header-search-trigger) { transition: opacity 180ms ease, visibility 180ms; }
 html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[data-home]) :is(.media-header-search, .media-header-search-trigger) { opacity: 0; visibility: hidden; pointer-events: none; }
+/* Between the home page and any other, the search is one element moving between the hero and the header. */
+::view-transition-group(.twitch-search) { z-index: 2; animation-duration: 0.32s; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+/* Its two sizes swap early in the move, so the text is never read twice. */
+::view-transition-old(.twitch-search), ::view-transition-new(.twitch-search) { height: 100%; animation-duration: 0.16s; }
+/* The rest of the home page leaves and arrives the way pages do in base.css, under a header that holds still. */
+::view-transition-old(.twitch-page) { animation: 0.16s ease-in both page-out; }
+::view-transition-new(.twitch-page) { animation: 0.2s ease-out both page-in; }
+.media-header { view-transition-name: twitch-header; }
+::view-transition-group(twitch-header) { z-index: 1; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*), ::view-transition-old(.twitch-page), ::view-transition-new(.twitch-page) { animation: none; }
+}
 
 .twitch-home-avatar-wrap { position: relative; display: block; flex: none; width: 46px; height: 46px; }
 .twitch-home-avatar { position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; width: 100%; height: 100%; border-radius: 50%; background: var(--color-surface-light); font-size: 16px; color: var(--color-text-secondary); }
@@ -126,8 +160,10 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
   .twitch-home-layout, .twitch-about { --cols: 1; }
   .twitch-home-layout { --feed-heading-gap: 18px; padding-inline: calc(var(--navigation-gutter) + 0.75rem); }
   .twitch-home-section { margin-top: 40px; }
-  .twitch-home-hero { padding-block: 32px 8px; }
-  .twitch-home-prompt { margin-bottom: 20px; }
+  .twitch-home-prompt { margin: 32px 0 20px; }
+  .twitch-home-search { position: relative; top: auto; z-index: 20; height: auto; }
+  :is(.twitch-home-search, .twitch-channels) + .twitch-home-section,
+  html:not([data-history]) .twitch-home-section[data-pending] + .twitch-home-section { margin-top: 48px; }
   /* As in the header: the placeholder needs the room more than the field needs a magnifier. */
   .twitch-home-search .search-pill > svg { display: none; }
   .twitch-home-search .search-pill input { padding-inline: 4px; text-overflow: ellipsis; }

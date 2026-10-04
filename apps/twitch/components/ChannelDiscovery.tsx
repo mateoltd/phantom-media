@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Skeleton from "react-loading-skeleton";
 import { IconButton } from "@phantom/ui";
 import { ArrowClockwise } from "@phosphor-icons/react/ssr";
 import { recentChannelLogins, type ChannelDiscoveryData, type DiscoveryChannel } from "@/lib/discovery";
@@ -21,7 +22,8 @@ async function discoveryResponse(response: Response) {
   return response.json();
 }
 
-export function ChannelDiscovery({ entries, onVideo }: { entries: HistoryEntry[]; onVideo: (vodId: string) => void }) {
+/** `pending` is the time before the browser's history has been read: `entries` is empty then because it is unknown, not because there is none. */
+export function ChannelDiscovery({ entries, pending = false, onVideo }: { entries: HistoryEntry[]; pending?: boolean; onVideo: (vodId: string) => void }) {
   const channelKey = recentChannelLogins(entries).join(",");
   const historyKey = JSON.stringify(entries.slice(0, 30).map(({ channel, vodId, timestamp, title }) => ({ channel, vodId, timestamp, title })));
   const [refresh, setRefresh] = useState(0);
@@ -42,13 +44,18 @@ export function ChannelDiscovery({ entries, onVideo }: { entries: HistoryEntry[]
   }, [channelKey, historyKey, requestKey]);
 
   function refreshFeed() { setError(null); setRefresh((value) => value + 1); }
-  return <Feed key={result?.request || "loading"} entries={entries} onVideo={onVideo} data={result?.data} loading={loading} refresh={refreshFeed} error={error} />;
+  // The search stays mounted while the feed under it is replaced, so what has been typed survives a refresh.
+  return <div className="twitch-home-layout">
+    <h2 id="home-search-heading" className="twitch-home-prompt"><label htmlFor="home-search-input">What do you want to watch?</label></h2>
+    <HomeSearch />
+    <Feed key={result?.request || "loading"} entries={entries} pending={pending} onVideo={onVideo} data={result?.data} loading={loading} refresh={refreshFeed} error={error} />
+  </div>;
 }
 
 const PAGE = 12;
 
-function Feed({ entries, onVideo, data, loading, refresh, error }: {
-  entries: HistoryEntry[]; onVideo: (id: string) => void; data?: ChannelDiscoveryData; loading: boolean; refresh: () => void; error: LoadError | null;
+function Feed({ entries, pending, onVideo, data, loading, refresh, error }: {
+  entries: HistoryEntry[]; pending: boolean; onVideo: (id: string) => void; data?: ChannelDiscoveryData; loading: boolean; refresh: () => void; error: LoadError | null;
 }) {
   const [pool, setPool] = useState(() => uniqueChannels(data?.sections.flatMap((section) => section.channels) ?? []));
   const [next, setNext] = useState(data?.next);
@@ -82,25 +89,25 @@ function Feed({ entries, onVideo, data, loading, refresh, error }: {
     }
   }
 
-  return <div className="twitch-home-layout">
-    <section className="twitch-home-hero" aria-labelledby="home-search-heading">
-      <h2 id="home-search-heading" className="twitch-home-prompt"><label htmlFor="home-search-input">What do you want to watch?</label></h2>
-      <HomeSearch />
-      {yours.length > 0 && <nav className="twitch-channels" aria-label="Channels you have watched">
-        {yours.map((channel) => {
-          const status = channel.stream ? `live${channel.stream.game?.name ? `, ${channel.stream.game.name}` : ""}` : channel.stream === null ? "offline" : "recently watched";
-          return <Link key={channel.login} href={buildChannelPath(channel.login)} className="twitch-channel" data-live={channel.stream ? "" : undefined} aria-label={`${channel.displayName}, ${status}`} title={`${channel.displayName}: ${status}`}>
-            <HomeAvatar channel={channel} />
-            {channel.displayName}
-            {channel.stream && <span className="twitch-channel-live" aria-hidden="true" />}
-          </Link>;
-        })}
-      </nav>}
-    </section>
-    {resume.length > 0 && <section className="twitch-home-section" aria-labelledby="home-resume-heading">
+  // Until the history is read, skeletons stand where it will go. They only show to someone who has one (see lib/history-hint.ts).
+  return <>
+    {pending ? <div className="twitch-channels" data-pending="" aria-hidden="true">
+      {Array.from({ length: 6 }, (_, index) => <Skeleton key={index} width={108} height={40} borderRadius={999} />)}
+    </div> : yours.length > 0 && <nav className="twitch-channels" aria-label="Channels you have watched">
+      {yours.map((channel) => {
+        const status = channel.stream ? `live${channel.stream.game?.name ? `, ${channel.stream.game.name}` : ""}` : channel.stream === null ? "offline" : "recently watched";
+        return <Link key={channel.login} href={buildChannelPath(channel.login)} className="twitch-channel" data-live={channel.stream ? "" : undefined} aria-label={`${channel.displayName}, ${status}`} title={`${channel.displayName}: ${status}`}>
+          <HomeAvatar channel={channel} />
+          {channel.displayName}
+          {channel.stream && <span className="twitch-channel-live" aria-hidden="true" />}
+        </Link>;
+      })}
+    </nav>}
+    {(pending || resume.length > 0) && <section className="twitch-home-section" aria-labelledby="home-resume-heading" data-pending={pending ? "" : undefined} aria-hidden={pending || undefined}>
       <div className="twitch-home-feed-heading"><h2 id="home-resume-heading">Continue watching</h2></div>
       <div className="twitch-home-media-grid twitch-home-resume-grid">
-        {resume.map((entry) => <ResumeTile key={entry.vodId} entry={entry} channel={recent.find((channel) => channel.login.toLowerCase() === entry.channel.toLowerCase())} onSelect={onVideo} compact />)}
+        {pending ? Array.from({ length: 4 }, (_, index) => <HomeTileSkeleton key={index} compact />)
+          : resume.map((entry) => <ResumeTile key={entry.vodId} entry={entry} channel={recent.find((channel) => channel.login.toLowerCase() === entry.channel.toLowerCase())} onSelect={onVideo} compact />)}
       </div>
     </section>}
     <section className="twitch-home-section" aria-labelledby="home-feed-heading" aria-busy={loading || fetching}>
@@ -119,7 +126,7 @@ function Feed({ entries, onVideo, data, loading, refresh, error }: {
             : hasMore && <button type="button" className="cinema-button" disabled={fetching} onClick={showMore}>{fetching ? "Loading…" : "Show more"}</button>)}
       </div>
     </section>
-  </div>;
+  </>;
 }
 
 function RetryNotice({ error, retry }: { error: LoadError; retry: () => void }) {

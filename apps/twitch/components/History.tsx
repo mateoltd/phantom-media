@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/lib/hooks";
 
 export interface HistoryEntry {
@@ -15,6 +15,13 @@ export interface HistoryEntry {
 
 export function useHistory() {
   return useHydratedHistory()[0];
+}
+
+/** False until the browser's history has been read. The server, and the first render in the browser, cannot know it. */
+export function useHistoryRead() {
+  const [read, setRead] = useState(false);
+  useEffect(() => setRead(true), []);
+  return read;
 }
 
 export function useHistoryEditor() {

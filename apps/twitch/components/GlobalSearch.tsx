@@ -1,5 +1,6 @@
 "use client";
 
+import { ViewTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ClockCounterClockwise } from "@phosphor-icons/react/ssr";
@@ -8,6 +9,8 @@ import { TwitchSearch } from "./TwitchSearch";
 
 export function GlobalSearch() {
   const pathname = usePathname();
+  const home = pathname === "/";
+  const search = <div className="twitch-header-search" data-home={home || undefined}><TwitchSearch key={pathname} /></div>;
   return <MediaHeader
     key={pathname}
     routeKey={pathname}
@@ -16,8 +19,9 @@ export function GlobalSearch() {
       <Wordmark service="Twitch" tone="chalk" className="hidden sm:flex" />
       <Wordmark tone="chalk" className="sm:hidden" />
     </Link>}
-    // The home page opens on its own search, so the header copy stays out of the way until that one scrolls off.
-    search={<div className="twitch-header-search" data-home={pathname === "/" || undefined}><TwitchSearch key={pathname} /></div>}
+    // The home page has its own search, which docks here on scroll, so the header copy stays out of the way.
+    // Everywhere else this field is the same element as that one: it arrives from the hero and returns to it.
+    search={home ? search : <ViewTransition name="twitch-search" share="twitch-search" default="none">{search}</ViewTransition>}
     actions={<Link href="/watch-history" className="media-header-action" aria-label="Watch history" title="Watch history" aria-current={pathname === "/watch-history" ? "page" : undefined}>
       <ClockCounterClockwise weight={pathname === "/watch-history" ? "bold" : "regular"} size={20} aria-hidden="true" />
     </Link>}

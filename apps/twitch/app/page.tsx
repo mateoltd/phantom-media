@@ -1,6 +1,5 @@
-import { Suspense } from "react";
 import { DebugVideoScript } from "@/components/DebugVideoScript";
-import { VodApp } from "@/components/VodApp";
+import { HomeView } from "@/components/HomeView";
 import { HomeContent } from "@/components/HomeContent";
 import { StructuredData } from "@/components/structured-data";
 import { isDebugEnabled } from "@/lib/debug";
@@ -49,9 +48,7 @@ export default function Home() {
         }}
       />
       {debugEnabled && <DebugVideoScript />}
-      <Suspense fallback={null}>
-        <VodApp />
-      </Suspense>
+      <HomeView />
       <HomeContent />
     </>
   );

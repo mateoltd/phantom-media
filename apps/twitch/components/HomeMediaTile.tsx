@@ -45,8 +45,8 @@ function Thumbnail({ image, channel }: { image?: string; channel: DiscoveryChann
   </span>;
 }
 
-export function HomeTileSkeleton() {
-  return <div className="twitch-home-tile twitch-home-tile-skeleton" aria-hidden="true">
+export function HomeTileSkeleton({ compact = false }: { compact?: boolean }) {
+  return <div className={`twitch-home-tile twitch-home-tile-skeleton${compact ? " twitch-home-tile-compact" : ""}`} aria-hidden="true">
     <span className="media-tile-art twitch-home-art"><Skeleton height="100%" borderRadius={0} /></span>
     <span className="twitch-home-tile-meta"><Skeleton width="38%" height={15} /><Skeleton width="82%" height={12} /></span>
   </div>;
