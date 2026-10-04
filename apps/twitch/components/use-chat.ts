@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { chatColor, mergeReplayMessages, messagesAtTime, parseChatLine, type ChatMessage } from "@/lib/chat";
+import { messagesAtTime, parseChatLine, type ChatMessage } from "@/lib/chat";
+import { createReplayChatSession, type ReplayChatState } from "@/lib/replay-chat";
 
 export function useLiveChat(channel: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -89,77 +90,25 @@ export function useLiveChat(channel: string) {
   return { messages, status, retry: () => setRetry((value) => value + 1) };
 }
 
-export function useReplayChat(vodId: string, time: number) {
+export function useReplayChat(vodId: string, time: number, playbackSeekVersion = 0) {
   const timeRef = useRef(time);
-  const [buffer, setBuffer] = useState<ChatMessage[]>([]);
+  const [state, setState] = useState<ReplayChatState>({ messages: [], status: "Loading replay…", error: "" });
   const [seekVersion, setSeekVersion] = useState(0);
-  const [status, setStatus] = useState("Loading replay…");
-  const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
   useEffect(() => { timeRef.current = time; }, [time]);
 
   useEffect(() => {
-    let stopped = false;
-    let controller: AbortController | null = null;
-    let generation = 0;
-    let busy = false;
-    let previousTime = timeRef.current;
-    let nextOffset: number | null = null;
-    let through = -1;
-    let exhausted = false;
-    let failed = false;
-    let messages: ChatMessage[] = [];
+    const session = createReplayChatSession({
+      vodId,
+      getTime: () => timeRef.current,
+      onChange: setState,
+      onReset: () => setSeekVersion((value) => value + 1),
+    });
+    void session.resync();
+    const timer = window.setInterval(() => void session.update(), 250);
+    return () => { clearInterval(timer); session.stop(); };
+  }, [vodId, retry, playbackSeekVersion]);
 
-    async function update() {
-      const now = Math.max(0, timeRef.current);
-      if (now < previousTime - 1 || now > previousTime + 10) {
-        generation += 1;
-        controller?.abort();
-        busy = false;
-        nextOffset = null;
-        through = -1;
-        exhausted = false;
-        failed = false;
-        messages = [];
-        setBuffer([]);
-        setSeekVersion((value) => value + 1);
-      }
-      previousTime = now;
-      if (busy || exhausted || failed || through > now + 15) return;
-      busy = true;
-      const currentGeneration = generation;
-      controller = new AbortController();
-      const signal = controller.signal;
-      const params = new URLSearchParams({ vodId });
-      params.set("offset", String(nextOffset ?? Math.max(0, Math.floor(now) - 15)));
-      setError("");
-      if (!messages.length) setStatus("Loading replay…");
-      try {
-        const response = await fetch(`/api/vod/comments?${params}`, { signal });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Chat replay is unavailable");
-        if (stopped || signal.aborted || currentGeneration !== generation) return;
-        const incoming: ChatMessage[] = data.messages.map((message: ChatMessage) => ({ ...message, color: message.color || chatColor(message.user) }));
-        messages = mergeReplayMessages(messages, incoming);
-        through = incoming.at(-1)?.offset ?? now;
-        exhausted = data.nextOffset === null;
-        nextOffset = data.nextOffset;
-        setBuffer(messages);
-        setStatus("Synced with video");
-      } catch (caught) {
-        if (stopped || signal.aborted || currentGeneration !== generation) return;
-        failed = true;
-        setError(caught instanceof Error ? caught.message : "Chat replay is unavailable");
-        setStatus("Unavailable");
-      } finally {
-        if (currentGeneration === generation) busy = false;
-      }
-    }
-    void update();
-    const timer = window.setInterval(() => void update(), 250);
-    return () => { stopped = true; clearInterval(timer); controller?.abort(); };
-  }, [vodId, retry]);
-
-  const messages = useMemo(() => messagesAtTime(buffer, time), [buffer, time]);
-  return { messages, status, error, seekVersion, retry: () => setRetry((value) => value + 1) };
+  const messages = useMemo(() => messagesAtTime(state.messages, time), [state.messages, time]);
+  return { messages, status: state.status, error: state.error, seekVersion, resync: () => setRetry((value) => value + 1) };
 }

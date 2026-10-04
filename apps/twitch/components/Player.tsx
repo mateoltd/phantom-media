@@ -23,6 +23,7 @@ interface PlayerProps {
   isLive?: boolean;
   dvrMode?: boolean;
   onTimeUpdate?: (time: number) => void;
+  onPlaybackSeek?: () => void;
   title?: string;
   subtitle?: string;
   chatOpen?: boolean;
@@ -114,6 +115,7 @@ export function Player({
   isLive = false,
   dvrMode = false,
   onTimeUpdate,
+  onPlaybackSeek,
   title = "Twitch video",
   subtitle,
   chatOpen = false,
@@ -433,6 +435,7 @@ export function Player({
       setLoading(false);
       updateSeekable();
       syncDisplayedTime(video.currentTime);
+      onPlaybackSeek?.();
     };
     const onEnded = () => {
       setPlaying(false);
@@ -466,7 +469,7 @@ export function Player({
       video.removeEventListener("seeked", onSeeked);
       video.removeEventListener("ended", onEnded);
     };
-  }, [syncDisplayedTime]);
+  }, [syncDisplayedTime, onPlaybackSeek]);
 
   const isFullscreen = nativeFullscreen;
 

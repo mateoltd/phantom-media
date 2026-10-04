@@ -270,6 +270,8 @@ function VideoView({ vodData, masterUrl, startTime, playerTime, onTimeUpdate }: 
   onTimeUpdate: (time: number) => void;
 }) {
   const [chatOpen, setChatOpen] = useState(true);
+  const [playbackSeekVersion, setPlaybackSeekVersion] = useState(0);
+  const onPlaybackSeek = useCallback(() => setPlaybackSeekVersion((value) => value + 1), []);
   const toggleChat = () => setChatOpen((open) => !open);
   const closeChat = () => {
     setChatOpen(false);
@@ -283,7 +285,7 @@ function VideoView({ vodData, masterUrl, startTime, playerTime, onTimeUpdate }: 
         <WatchLayout chatOpen={chatOpen}
           video={<Player src={masterUrl} title={vodData.title || `Video ${vodData.vodId}`} subtitle={vodData.channelDisplayName || vodData.channel}
             qualities={vodData.qualities} startTime={startTime} isLive={Boolean(vodData.isLiveArchive)} dvrMode={Boolean(vodData.isLiveArchive)}
-            onTimeUpdate={onTimeUpdate} chatOpen={chatOpen} onChatToggle={toggleChat} />}
+            onTimeUpdate={onTimeUpdate} onPlaybackSeek={onPlaybackSeek} chatOpen={chatOpen} onChatToggle={toggleChat} />}
           rail={<WatchRail channel={vodData.channel} displayName={vodData.channelDisplayName} image={vodData.channelProfileImageURL}
             broadcastType={vodData.isLiveArchive ? "Live" : vodData.broadcastType.toLowerCase() === "highlight" ? "Highlight" : vodData.broadcastType.toLowerCase() === "upload" ? "Upload" : "Past broadcast"}
             actions={[
@@ -291,7 +293,7 @@ function VideoView({ vodData, masterUrl, startTime, playerTime, onTimeUpdate }: 
               <DownloadButton key="download" iconOnly qualities={vodData.qualities} channel={vodData.channel} vodId={vodData.vodId} />,
               <ShareButton key="share" iconOnly vodId={vodData.vodId} currentTime={playerTime} />,
             ]} />}
-          chat={<ChatPanel channel={vodData.channel} vodId={vodData.vodId} time={playerTime} onClose={closeChat} />}
+          chat={<ChatPanel channel={vodData.channel} vodId={vodData.vodId} time={playerTime} playbackSeekVersion={playbackSeekVersion} onClose={closeChat} />}
         >
         <div className="twitch-watch-details">
           <VodInfo channel={vodData.channel} channelDisplayName={vodData.channelDisplayName} channelProfileImageURL={vodData.channelProfileImageURL}
