@@ -19,8 +19,10 @@ nest another `media-content` inside it: keep internal text readable with a
 the container.
 
 The Twitch player starts below the header at the frame's left edge. Its title
-shares that edge, and its height-constrained video keeps a reserved space for expanded chat.
-Opening chat expands the sidebar to the right without moving the video.
+shares that edge, and its height-constrained video keeps a responsive space for
+expanded chat. Opening chat expands the sidebar to fill the remaining frame
+without moving the video. The sidebar reserves 20% of the frame (336–512px),
+then absorbs any extra width left by the video's height limit.
 
 ## Spacing and type
 

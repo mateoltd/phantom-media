@@ -304,7 +304,7 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
 }
 .twitch-playback-layout {
   --watch-sidebar-width: 64px;
-  --watch-expanded-sidebar-width: 336px;
+  --watch-expanded-sidebar-width: clamp(336px, 20cqw, 512px);
   /* Both states fit the expanded chat. Only the sidebar changes size. */
   --watch-video-width: min(calc(100cqw - var(--watch-expanded-sidebar-width)), calc((100svh - var(--media-header-height) - 8rem) * 16 / 9));
   display: grid;
@@ -319,7 +319,8 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
   transition: width var(--panel-close-dur) var(--panel-ease), grid-template-columns var(--panel-close-dur) var(--panel-ease);
 }
 .twitch-playback-layout[data-chat-open="true"] {
-  --watch-sidebar-width: var(--watch-expanded-sidebar-width);
+  /* Chat takes the remaining frame when the video reaches its height limit. */
+  --watch-sidebar-width: calc(100cqw - var(--watch-video-width));
   transition-duration: var(--panel-open-dur);
 }
 .twitch-playback-video, .twitch-playback-details {
