@@ -10,8 +10,9 @@ Use `className="media-content"` on a top-level content container. Its content
 width is `100% - 2 × gutter`, with no fixed desktop maximum. Surfaces can opt
 into a cap using `--media-content-max-width` (100% by default).
 The gutter is `--navigation-gutter` plus a 24px inset, reduced to 12px at 640px
-and below. At viewport widths of 390px, 1440px, and 1920px, the resulting left
-edges are 20px, 45.6px, and 48px respectively.
+and below. At viewport widths of 390px, 1440px, and 1920px, the content insets
+are 20px, 45.6px, and 48px respectively. Twitch also reserves equal scrollbar
+space on both viewport edges when the platform uses non-overlay scrollbars.
 
 Use `<MediaHeader contentAligned />` to align navigation to that frame. Do not
 nest another `media-content` inside it: keep internal text readable with a

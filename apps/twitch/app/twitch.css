@@ -1,4 +1,6 @@
 /* Twitch-specific layout. Shared media and player styling live in @phantom/theme. */
+/* Reserve matching scrollbar space so the frame is centered in the viewport. */
+html { scrollbar-gutter: stable both-edges; }
 :root {
   --media-tile-title-size: var(--media-font-card-title);
   --media-tile-meta-size: var(--media-font-card-meta);
