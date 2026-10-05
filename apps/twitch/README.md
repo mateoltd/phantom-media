@@ -1,12 +1,29 @@
 # Phantom Twitch
 
-Live channel and VOD client in the Phantom Media workspace. The server routes,
-resolver, player, and download flow come from the standalone Phantom Twitch
-project. UI uses `@phantom/theme/media.css`, `@phantom/theme/player.css`,
-and components from `@phantom/ui`. The transport, scrub bar, settings panel,
-switch, search field, sticky header, and artwork tiles are shared with Stream.
-Search supports channel avatars and live state, plus VOD metadata previews.
-Older history entries are enriched through the lightweight metadata route.
+**[Watch on notwitch.tv](https://notwitch.tv)** — a free, open-source, ad-free
+Twitch player for live streams and VODs. Search a channel or paste a Twitch
+video link; no account, extension, or installation is required.
+
+## Features
+
+- Ad-free live streams and VOD playback.
+- Subscriber-only Twitch VODs when their source playlists are available, without a Twitch login.
+- Live rewind and seeking through the current broadcast’s archive while the channel is still live, when an archive is available.
+- Quality selection, playback speed, keyboard shortcuts, picture-in-picture, and VOD downloads.
+- Live chat and synchronized VOD chat replay.
+- Browser-local history, resume positions, and playback preferences.
+- No app analytics, tracking cookies, or Twitch account requirement.
+
+Source media must still be available: Phantom Twitch cannot restore deleted
+videos, and archive-based rewind depends on the channel and Twitch. Media and
+chat use third-party services. Cloudflare observability is currently enabled
+in the Worker configuration, and opt-in debug diagnostics exist, so account-free
+viewing does not mean zero infrastructure logging or network anonymity.
+
+## Development
+
+UI uses `@phantom/theme/media.css`, `@phantom/theme/player.css`, and
+`@phantom/ui`; the Twitch resolver, transport, and playback engine live here.
 
 From the workspace root:
 

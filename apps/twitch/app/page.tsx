@@ -6,17 +6,9 @@ import { isDebugEnabled } from "@/lib/debug";
 import { buildMetadata, getBaseUrl, siteConfig } from "@/lib/seo";
 
 export const metadata = buildMetadata({
-  title: "Twitch Live and VOD Client",
-  description:
-    "Search Twitch channels, watch live streams, browse recent VODs, and resume video playback in a modern web player.",
+  title: siteConfig.title,
+  description: siteConfig.description,
   path: "/",
-  keywords: [
-    "twitch client",
-    "watch twitch live",
-    "watch twitch vods",
-    "twitch channel search",
-    "twitch vod player",
-  ],
 });
 
 export default function Home() {
@@ -39,6 +31,15 @@ export default function Home() {
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",
           name: siteConfig.name,
+          alternateName: "Phantom Twitch on notwitch.tv",
+          sameAs: siteConfig.repositoryUrl,
+          featureList: [
+            "Ad-free Twitch playback",
+            "Subscriber-only VOD playback when source playlists are available",
+            "Live rewind and seeking through available broadcast archives",
+            "No account required and no app analytics",
+            "Quality, playback speed, chat and download controls",
+          ],
           applicationCategory: "MultimediaApplication",
           operatingSystem: "Web",
           isAccessibleForFree: true,

@@ -63,7 +63,7 @@ const DESCRIPTION_BUDGET = 160;
  */
 export function buildChannelDescription(channel: TwitchChannelData): string {
   const status = channel.stream ? "live now" : "offline right now";
-  const summary = `${channel.displayName} is ${status} on Twitch. Watch the live stream or browse recent broadcasts and past broadcasts in the Phantom Twitch player.`;
+  const summary = `${channel.displayName} is ${status} on Twitch. Watch ad-free or replay VODs without an account, with quality and speed controls on Phantom Twitch.`;
 
   // displayName is interpolated, so the result can overrun the snippet budget
   // and be cut mid-word. Clamp instead of trusting upstream lengths.

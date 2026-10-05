@@ -14,7 +14,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     ...staticRoutes.map(({ route, changeFrequency, priority }) => ({
       url: new URL(route, baseUrl).toString(),
-      lastModified: new Date(),
       changeFrequency,
       priority,
     })),

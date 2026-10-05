@@ -2,7 +2,7 @@
   "name": "@phantom/twitch",
   "version": "1.0.0",
   "private": true,
-  "description": "Phantom Twitch live and VOD client.",
+  "description": "Ad-free Twitch player with subscriber-only VODs, archive-based live rewind, and account-free viewing.",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",

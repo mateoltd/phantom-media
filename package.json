@@ -2,7 +2,7 @@
   "name": "phantom-media",
   "version": "1.0.0",
   "private": true,
-  "description": "The monorepo for Phantom Downloader, Stream, and Twitch.",
+  "description": "Open-source media tools led by Phantom Twitch: ad-free playback, subscriber-only VODs, and live rewind.",
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",

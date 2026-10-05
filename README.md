@@ -1,18 +1,40 @@
 # Phantom Media
 
-> **Work in progress.** Everything here is under active development. The apps,
-> the architecture, the roadmap, and the documented behaviour are all expected
-> to change. Treat none of it as stable or supported.
+Free, open-source media tools, led by **[Phantom Twitch](https://notwitch.tv)**:
+an ad-free alternative Twitch player for live streams, subscriber-only VODs,
+and live rewind through broadcast archives. Watch without a Twitch account,
+with no app analytics or tracking cookies.
 
-The monorepo for Phantom Downloader, Phantom Stream, and Phantom Twitch. Three apps,
-one design system, one install, and no build-time dependency on the Pervasivity
-intelligence repository from which this project was extracted.
+**[Open Phantom Twitch →](https://notwitch.tv)** ·
+[Twitch documentation](apps/twitch/README.md) · [Local setup](#getting-set-up)
+
+## Phantom Twitch: watch on your terms
+
+- **Ad-free Twitch playback:** live streams and past broadcasts without Twitch ad breaks.
+- **Subscriber-only VODs:** play sub-only broadcasts without signing in when their source playlists are available.
+- **Live rewind and seeking:** open the current broadcast’s archive to catch up while the channel is still live, when an archive is available.
+- **More playback controls:** quality selection, playback speed, keyboard shortcuts, picture-in-picture, and VOD downloads.
+- **Live chat and VOD chat replay:** read chat alongside playback, with replay synchronized to pauses and seeks.
+- **Account-free viewing:** no Twitch login, app analytics, or tracking cookies. History, resume positions, and preferences stay in your browser.
+
+Media availability depends on Twitch. Deleted or unavailable source media cannot
+be recovered. Third-party media, chat, and hosting services still process network
+requests; the app does not promise network anonymity or zero infrastructure logs.
+
+Phantom Media also includes **Phantom Downloader**, for downloading videos and
+playlists, and **Phantom Stream**, a film and series frontend. The three apps
+share a design system and toolchain in this monorepo.
+
+> **Work in progress.** The apps and their architecture are under active
+> development; features and platform compatibility may change.
+
+## Workspace
 
 | Package                | What it is                                                              |
 | ---------------------- | ----------------------------------------------------------------------- |
 | `apps/downloader`      | Phantom Downloader pulls a video or a whole playlist down as a file.    |
 | `apps/stream`          | Phantom Stream finds a film or series and plays it.                     |
-| `apps/twitch`          | Phantom Twitch plays live channels and VODs.                            |
+| `apps/twitch`          | Ad-free Twitch player, subscriber-only VODs, and live rewind.                            |
 | `packages/theme`       | Design tokens, base layer and CSS primitives. Tailwind v4.              |
 | `packages/ui`          | React components the apps share, consumed as source.                    |
 | `packages/config`      | tsconfig, ESLint and PostCSS bases.                                     |

@@ -17,7 +17,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Phantom Twitch - Twitch Live and VOD Client",
+    default: `${siteConfig.title} | ${siteConfig.name}`,
     template: "%s | Phantom Twitch",
   },
   description: siteConfig.description,
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "Phantom Twitch - Twitch Live and VOD Client",
+    title: `${siteConfig.title} | ${siteConfig.name}`,
     description: siteConfig.description,
     url: "/",
     siteName: siteConfig.name,
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Phantom Twitch - Twitch Live and VOD Client",
+    title: `${siteConfig.title} | ${siteConfig.name}`,
     description: siteConfig.description,
     creator: "@mateoltd",
     images: [siteConfig.ogImage.url],

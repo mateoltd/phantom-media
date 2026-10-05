@@ -3,15 +3,17 @@ import type { Metadata } from "next";
 export const siteConfig = {
   name: "Phantom Twitch",
   shortName: "Phantom",
+  title: "Ad-Free Twitch Player, Subscriber-Only VODs & Live Rewind",
+  repositoryUrl: "https://github.com/mateoltd/phantom-media",
   description:
-    "Search Twitch channels, watch live streams, browse recent VODs, and resume playback in a modern adaptive Twitch client.",
+    "Watch Twitch ad-free without an account. Play subscriber-only VODs, rewind live streams through available archives, and take control with no app analytics.",
   creator: "mateoltd",
   publisher: "Phantom Research",
   ogImage: {
     url: "/og.png",
     width: 1730,
     height: 909,
-    alt: "Phantom Twitch - watch Twitch live and VODs",
+    alt: "Phantom Twitch - ad-free Twitch player, subscriber-only VODs and live rewind",
   },
   keywords: [
     "twitch client",
@@ -19,12 +21,17 @@ export const siteConfig = {
     "watch twitch vods",
     "twitch vod player",
     "phantom twitch",
+    "ad free twitch player",
+    "twitch without account",
+    "twitch live rewind",
+    "twitch dvr",
+    "twitch alternative client",
+    "subscriber only twitch vods",
     "twitch restricted vods",
     "twitch vod downloader",
     "sub-only vod bypass",
     "download twitch vods",
     "twitch vod download",
-    "twitch clip downloader",
     "save twitch vods",
   ],
 };
