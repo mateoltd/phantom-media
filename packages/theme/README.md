@@ -7,18 +7,19 @@ channel, watch, history, and informational pages.
 ## Content frame
 
 Use `className="media-content"` on a top-level content container. Its content
-width is `min(100% - 2 × gutter, 90rem)` (1440px at the default root font size).
+width is `100% - 2 × gutter`, with no fixed desktop maximum. Surfaces can opt
+into a cap using `--media-content-max-width` (100% by default).
 The gutter is `--navigation-gutter` plus a 24px inset, reduced to 12px at 640px
 and below. At viewport widths of 390px, 1440px, and 1920px, the resulting left
-edges are 20px, 45.6px, and 240px respectively.
+edges are 20px, 45.6px, and 48px respectively.
 
 Use `<MediaHeader contentAligned />` to align navigation to that frame. Do not
 nest another `media-content` inside it: keep internal text readable with a
 `max-width` on the prose itself. A full-width background or divider can wrap
 the container.
 
-The Twitch player starts at the frame's left edge. Its title shares that edge,
-and its height-constrained video keeps a reserved space for expanded chat.
+The Twitch player starts below the header at the frame's left edge. Its title
+shares that edge, and its height-constrained video keeps a reserved space for expanded chat.
 Opening chat expands the sidebar to the right without moving the video.
 
 ## Spacing and type
@@ -29,6 +30,7 @@ The `--space-N` scale uses `N × 4px`: available steps are 1–8, 10, 12, 14, an
 | Token | Default | Responsive variant |
 | --- | --- | --- |
 | `--media-grid-column-gap` | 24px | 18px at ≤900px |
+| `--media-grid-columns` | 4 | 1 at ≤640px, 2 at ≤1000px, 3 at ≤1399px, 6 at ≥3000px |
 | `--media-grid-row-gap` | 28px | 24px at ≤640px |
 | `--media-heading-gap` | 24px | 18px at ≤640px |
 | `--media-heading-height` | 40px | Same |

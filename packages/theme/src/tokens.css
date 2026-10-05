@@ -47,7 +47,7 @@
   --space-14: 3.5rem;
   --space-18: 4.5rem;
 
-  --media-content-max-width: 90rem;
+  --media-content-max-width: 100%;
   --media-content-inset: var(--space-6);
   --media-content-gutter: calc(var(--navigation-gutter, 1rem) + var(--media-content-inset));
   --media-content-width: min(calc(100% - var(--media-content-gutter) * 2), var(--media-content-max-width));
@@ -59,6 +59,7 @@
   --media-font-badge: 0.75rem;
   --media-card-line-height: 1.4;
   --media-grid-column-gap: var(--space-6);
+  --media-grid-columns: 4;
   --media-grid-row-gap: var(--space-7);
   --media-heading-gap: var(--space-6);
   --media-heading-height: var(--space-10);
@@ -72,10 +73,24 @@
 }
 
 @media (max-width: 900px) {
-  :root { --media-grid-column-gap: 1.125rem; }
+  :root {
+    --media-grid-column-gap: 1.125rem;
+  }
+}
+
+/* Twelve-item pages keep complete rows, with larger previews on desktop. */
+@media (min-width: 3000px) {
+  :root { --media-grid-columns: 6; }
+}
+@media (max-width: 1399px) {
+  :root { --media-grid-columns: 3; }
+}
+@media (max-width: 1000px) {
+  :root { --media-grid-columns: 2; }
 }
 @media (max-width: 640px) {
   :root {
+    --media-grid-columns: 1;
     --media-content-inset: var(--space-3);
     --media-font-section: 1.4375rem;
     --media-grid-row-gap: var(--space-6);

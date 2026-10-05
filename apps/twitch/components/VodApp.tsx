@@ -358,7 +358,7 @@ function ChannelView({ channel, masterUrl, onVideo }: {
       </section>
       {channel.videos.length > 0 && <section className="mt-8">
         <h2 className="twitch-broadcast-heading">Recent broadcasts</h2>
-        <div className="twitch-broadcast-grid sm:grid-cols-2 xl:grid-cols-3">
+        <div className="twitch-broadcast-grid">
           {channel.videos.map((video) => <button key={video.id} onClick={() => onVideo(video.id)} className="media-tile-hit group min-w-0 text-left">
             <MediaTile title={video.title || `Video ${video.id}`} imageUrl={video.previewThumbnailURL} sizes="(max-width: 640px) 100vw, 33vw" badge={formatTime(video.lengthSeconds)}
               meta={<><span>{video.viewCount.toLocaleString()} views</span><span>{new Date(video.createdAt).toLocaleDateString()}</span></>} />
