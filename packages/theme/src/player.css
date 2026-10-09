@@ -441,6 +441,21 @@
   background: #ffffff45;
   opacity: 0;
 }
+.scrub-segments {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.scrub-segment {
+  position: absolute;
+  inset-block: 0;
+}
+.scrub-segment[data-marker="range"] {
+  box-shadow: inset 1px 0 #141618, inset -1px 0 #141618;
+}
+.scrub-segment[data-marker="boundary"] {
+  transform: translateX(-50%);
+}
 .scrub-head {
   position: absolute;
   left: var(--played);
@@ -458,17 +473,39 @@
   opacity: 1;
 }
 .scrub-tooltip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+  overflow: hidden;
   position: absolute;
   bottom: calc(100% + 0.4rem);
-  left: clamp(2rem, var(--hover), calc(100% - 2rem));
+  left: clamp(var(--tooltip-half-width, 2rem), var(--hover), calc(100% - var(--tooltip-half-width, 2rem)));
   padding: 0.25rem 0.5rem;
   background: #141618;
   color: #fff;
   font-family: var(--font-mono);
   font-size: 12px;
+  white-space: nowrap;
   transform: translateX(-50%);
   opacity: 0;
   pointer-events: none;
+}
+.scrub-tooltip-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-width: 100%;
+  font-family: var(--font-sans);
+  color: #d2d4d7;
+}
+.scrub-tooltip-labels:empty {
+  display: none;
+}
+.scrub-tooltip-labels > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .scrub-hovering .scrub-hover,
 .scrub-hovering .scrub-tooltip {

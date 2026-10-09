@@ -27,6 +27,7 @@ export { useModalBehavior } from "./use-modal-behavior";
 
 export { MotionPresence } from "./motion-presence";
 export { ScrubBar } from "./scrub-bar";
+export type { ScrubBarProps } from "./scrub-bar";
 export { StageChrome, StageControl, StageTransport } from "./stage-controls";
 export { StageSettings } from "./stage-settings";
 export { useSleepTimer } from "./use-sleep-timer";
@@ -42,3 +43,6 @@ export { MediaTile } from "./media-tile";
 
 export { PLAYER_SEEK_SECONDS, useStagePlayback } from "./use-stage-playback";
 export type { StageFeedback } from "./use-stage-playback";
+
+export { normalizePlaybackSegments, projectPlaybackSegment, playbackSegmentLabelsAt, segmentAppearance } from "./playback-segments";
+export type { PlaybackSegment, SegmentAppearance, SegmentAppearances } from "./playback-segments";

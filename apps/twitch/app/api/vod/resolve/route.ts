@@ -1,3 +1,4 @@
+import type { VodPlaybackData } from "@/lib/playback";
 import { NextRequest, NextResponse } from "next/server";
 import { extractVodId } from "@/lib/validation";
 import { resolveVod } from "@/lib/resolve";
@@ -15,7 +16,8 @@ function createResolveResponse(data: Awaited<ReturnType<typeof resolveVod>>) {
       isLiveArchive: data.isLiveArchive,
       broadcastType: data.broadcastType,
       qualities: data.qualities,
-    },
+      segments: data.segments,
+    } satisfies VodPlaybackData,
     {
       headers: {
         "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800",

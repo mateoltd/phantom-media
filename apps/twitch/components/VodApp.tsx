@@ -22,35 +22,15 @@ import { VodInfo } from "@/components/VodInfo";
 import { VodLoading } from "@/components/VodLoading";
 import { Footer } from "@/components/Footer";
 import { formatTime } from "@/lib/format";
+import type { VodPlaybackData } from "@/lib/playback";
+import type { ResolvedQuality } from "@/lib/validation";
 import {
   buildChannelPath,
   buildVodPath,
   parseStartTime,
 } from "@/lib/validation";
 
-interface Quality {
-  key: string;
-  name: string;
-  resolution: string;
-  frameRate: number;
-  bandwidth: number;
-  codec: string;
-  playlistUrl: string;
-}
-
-const LIVE_QUALITIES: Quality[] = [];
-
-interface VodData {
-  vodId: string;
-  channel: string;
-  channelDisplayName?: string;
-  channelProfileImageURL?: string;
-  title?: string;
-  previewThumbnailURL?: string;
-  isLiveArchive?: boolean;
-  broadcastType: string;
-  qualities: Quality[];
-}
+const LIVE_QUALITIES: ResolvedQuality[] = [];
 
 interface ChannelVideo {
   id: string;
@@ -118,7 +98,7 @@ export function VodApp() {
   );
 
   const [state, setState] = useState<AppState>("loading");
-  const [vodData, setVodData] = useState<VodData | null>(null);
+  const [vodData, setVodData] = useState<VodPlaybackData | null>(null);
   const [channelData, setChannelData] = useState<ChannelData | null>(null);
   const [error, setError] = useState("");
   const [masterUrl, setMasterUrl] = useState("");
@@ -152,7 +132,7 @@ export function VodApp() {
         throw new Error(data.error || `Error: ${resp.status}`);
       }
 
-      const data: VodData = await resp.json();
+      const data: VodPlaybackData = await resp.json();
       setVodData(data);
       setMasterUrl(`/api/vod/master.m3u8?vodId=${data.vodId}`);
       setPlayerTime(resumeTime);
@@ -255,7 +235,7 @@ export function VodApp() {
 }
 
 function VideoView({ vodData, masterUrl, startTime, playerTime, onTimeUpdate }: {
-  vodData: VodData;
+  vodData: VodPlaybackData;
   masterUrl: string;
   startTime: number;
   playerTime: number;
@@ -277,6 +257,7 @@ function VideoView({ vodData, masterUrl, startTime, playerTime, onTimeUpdate }: 
         <WatchLayout chatOpen={chatOpen}
           video={<Player src={masterUrl} title={vodData.title || `Video ${vodData.vodId}`} subtitle={vodData.channelDisplayName || vodData.channel}
             qualities={vodData.qualities} startTime={startTime} isLive={Boolean(vodData.isLiveArchive)} dvrMode={Boolean(vodData.isLiveArchive)}
+            segments={vodData.segments}
             onTimeUpdate={onTimeUpdate} onPlaybackSeek={onPlaybackSeek} chatOpen={chatOpen} onChatToggle={toggleChat} />}
           rail={<WatchRail channel={vodData.channel} displayName={vodData.channelDisplayName} image={vodData.channelProfileImageURL}
             broadcastType={vodData.isLiveArchive ? "Live" : vodData.broadcastType.toLowerCase() === "highlight" ? "Highlight" : vodData.broadcastType.toLowerCase() === "upload" ? "Upload" : "Past broadcast"}

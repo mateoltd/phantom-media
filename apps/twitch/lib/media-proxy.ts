@@ -25,8 +25,23 @@ export async function proxyMedia(request: Request): Promise<Response> {
   if (range) headers.set("Range", range);
 
   let upstream: Response;
+  let usedMutedFallback = false;
   try {
     upstream = await fetch(parsed, { headers, signal: request.signal, cache: "no-store" });
+
+    // Twitch playlists can retain unmuted filenames after those copies become
+    // inaccessible. Keep the original audio when available, otherwise stream
+    // the matching muted segment so playback and downloads can continue.
+    if (
+      (upstream.status === 403 || upstream.status === 404) &&
+      /\/\d+-unmuted\.ts$/.test(parsed.pathname)
+    ) {
+      await upstream.body?.cancel();
+      const mutedUrl = new URL(parsed);
+      mutedUrl.pathname = mutedUrl.pathname.replace(/-unmuted\.ts$/, "-muted.ts");
+      upstream = await fetch(mutedUrl, { headers, signal: request.signal, cache: "no-store" });
+      usedMutedFallback = true;
+    }
   } catch {
     return new Response("Upstream unavailable", { status: 502 });
   }
@@ -38,7 +53,8 @@ export async function proxyMedia(request: Request): Promise<Response> {
 
   const responseHeaders = new Headers({
     "Content-Type": upstream.headers.get("Content-Type") ?? "application/octet-stream",
-    "Cache-Control": parsed.pathname.endsWith(".m3u8")
+    // Recheck fallback responses soon in case Twitch restores the original audio.
+    "Cache-Control": usedMutedFallback || parsed.pathname.endsWith(".m3u8")
       ? "public, max-age=300"
       : "public, max-age=86400, immutable",
   });

@@ -6,11 +6,13 @@
   "description": "React components shared by the Phantom apps. Consumed as source and compiled by each app.",
   "exports": {
     ".": "./src/index.ts",
-    "./*": "./src/*.tsx"
+    "./*": "./src/*.tsx",
+    "./playback-segments": "./src/playback-segments.ts"
   },
   "scripts": {
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test test/*.test.mjs"
   },
   "peerDependencies": {
     "next": "*",

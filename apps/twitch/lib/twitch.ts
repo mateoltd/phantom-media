@@ -1,5 +1,10 @@
 import { buildDiscoveryProfile, rankDiscovery, type DiscoveryPage, type DiscoveryContinuation, type DiscoveryHistory, type DiscoveryCandidate, type WatchedVideo, type ChannelDiscoveryData, type DiscoveryChannel } from "./discovery.ts";
 
+export interface MutedSegment {
+  offset: number;
+  duration: number;
+}
+
 export interface TwitchVideoData {
   id?: string;
   title?: string;
@@ -10,6 +15,7 @@ export interface TwitchVideoData {
   viewCount?: number;
   seekPreviewsURL: string;
   owner: { login: string };
+  muteInfo?: { mutedSegmentConnection: { nodes: MutedSegment[] | null } | null } | null;
 }
 
 interface TwitchGQLResponse {
@@ -23,6 +29,7 @@ const GQL_ENDPOINT = "https://gql.twitch.tv/gql";
 
 interface GraphQLError {
   message?: string;
+  path?: (string | number)[];
 }
 
 interface GraphQLResponse<T> {
@@ -72,7 +79,11 @@ export interface TwitchSearchResult {
   viewersCount?: number;
 }
 
-async function gql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+async function gql<T>(
+  query: string,
+  variables?: Record<string, unknown>,
+  optionalErrorPath?: readonly string[],
+): Promise<T> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       const resp = await fetch(GQL_ENDPOINT, {
@@ -99,8 +110,12 @@ async function gql<T>(query: string, variables?: Record<string, unknown>): Promi
       }
 
       const data: GraphQLResponse<T> = await resp.json();
-      if (data.errors?.length) {
-        const message = data.errors[0].message || "Twitch API query failed";
+      // Advisory fields must not delay playback with retries when metadata succeeded.
+      const errors = data.errors?.filter((error) =>
+        !optionalErrorPath || !optionalErrorPath.every((part, index) => error.path?.[index] === part)
+      );
+      if (errors?.length) {
+        const message = errors[0].message || "Twitch API query failed";
         if (isTransientGraphQLError(message) && attempt < 2) {
           await retryDelay(attempt);
           continue;
@@ -143,9 +158,11 @@ export async function fetchVodMetadata(vodId: string): Promise<TwitchVideoData> 
         viewCount
         seekPreviewsURL
         owner { login }
+        muteInfo { mutedSegmentConnection { nodes { offset duration } } }
       }
     }`,
-    { id: vodId }
+    { id: vodId },
+    ["video", "muteInfo"],
   );
 
   if (!data.video) {

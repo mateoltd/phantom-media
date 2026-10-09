@@ -4,6 +4,48 @@ import { fetchChannel, fetchVodMetadata } from "../lib/twitch.ts";
 
 afterEach(() => mock.restoreAll());
 
+test("loads all muted intervals in the existing VOD metadata request", async () => {
+  const segments = [{ offset: 16605, duration: 203 }, { offset: 200, duration: 60 }];
+  const fetch = mock.method(globalThis, "fetch", async (url, init) => {
+    assert.equal(url, "https://gql.twitch.tv/gql");
+    const { query, variables } = JSON.parse(init.body);
+    assert.deepEqual(variables, { id: "123" });
+    assert.match(query, /muteInfo\s*\{\s*mutedSegmentConnection\s*\{\s*nodes\s*\{\s*offset\s+duration/);
+    assert.match(query, /seekPreviewsURL/);
+    return Response.json({ data: { video: {
+      id: "123", owner: { login: "example" },
+      muteInfo: { mutedSegmentConnection: { nodes: segments } },
+    } } });
+  });
+  const video = await fetchVodMetadata("123");
+  assert.deepEqual(video.muteInfo.mutedSegmentConnection.nodes, segments);
+  assert.equal(fetch.mock.callCount(), 1, "no separate mute lookup or segment probes");
+});
+
+test("unavailable mute information does not retry or block valid VOD metadata", async () => {
+  for (const path of [["video", "muteInfo"], ["video", "muteInfo", "mutedSegmentConnection"]]) {
+    const fetch = mock.method(globalThis, "fetch", async () => Response.json({
+      errors: [{ message: "service error", path }],
+      data: { video: { id: "123", owner: { login: "example" }, muteInfo: null } },
+    }));
+    assert.equal((await fetchVodMetadata("123")).id, "123");
+    assert.equal(fetch.mock.callCount(), 1);
+    mock.restoreAll();
+  }
+});
+
+test("optional mute errors do not hide errors in required VOD metadata", async () => {
+  const fetch = mock.method(globalThis, "fetch", async () => Response.json({
+    errors: [
+      { message: "service error", path: ["video", "muteInfo"] },
+      { message: "invalid video", path: ["video"] },
+    ],
+    data: { video: null },
+  }));
+  await assert.rejects(fetchVodMetadata("123"), /invalid video/);
+  assert.equal(fetch.mock.callCount(), 1);
+});
+
 test("retries transient GraphQL service errors during a channel fetch", async () => {
   let calls = 0;
   mock.method(globalThis, "fetch", async () => {

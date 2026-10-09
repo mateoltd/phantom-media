@@ -1,15 +1,25 @@
 "use client";
 
-import { type PointerEvent, useEffect, useRef } from "react";
+import { type PointerEvent, useEffect, useMemo, useRef } from "react";
 import { PLAYER_SEEK_SECONDS } from "./use-stage-playback";
 import { formatTimecode } from "./timecode";
 import type { TimeListener } from "./timecode";
 
-interface ScrubBarProps {
+import { EMPTY_PLAYBACK_SEGMENTS, normalizePlaybackSegments, playbackSegmentLabelsAt } from "./playback-segments";
+import type { PlaybackSegment, SegmentAppearances } from "./playback-segments";
+import { ScrubSegments } from "./scrub-segments";
+import { ScrubTooltip } from "./scrub-tooltip";
+import type { ScrubTooltipHandle } from "./scrub-tooltip";
+
+export interface ScrubBarProps {
   subscribe: (listener: TimeListener) => () => void;
   onSeek: (seconds: number) => void;
   onSeekStep?: (direction: -1 | 1) => void;
   onScrubbingChange?: (scrubbing: boolean) => void;
+  segments?: readonly PlaybackSegment[];
+  segmentAppearances?: SegmentAppearances;
+  /** Absolute media time at the start of the displayed viewport. */
+  timelineStart?: number;
 }
 
 function percent(value: number, total: number): string {
@@ -22,37 +32,40 @@ export function ScrubBar({
   onSeek,
   onSeekStep,
   onScrubbingChange,
+  segments = EMPTY_PLAYBACK_SEGMENTS,
+  segmentAppearances,
+  timelineStart = 0,
 }: ScrubBarProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLButtonElement>(null);
-  const tooltipRef = useRef<HTMLSpanElement>(null);
+  const tooltipRef = useRef<ScrubTooltipHandle>(null);
+  const validSegments = useMemo(() => normalizePlaybackSegments(segments), [segments]);
+  const labelsAt = (time: number) => playbackSegmentLabelsAt(validSegments, timelineStart + time);
   const durationRef = useRef(0);
   const currentTimeRef = useRef(0);
   const scrubbingRef = useRef(false);
   const pendingRatioRef = useRef<number | null>(null);
 
-  useEffect(
-    () =>
-      subscribe(({ currentTime, duration, bufferedTo }) => {
-        durationRef.current = duration;
-        currentTimeRef.current = currentTime;
-        const rail = railRef.current;
-        const root = rootRef.current;
-        if (!rail || !root) return;
+  useEffect(() => {
+    return subscribe(({ currentTime, duration, bufferedTo }) => {
+      durationRef.current = duration;
+      currentTimeRef.current = currentTime;
+      const rail = railRef.current;
+      const root = rootRef.current;
+      if (!rail || !root) return;
 
-        root.style.setProperty("--buffered", percent(bufferedTo, duration));
-        if (!scrubbingRef.current) {
-          root.style.setProperty("--played", percent(currentTime, duration));
-        }
-        rail.setAttribute("aria-valuemax", String(Math.round(duration)));
-        rail.setAttribute("aria-valuenow", String(Math.round(currentTime)));
-        rail.setAttribute(
-          "aria-valuetext",
-          `${formatTimecode(currentTime)} of ${formatTimecode(duration)}`,
-        );
-      }),
-    [subscribe],
-  );
+      root.style.setProperty("--buffered", percent(bufferedTo, duration));
+      if (!scrubbingRef.current) {
+        root.style.setProperty("--played", percent(currentTime, duration));
+      }
+      rail.setAttribute("aria-valuemax", String(Math.round(duration)));
+      rail.setAttribute("aria-valuenow", String(Math.round(currentTime)));
+      rail.setAttribute(
+        "aria-valuetext",
+        `${formatTimecode(currentTime)} of ${formatTimecode(duration)}${playbackSegmentLabelsAt(validSegments, timelineStart + currentTime).map((label) => `, ${label}`).join("")}`,
+      );
+    });
+  }, [subscribe, validSegments, timelineStart]);
 
   const ratioAt = (clientX: number): number => {
     const rail = railRef.current;
@@ -66,11 +79,8 @@ export function ScrubBar({
     const root = rootRef.current;
     if (!root) return;
     root.style.setProperty("--hover", `${ratio * 100}%`);
-    if (tooltipRef.current) {
-      tooltipRef.current.textContent = formatTimecode(
-        ratio * durationRef.current,
-      );
-    }
+    const time = ratio * durationRef.current;
+    tooltipRef.current?.preview(time, labelsAt(time));
   };
 
   const setScrubbing = (scrubbing: boolean) => {
@@ -167,10 +177,12 @@ export function ScrubBar({
           <span className="scrub-buffered" />
           <span className="scrub-hover" />
           <span className="scrub-played" />
+          <ScrubSegments segments={validSegments} appearances={segmentAppearances}
+            timelineStart={timelineStart} subscribe={subscribe} />
         </span>
         <span className="scrub-head" />
       </button>
-      <span ref={tooltipRef} className="scrub-tooltip" aria-hidden="true" />
+      <ScrubTooltip ref={tooltipRef} />
     </div>
   );
 }

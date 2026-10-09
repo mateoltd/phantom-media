@@ -1,3 +1,5 @@
+import { getVodPlaybackSegments } from "./playback-segments";
+import type { VodPlaybackData } from "./playback";
 import { fetchChannel, fetchVodMetadata, fetchVodPlaybackUrl } from "./twitch";
 import type { TwitchVideoData } from "./twitch";
 import { extractUrlInfo, buildPlaylistUrl, VodUrlInfo } from "./url-builder";
@@ -7,22 +9,13 @@ import { cacheGet, cacheSet } from "./cache";
 import { ResolvedQuality } from "./validation";
 import { archiveFolder, archiveHosts, archiveStartCandidates } from "./stream-archive";
 
-export interface CachedVodData {
-  vodId: string;
-  channel: string;
-  channelDisplayName?: string;
-  channelProfileImageURL?: string;
-  title?: string;
-  previewThumbnailURL?: string;
-  isLiveArchive?: boolean;
-  broadcastType: string;
+export interface CachedVodData extends VodPlaybackData {
   createdAt: string;
   urlInfo: VodUrlInfo;
-  qualities: ResolvedQuality[];
 }
 
 export async function resolveVod(vodId: string): Promise<CachedVodData> {
-  const cacheKey = `vod:v4:${vodId}`;
+  const cacheKey = `vod:v6:${vodId}`;
   const cached = cacheGet<CachedVodData>(cacheKey);
   if (cached) return cached;
 
@@ -146,7 +139,7 @@ export async function resolveStreamArchive(login: string): Promise<CachedVodData
   const stream = channel.stream;
   if (!stream) return null;
 
-  const cacheKey = `archive:v1:${stream.id}`;
+  const cacheKey = `archive:v2:${stream.id}`;
   const cached = cacheGet<CachedVodData | false>(cacheKey);
   if (cached !== null) return cached || null;
 
@@ -171,6 +164,7 @@ export async function resolveStreamArchive(login: string): Promise<CachedVodData
     createdAt: stream.createdAt,
     urlInfo: { ...found, channel: channel.login, broadcastType: "archive" },
     qualities,
+    segments: [],
   };
   cacheSet(cacheKey, data, 12 * 60 * 60 * 1000);
   return data;
@@ -219,6 +213,7 @@ function createCachedVodData({
     createdAt: vodData.createdAt,
     urlInfo,
     qualities,
+    segments: getVodPlaybackSegments(vodData),
   };
 }
 
