@@ -34,6 +34,12 @@ html { scrollbar-gutter: stable both-edges; }
   .twitch-stage-frame .stage-controls-right { grid-column: 2; grid-row: 2; justify-content: flex-end; gap: 0; margin-left: 0; }
   .twitch-stage-frame .stage-settings-trigger { min-width: 40px; }
 }
+/* Beside chat the frame is too short to seat a sheet above the controls, so sheets take the frame's height. */
+@media (min-width: 641px) {
+  @container (max-width: 640px) {
+    .twitch-stage-frame .stage-sheet { inset: var(--space-2) var(--space-2) var(--space-2) auto; width: min(340px, calc(100% - var(--space-2) * 2)); height: fit-content; max-height: calc(100% - var(--space-2) * 2); margin-top: auto; }
+  }
+}
 
 .twitch-main { min-height: calc(100svh - var(--media-header-height)); }
 .twitch-vod-loading .job-rail { background: var(--color-surface-hover); }

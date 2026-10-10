@@ -94,10 +94,12 @@ export function StageSettings({
   const settingsId = useId();
   const sheetRef = useRef<HTMLDivElement>(null);
 
+  // Nothing renders until there is something to choose, so the stage is looked up again once the trigger exists.
+  const empty = sections.length === 0 && actions.length === 0;
   const [stage, setStage] = useState<HTMLElement | null>(null);
   useEffect(() => {
     setStage(rootRef.current?.closest<HTMLElement>(".stage") ?? null);
-  }, []);
+  }, [empty]);
 
   const section = sections.find((entry) => entry.id === active);
 
@@ -143,7 +145,7 @@ export function StageSettings({
     }
   }, [open]);
 
-  if (sections.length === 0 && actions.length === 0) return null;
+  if (empty) return null;
 
   const sheet = (
     <>
