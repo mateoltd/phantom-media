@@ -104,7 +104,7 @@ function Feed({ entries, pending, onNavigate, data, loading, refresh, error }: {
         return <Link key={channel.login} href={buildChannelPath(channel.login)} className="twitch-channel" data-live={channel.stream ? "" : undefined} aria-label={`${channel.displayName}, ${status}`} title={`${channel.displayName}: ${status}`}>
           <HomeAvatar channel={channel} />
           {channel.displayName}
-          {channel.stream && <span className="twitch-channel-live" aria-hidden="true" />}
+          {channel.stream && <span className="twitch-channel-live-badge" aria-hidden="true">LIVE</span>}
         </Link>;
       })}
     </nav>}
