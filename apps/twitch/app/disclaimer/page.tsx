@@ -5,7 +5,7 @@ import { buildMetadata, getBaseUrl, siteConfig } from "@/lib/seo";
 export const metadata = buildMetadata({
   title: "Legal Disclaimer",
   description:
-    "Read the Phantom Twitch legal disclaimer, permitted-use guidance, copyright notice, and limitation of liability terms.",
+    "Read the Still legal disclaimer, permitted-use guidance, copyright notice, and limitation of liability terms.",
   path: "/disclaimer",
   keywords: ["legal disclaimer", "copyright notice", "terms of use"],
 });
@@ -40,7 +40,7 @@ export default function DisclaimerPage() {
           "@type": "WebPage",
           name: `${siteConfig.name} Legal Disclaimer`,
           description:
-            "Legal disclaimer and permitted-use guidance for Phantom Twitch.",
+            "Legal disclaimer and permitted-use guidance for Still.",
           url: pageUrl,
         }}
       />
@@ -51,7 +51,7 @@ export default function DisclaimerPage() {
             Legal disclaimer
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-text-secondary sm:text-[15px]">
-            Phantom Twitch is an independent software tool. This page sets out
+            Still is an independent software tool. This page sets out
             the intended use of the site, the limits of responsibility for its
             operators, and the intellectual-property boundaries users are
             expected to respect before using any streaming, playback, or
@@ -62,7 +62,7 @@ export default function DisclaimerPage() {
         <div className="mt-8 max-w-3xl space-y-6">
           <Section title="No affiliation">
             <p>
-              Phantom Twitch is an independent project and is not affiliated
+              Still is an independent project and is not affiliated
               with, endorsed by, sponsored by, approved by, or connected with
               Twitch, Amazon, or any of their parents, subsidiaries, or
               affiliates. Any reference to Twitch or related products is made
@@ -102,7 +102,7 @@ export default function DisclaimerPage() {
 
           <Section title="User responsibility">
             <p>
-              By using Phantom Twitch, you represent and warrant that you have
+              By using Still, you represent and warrant that you have
               all rights, permissions, and legal authority necessary for the
               content you access or process through the service.
             </p>
@@ -152,7 +152,7 @@ export default function DisclaimerPage() {
 
           <Section title="Availability and warranties">
             <p>
-              Phantom Twitch is provided on an &quot;as is&quot; and &quot;as
+              Still is provided on an &quot;as is&quot; and &quot;as
               available&quot; basis without warranties of any kind, express or
               implied, including merchantability, fitness for a particular
               purpose, non-infringement, availability, or accuracy.
@@ -172,8 +172,8 @@ export default function DisclaimerPage() {
 
           <Section title="Limitation of liability">
             <p>
-              To the maximum extent permitted by law, the operators of Phantom
-              Twitch will not be liable for any direct, indirect, incidental,
+              To the maximum extent permitted by law, the operators of Still
+              will not be liable for any direct, indirect, incidental,
               consequential, special, exemplary, or punitive damages arising out
               of or related to your use of, or inability to use, the service.
             </p>

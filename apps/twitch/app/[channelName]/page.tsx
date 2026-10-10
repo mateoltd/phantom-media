@@ -30,7 +30,7 @@ export async function generateMetadata({
   if (!isValidChannelName(login)) {
     return buildMetadata({
       title: "Channel Not Found",
-      description: "That Twitch channel does not exist on Phantom Twitch.",
+      description: "That Twitch channel does not exist on Still.",
       path: `/${channelName}`,
       noIndex: true,
     });
@@ -42,7 +42,7 @@ export async function generateMetadata({
   if (result.status === "missing") {
     return buildMetadata({
       title: "Channel Not Found",
-      description: "That Twitch channel does not exist on Phantom Twitch.",
+      description: "That Twitch channel does not exist on Still.",
       path: `/${login}`,
       noIndex: true,
     });
@@ -81,7 +81,7 @@ export async function generateMetadata({
 }
 
 function buildMetadataFallbackDescription(login: string): string {
-  return `Watch ${login} live on Twitch or browse their recent broadcasts and past broadcasts in the Phantom Twitch player.`;
+  return `Watch ${login} live on Twitch or browse their recent broadcasts and past broadcasts in the Still player.`;
 }
 
 export default async function ChannelPage({ params }: ChannelPageProps) {

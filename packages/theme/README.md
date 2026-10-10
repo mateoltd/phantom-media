@@ -1,7 +1,7 @@
 # Media layout and sizes
 
 `src/tokens.css` owns the shared sizes. `src/media.css` supplies the container
-and styles consumed by `@phantom/ui`. Twitch uses this contract for home,
+and styles consumed by `@phantom/ui`. Still uses this contract for home,
 channel, watch, history, and informational pages.
 
 ## Content frame
@@ -11,7 +11,7 @@ width is `100% - 2 × gutter`, with no fixed desktop maximum. Surfaces can opt
 into a cap using `--media-content-max-width` (100% by default).
 The gutter is `--navigation-gutter` plus a 24px inset, reduced to 12px at 640px
 and below. At viewport widths of 390px, 1440px, and 1920px, the content insets
-are 20px, 45.6px, and 48px respectively. Twitch also reserves equal scrollbar
+are 20px, 45.6px, and 48px respectively. Still also reserves equal scrollbar
 space on both viewport edges when the platform uses non-overlay scrollbars.
 
 Use `<MediaHeader contentAligned />` to align navigation to that frame. Do not
@@ -19,7 +19,7 @@ nest another `media-content` inside it: keep internal text readable with a
 `max-width` on the prose itself. A full-width background or divider can wrap
 the container.
 
-The Twitch player starts below the header at the frame's left edge. Its title
+The Still player starts below the header at the frame's left edge. Its title
 shares that edge, and its height-constrained video keeps a responsive space for
 expanded chat. Opening chat expands the sidebar to fill the remaining frame
 without moving the video. The sidebar reserves 20% of the frame (336–512px),
@@ -45,7 +45,7 @@ The `--space-N` scale uses `N × 4px`: available steps are 1–8, 10, 12, 14, an
 | `--media-font-badge` | 12px | Same |
 | `--media-card-line-height` | 1.4 | Same |
 
-Twitch maps the shared `MediaTile` styling hooks (`--media-tile-title-size`,
+Still maps the shared `MediaTile` styling hooks (`--media-tile-title-size`,
 `--media-tile-meta-size`, `--media-tile-badge-size`, and
 `--media-tile-line-height`) to these tokens. Its caption starts 12px below the
 artwork with no horizontal inset; metadata starts 4px below the title. Badges

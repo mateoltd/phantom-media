@@ -14,7 +14,7 @@ export default function NotFound() {
           <header>
             <h1 className="twitch-seo-title">Page not found</h1>
             <p className="twitch-seo-lede">
-              That page does not exist on Phantom Twitch. The channel may have been
+              That page does not exist on Still. The channel may have been
               renamed or removed, or the link may be mistyped.
             </p>
           </header>

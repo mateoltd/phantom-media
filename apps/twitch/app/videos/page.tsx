@@ -6,7 +6,7 @@ import { buildMetadata, getBaseUrl, siteConfig } from "@/lib/seo";
 export const metadata = buildMetadata({
   title: "Watch Twitch VODs, Including Subscriber-Only Broadcasts",
   description:
-    "Watch Twitch VODs and available subscriber-only broadcasts without an account. Seek, change playback speed, replay chat, resume, or download in Phantom Twitch.",
+    "Watch Twitch VODs and available subscriber-only broadcasts without an account. Seek, change playback speed, replay chat, resume, or download in Still.",
   path: "/videos",
   keywords: [
     "watch twitch vods",
@@ -27,7 +27,7 @@ export default function VideosPage() {
           "@type": "CollectionPage",
           name: "Twitch VODs and Past Broadcasts",
           description:
-            "Browse Twitch VODs and past broadcasts on Phantom Twitch.",
+            "Browse Twitch VODs and past broadcasts on Still.",
           url: pageUrl,
           isPartOf: { "@type": "WebSite", name: siteConfig.name, url: getBaseUrl().toString() },
         }}

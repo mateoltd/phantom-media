@@ -1,7 +1,7 @@
 {
   "name": "phantom-media",
   "private": true,
-  "description": "Open-source media tools led by Phantom Twitch: ad-free playback, subscriber-only VODs, and live rewind.",
+  "description": "Open-source media tools led by Still: ad-free playback, subscriber-only VODs, and live rewind.",
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",

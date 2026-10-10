@@ -1,26 +1,26 @@
 import type { Metadata } from "next";
 
 export const siteConfig = {
-  name: "Phantom Twitch",
-  shortName: "Phantom",
+  name: "Still",
+  shortName: "Still",
   title: "Ad-Free Twitch Player, Subscriber-Only VODs & Live Rewind",
   repositoryUrl: "https://github.com/mateoltd/phantom-media",
   description:
     "Watch Twitch ad-free without an account. Play subscriber-only VODs, rewind live streams through available archives, and take control with no app analytics.",
   creator: "mateoltd",
-  publisher: "Phantom Research",
+  publisher: "Phantom Media",
   ogImage: {
     url: "/og.png",
-    width: 1730,
-    height: 909,
-    alt: "Phantom Twitch - ad-free Twitch player, subscriber-only VODs and live rewind",
+    width: 1200,
+    height: 630,
+    alt: "Still - ad-free Twitch player, subscriber-only VODs and live rewind",
   },
   keywords: [
     "twitch client",
     "watch twitch live",
     "watch twitch vods",
     "twitch vod player",
-    "phantom twitch",
+    "still twitch player",
     "ad free twitch player",
     "twitch without account",
     "twitch live rewind",

@@ -6,7 +6,7 @@ import { isDebugEnabled } from "@/lib/debug";
 import { buildMetadata, getBaseUrl, siteConfig } from "@/lib/seo";
 
 export const metadata = buildMetadata({
-  title: siteConfig.title,
+  title: `${siteConfig.title} | ${siteConfig.name}`,
   description: siteConfig.description,
   path: "/",
 });

@@ -18,7 +18,7 @@ export function generateMasterPlaylist(
   for (const q of qualities) {
     if (q.delivery !== "hls" || isAudioVariant(q)) continue;
     if (!hasVideoAttributes(q)) {
-      console.warn("[phantom-hls] omitted video rendition without codec/resolution", { key: q.key });
+      console.warn("[still-hls] omitted video rendition without codec/resolution", { key: q.key });
       continue;
     }
     // HLS requires BANDWIDTH. Estimates are transport hints, never measured metadata.

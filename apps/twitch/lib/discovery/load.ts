@@ -15,7 +15,7 @@ async function expandDiscovery(cursor: string, languages: string[]): Promise<Dis
 }
 
 export async function fetchMoreChannelDiscovery(cursor: string, languages: string[]): Promise<DiscoveryPage> {
-  // Only Phantom-owned category plans may continue. Twitch after-cursors are
+  // Only Still-owned category plans may continue. Twitch after-cursors are
   // rejected as invalid inputs before any upstream request.
   return expandDiscovery(cursor, languages);
 }

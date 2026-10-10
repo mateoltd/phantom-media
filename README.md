@@ -1,13 +1,13 @@
 # Phantom Media
 
-Free, open-source media tools, led by **Phantom Twitch**:
+Free, open-source media tools, led by **Still**:
 an ad-free alternative Twitch player for live streams, subscriber-only VODs,
 and live rewind through broadcast archives. Watch without a Twitch account,
 with no app analytics or tracking cookies.
 
-[Twitch documentation](apps/twitch/README.md) and [local setup](#getting-set-up).
+[Still documentation](apps/twitch/README.md) and [local setup](#getting-set-up).
 
-## Phantom Twitch: watch on your terms
+## Still: watch on your terms
 
 - **Ad-free Twitch playback:** live streams and past broadcasts without Twitch ad breaks.
 - **Subscriber-only VODs:** play sub-only broadcasts without signing in when their source playlists are available.
@@ -33,7 +33,7 @@ share a design system and toolchain in this monorepo.
 | ---------------------- | ----------------------------------------------------------------------- |
 | `apps/downloader`      | Phantom Downloader pulls a video or a whole playlist down as a file.    |
 | `apps/stream`          | Phantom Stream finds a film or series and plays it.                     |
-| `apps/twitch`          | Ad-free Twitch player, subscriber-only VODs, and live rewind.                            |
+| `apps/twitch`          | Still: ad-free Twitch player, subscriber-only VODs, and live rewind.                            |
 | `packages/theme`       | Design tokens, base layer and CSS primitives. Tailwind v4.              |
 | `packages/ui`          | React components the apps share, consumed as source.                    |
 | `packages/config`      | tsconfig, ESLint and PostCSS bases.                                     |
@@ -56,10 +56,10 @@ climbed.
 
 **Downloader** grows outward. Today it resolves and downloads YouTube; the goal
 is inexpensive YouTube downloading plus Spotify, Twitch, and the other video and
-audio platforms worth supporting. Twitch is already covered by the Twitch app,
+audio platforms worth supporting. Twitch is already covered by Still,
 so the work there is making the downloader the front door to it.
 
-**Twitch** broadens into a fuller client than the channel and VOD player it is
+**Still** broadens into a fuller client than the channel and VOD player it is
 today.
 
 **Stream** narrows, on purpose. It is a stream frontend, and that is what it
@@ -82,7 +82,7 @@ Node 22 or newer, pnpm 10. Everything else comes from the lockfile.
 ```sh
 pnpm dev                              # all apps
 pnpm --filter @phantom/stream dev     # just one
-pnpm --filter @phantom/twitch dev     # Twitch only
+pnpm --filter @phantom/twitch dev     # Still only
 pnpm check                            # typecheck, lint, test and build everything
 pnpm deployment:check                 # Worker/OpenNext dry runs, no deployment
 pnpm container:build:downloader       # real Downloader image build
@@ -148,13 +148,13 @@ Tailwind source scan and then loads the media surface appropriate to that app:
 @source "../../../packages/ui/src";
 ```
 
-Stream and Twitch add their additional cinema/player layers. The `@source`
+Stream and Still add their additional cinema/player layers. The `@source`
 line is not optional: Tailwind only ships classes it can find, and the shared
 components live outside the app it is scanning.
 
 Anything genuinely local stays local. The downloader keeps its locale-switcher
 transition and its download/format workflows. All three apps now use the shared
-media header, search field, artwork, and media surface. Stream and Twitch also
+media header, search field, artwork, and media surface. Stream and Still also
 import `@phantom/theme/player.css` for shared video chrome; their playback
 engines remain app-specific.
 
@@ -162,24 +162,26 @@ The theme also ships a dark media surface. `@phantom/theme/media.css` re-points
 the palette variables to ink for all three apps. Stream adds
 `@phantom/theme/cinema.css` for its catalog and watch pages. Downloader keeps
 its download-specific layouts and queue state, while all apps use the shared
-media shell. Stream and Twitch use `@phantom/theme/player.css` and player
-controls from `@phantom/ui`. Twitch keeps its playback engine and chat behavior.
+media shell. Stream and Still use `@phantom/theme/player.css` and player
+controls from `@phantom/ui`. Still keeps its playback engine and chat behavior.
 
-Phantom Twitch was imported from the separate `twitchsubonlybypass` checkout.
+Still, formerly Phantom Twitch, was imported from the separate `twitchsubonlybypass` checkout.
 Its channel, VOD, and playlist routes remain local to that app; the source
 checkout is unchanged.
 
 ## Design
 
-Sora anchors the interface across all three apps. JetBrains Mono is limited to
-the Phantom wordmark treatment and existing technical readouts. All three use
-the shared dark media palette. The wordmark, search field, buttons, artwork,
-media header, and media tiles come from `@phantom/ui`. Stream and Twitch also
+Sora anchors the interface across all three apps. Still uses its local outlined
+SVG wordmark and resting-face symbol, with the shared Phantom identity in its
+“Part of Phantom Media” footer signature. Downloader and Stream retain the
+shared Phantom wordmark; JetBrains Mono serves that treatment and technical
+readouts. All three use the shared dark media palette, search field, buttons,
+artwork, media header, and media tiles from `@phantom/ui`. Stream and Still also
 use the shared player controls; app-specific catalog, channel, playback, and
 download workflows stay with their apps.
 
 The [media layout and size reference](packages/theme/README.md) records the
-shared content frame, spacing, type, and element variants used by Twitch.
+shared content frame, spacing, type, and element variants used by Still.
 
 ## Deployment
 
@@ -190,7 +192,7 @@ and Cloudflare Builds deploys it to production. See
 [`docs/VERSIONING.md`](docs/VERSIONING.md#production-deploys).
 
 All three apps have Cloudflare deployment configuration. Downloader uses a
-Container; Stream and Twitch run as Workers through OpenNext. Deploy only the
+Container; Stream and Still run as Workers through OpenNext. Deploy only the
 apps intended for the current environment.
 
 **Downloader** runs in a Cloudflare Container. It shells out to `yt-dlp` and
@@ -207,7 +209,7 @@ The image builds from the workspace root because the app compiles against
 packages that live outside its own folder. The `image_build_context` setting is
 in `apps/downloader/wrangler.jsonc`.
 
-**Stream and Twitch** run on Workers through OpenNext. Build each app, then
+**Stream and Still** run on Workers through OpenNext. Build each app, then
 deploy its Worker with `wrangler --domain` and `NEXT_PUBLIC_BASE_URL` set to its
 canonical HTTPS URL. Keep production hostnames in deployment settings rather
 than this repository.

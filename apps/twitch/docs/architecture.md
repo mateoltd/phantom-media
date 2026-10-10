@@ -1,4 +1,4 @@
-# Twitch application boundaries
+# Still application boundaries
 
 Routes translate HTTP input and output. Domain operations own upstream shapes;
 components consume pure application contracts. Direct imports keep server, browser

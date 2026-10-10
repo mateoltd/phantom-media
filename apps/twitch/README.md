@@ -1,7 +1,7 @@
-# Phantom Twitch
+# Still
 
-Phantom Twitch is a free, open-source, ad-free
-Twitch player for live streams and VODs. Search a channel or paste a Twitch
+Still is a free, open-source, ad-free
+Twitch player for live streams and VODs, part of Phantom Media. Search a channel or paste a Twitch
 video or clip link; no account, extension, or installation is required.
 
 ## Features
@@ -19,7 +19,7 @@ video or clip link; no account, extension, or installation is required.
 - Browser-local history, resume positions, and playback preferences.
 - No app analytics, tracking cookies, or Twitch account requirement.
 
-Source media must still be available: Phantom Twitch cannot restore deleted
+Source media must still be available: Still cannot restore deleted
 videos, and archive-based rewind depends on the channel and Twitch. Media and
 chat use third-party services. Cloudflare observability is currently enabled
 in the Worker configuration, and opt-in debug diagnostics exist, so account-free

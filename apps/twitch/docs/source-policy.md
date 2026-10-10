@@ -19,7 +19,7 @@ reference. A sample establishes a contract, not unlimited coverage/request volum
 - Terminated-account recovery, anonymous 4K and unverified members-only live playback.
 
 Cursor restrictions are **not a global catalog-depth limit**. Finite sort/type/
-language/period slices can discover older content. Phantom category-plan tokens
+language/period slices can discover older content. Still category-plan tokens
 are app-owned, not Twitch cursors. Chat uses contentOffsetSeconds; verified offset
 coverage does not prove completeness in arbitrarily crowded same-second windows.
 

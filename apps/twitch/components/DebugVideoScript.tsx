@@ -2,7 +2,7 @@ import Script from "next/script";
 
 const DEBUG_SCRIPT = `
 (() => {
-  const prefix = "[phantom-debug]";
+  const prefix = "[still-debug]";
   const watchedVideoElements = new WeakSet();
   const monitoredRequests = ["/api/vod/resolve", "/api/vod/master.m3u8", "/api/vod/media.m3u8", "/api/clip/resolve", "/api/channel/resolve", "/api/channel/search", "/api/live/master.m3u8", "/api/live/media.m3u8"];
   const safeUrl = (input) => {
@@ -97,7 +97,7 @@ const DEBUG_SCRIPT = `
 export function DebugVideoScript() {
   return (
     <Script
-      id="phantom-debug-video"
+      id="still-debug-video"
       strategy="afterInteractive"
       dangerouslySetInnerHTML={{ __html: DEBUG_SCRIPT }}
     />

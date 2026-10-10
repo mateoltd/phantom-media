@@ -2,7 +2,7 @@
   "name": "@phantom/twitch",
   "version": "0.2.0",
   "private": true,
-  "description": "Ad-free Twitch player with subscriber-only VODs, archive-based live rewind, and account-free viewing.",
+  "description": "Still: ad-free Twitch player with subscriber-only VODs, archive-based live rewind, and account-free viewing.",
   "scripts": {
     "dev": "next dev --turbopack --hostname 0.0.0.0",
     "build": "next build",
