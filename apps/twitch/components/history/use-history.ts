@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useSyncExternalStore } from "react";
-import { historyPaused, parseHistory, resourceKey, saveHistory, storedHistory, subscribeHistory, type HistoryEntry } from "@/lib/history";
+import { useEffect, useEffectEvent, useMemo, useSyncExternalStore } from "react";
+import { addToHistory, historyPaused, parseHistory, resourceKey, saveHistory, storedHistory, subscribeHistory, type HistoryEntry } from "@/lib/history";
 
 // On the server and while hydrating the history is unread, which is not the same as empty.
 const unread = () => null;
@@ -13,6 +13,14 @@ export function useHistoryRead() {
 
 export function useHistoryPaused() {
   return useSyncExternalStore(subscribeHistory, historyPaused, unpaused);
+}
+
+/** Records what is playing: when it opens, and again if history is unpaused while it is still on screen. */
+export function useHistoryRecord(entry: Omit<HistoryEntry, "timestamp"> | null) {
+  const paused = useHistoryPaused();
+  const key = entry && resourceKey(entry.resource);
+  const record = useEffectEvent(() => { if (entry) addToHistory(entry); });
+  useEffect(() => { if (key && !paused) record(); }, [key, paused]);
 }
 
 // Videos whose details have been asked for since the page loaded, whichever view of the history asked.

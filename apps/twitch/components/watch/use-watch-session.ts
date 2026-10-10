@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { addToHistory, readStoredPlayback, storePlayback } from "@/lib/history";
+import { readStoredPlayback, storePlayback } from "@/lib/history";
+import { useHistoryRecord } from "../history/use-history";
 import { parseStartTime } from "@/lib/validation";
 import type { TwitchChannelData as ChannelData } from "@/lib/contracts";
 import type { VideoDetails } from "@/lib/playback/data";
@@ -23,6 +24,7 @@ export function useWatchSession() {
 
   const [state, setState] = useState<AppState>("loading");
   const [vodData, setVodData] = useState<VodPlaybackData | null>(null);
+  useHistoryRecord(vodData && { resource: { kind: "vod", id: vodData.vodId }, channel: vodData.channel, broadcastType: vodData.broadcastType, title: vodData.title, previewThumbnailURL: vodData.previewThumbnailURL });
   const [channelData, setChannelData] = useState<ChannelData | null>(null);
   const [error, setError] = useState("");
   const [masterUrl, setMasterUrl] = useState("");
@@ -69,15 +71,6 @@ export function useWatchSession() {
           if (!details || signal.aborted) return;
           setVodData(current => current?.vodId === vodId ? { ...current, chapters: details.chapters, classification: details.classification } : current);
         }).catch(() => {});
-
-
-      addToHistory({
-        resource: { kind: "vod", id: data.vodId },
-        channel: data.channel,
-        broadcastType: data.broadcastType,
-        title: data.title,
-        previewThumbnailURL: data.previewThumbnailURL,
-      });
     } catch (err) {
       if (signal.aborted) return;
       resetPlayback();

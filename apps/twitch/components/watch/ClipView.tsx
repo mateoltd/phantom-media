@@ -1,5 +1,6 @@
 "use client";
-import { addToHistory, readStoredPlayback, storePlayback } from "@/lib/history";
+import { readStoredPlayback, storePlayback } from "@/lib/history";
+import { useHistoryRecord } from "../history/use-history";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Player } from "@/components/player/Player";
 import { DownloadButton } from "@/components/downloads/DownloadButton";
@@ -8,6 +9,7 @@ import { ResourceNotice } from "../resources/ResourcePage";
 import { Footer } from "../Footer";
 export function ClipView({ slug, requestedTime }: { slug: string; requestedTime?: number }) {
   const [data, setData] = useState<ClipPlaybackData>();
+  useHistoryRecord(data ? { resource: { kind: "clip", slug }, channel: "", broadcastType: "clip", title: data.title, previewThumbnailURL: data.thumbnail, lengthSeconds: data.duration } : null);
   const [error, setError] = useState("");
   const [startTime] = useState(() => requestedTime ?? readStoredPlayback({ kind: "clip", slug }));
   const currentTime = useRef(startTime);
@@ -22,7 +24,6 @@ export function ClipView({ slug, requestedTime }: { slug: string; requestedTime?
       if (!response.ok) throw new Error("Clip is unavailable");
       const next = await response.json() as ClipPlaybackData;
       if (controller.signal.aborted) return;
-      addToHistory({ resource: { kind: "clip", slug }, channel: "", broadcastType: "clip", title: next.title, previewThumbnailURL: next.thumbnail, lengthSeconds: next.duration });
       setData(next); setQuality(next.qualities[0]?.key ?? "");
     }).catch(error => { if (!controller.signal.aborted) setError(error.message); });
     return () => controller.abort();
