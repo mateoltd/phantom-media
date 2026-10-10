@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test, afterEach, mock } from 'node:test';
 import { createPermitPool } from '../lib/concurrency.ts';
 import { readBytes } from '../lib/media/read.ts';
-import { resourceKey, historyPath, discoveryHistory, validHistory, playbackKey } from '../lib/history.ts';
+import { resourceKey, historyPath, discoveryHistory, validHistory, playbackKey, addToHistory, forgetHistory, restoreHistory, parseHistory, storedHistory, setHistoryPaused, storePlayback, readStoredPlayback } from '../lib/history.ts';
 import { readPlaybackSource } from '../lib/playback/resolve.ts';
 import { parseMediaManifest } from '../lib/media/manifest.ts';
 import { proxyMedia } from '../lib/media/proxy.ts';
@@ -23,6 +23,26 @@ test('history and resume keys distinguish clips from VODs without legacy adapter
   assert.notEqual(resourceKey(vod.resource),resourceKey(clip.resource));assert.notEqual(playbackKey(vod.resource),playbackKey(clip.resource));
   assert.equal(historyPath(vod),'/videos/123');assert.equal(historyPath(clip),'/clips/123');assert.equal(discoveryHistory([vod,clip]).length,1);
   assert.equal(validHistory([{vodId:'123',channel:'old',timestamp:0},vod,clip]).length,2);
+});
+test('forgetting history drops resume positions until restored, and a paused history records nothing',()=>{
+  const data=new Map();let changes=0;
+  globalThis.localStorage={getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,String(value)),removeItem:key=>data.delete(key)};
+  globalThis.window={dispatchEvent:()=>{changes++;return true;}};
+  try{
+    const first={kind:'vod',id:'1'},second={kind:'vod',id:'2'};
+    for(const resource of [first,second]){addToHistory({resource,channel:'fixturechannel',broadcastType:'archive'});storePlayback(resource,90);}
+    assert.deepEqual(parseHistory(storedHistory()).map(entry=>entry.resource.id),['2','1']);assert.equal(changes,2);
+    const forgotten=forgetHistory(entry=>resourceKey(entry.resource)==='vod:1');
+    assert.deepEqual(parseHistory(storedHistory()).map(entry=>entry.resource.id),['2']);assert.equal(readStoredPlayback(first),0);assert.equal(readStoredPlayback(second),90);
+    setHistoryPaused(true);addToHistory({resource:first,channel:'fixturechannel',broadcastType:'archive'});storePlayback(second,500);
+    assert.equal(parseHistory(storedHistory()).length,1);assert.equal(readStoredPlayback(second),90);
+    setHistoryPaused(false);restoreHistory(forgotten);
+    assert.equal(parseHistory(storedHistory()).length,2);assert.equal(readStoredPlayback(first),90);
+    const cleared=forgetHistory();storePlayback(first,500);restoreHistory(cleared);
+    assert.equal(readStoredPlayback(first),500);assert.equal(readStoredPlayback(second),90);
+    forgetHistory();
+    assert.equal(parseHistory(storedHistory()).length,0);assert.equal(readStoredPlayback(second),0);
+  }finally{delete globalThis.localStorage;delete globalThis.window;}
 });
 test('explicit start-of-video timestamps remain distinct from absent resume requests',()=>{
   assert.equal(parseStartTime('0'),0);

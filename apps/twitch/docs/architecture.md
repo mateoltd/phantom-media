@@ -202,6 +202,13 @@ hydration, and `client.ts` plus `use-search.ts` own local ranking and progressiv
 UI updates. Both runtimes use the same index implementation, bounded to 2,000
 channels. It precomputes normalized login/display names, handles accents and
 separators, and retains only the top eight matches. Exact, prefix, word,
+Watch history has no page of its own. The header's history button opens a panel
+over the current page (`components/history/HistoryMenu.tsx`) that lists what is
+stored, removes single entries or all of them with an undo, and pauses recording. Every
+write goes through `lib/history.ts`, which announces it, so the home page and
+search stay in step with the panel. The panel itself makes no request beyond
+the bounded metadata backfill for entries saved without details.
+
 substring and bounded typo matching outrank category/title clues. Short ambiguous
 name matches weigh logarithmically bounded follower counts and partner status
 alongside spelling. Longer exact names, explicit @usernames and recent personal
@@ -253,8 +260,8 @@ verification expire independently after 120 seconds; follower/partner observatio
 after seven days. Active search schedules expiry invalidations and reopening
 recomputes freshness. Ready hidden matches remain available for keyboard reopening.
 
-Watch-history affinity is read again when search opens, including same-tab
-changes and deletions; it never leaves the browser. Up to 48 selected channel
+Watch-history affinity follows every change to the stored history, in this tab
+or another, deletions included; it never leaves the browser. Up to 48 selected channel
 identities are stored locally for later name matching. Query strings are not
 persisted. Pasted channel URLs and explicit @usernames navigate directly; VOD
 and clip links retain their dedicated routes.

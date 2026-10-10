@@ -64,7 +64,6 @@ export const reservedChannelNames = new Set([
   "robots.txt",
   "sitemap.xml",
   "videos",
-  "watch-history",
   "categories",
   "live-wall",
 ]);

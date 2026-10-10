@@ -16,7 +16,8 @@ export interface DiscoveryChannel {
 }
 
 export function historyPreview(entry: { vodId: string; previewThumbnailURL?: string }, channel?: DiscoveryChannel) {
-  if (entry.previewThumbnailURL && !entry.previewThumbnailURL.includes("/_404/")) return entry.previewThumbnailURL;
+  // History keeps the full-size picture's address; a history tile is small, so it asks for the rendition a ninth of the weight.
+  if (entry.previewThumbnailURL && !entry.previewThumbnailURL.includes("/_404/")) return entry.previewThumbnailURL.replace(/-1280x720(\.jpe?g)$/, "-320x180$1");
   // A live preview is relevant only when this VOD is that stream's archive.
   if (channel?.stream?.archiveVideo?.id === entry.vodId) return channel.stream.previewImageURL;
   return undefined;

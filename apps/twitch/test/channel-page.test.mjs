@@ -51,7 +51,7 @@ test("rejects app-owned and malformed channel names", () => {
   assert.equal(isValidChannelName("example"), true);
   // These resolve to app routes, not channels.
   assert.equal(isValidChannelName("videos"), false);
-  assert.equal(isValidChannelName("watch-history"), false);
+  assert.equal(isValidChannelName("categories"), false);
   assert.equal(isValidChannelName("disclaimer"), false);
   assert.equal(isValidChannelName("api"), false);
   assert.equal(isValidChannelName("robots.txt"), false);

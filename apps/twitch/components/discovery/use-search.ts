@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { SearchSuggestion } from "@phantom/ui";
 import { extractChannelName, extractClipSlug, extractVodId } from "@/lib/validation";
 import { formatTime } from "@/lib/format";
-import { localChannelSearch, prepareSearchResults, refreshChannelSearch, refreshSearchHistory, searchMatchDeadline, searchRevision, serverSearchRevision, subscribeSearch, warmSearch } from "@/lib/search/client";
+import { localChannelSearch, prepareSearchResults, refreshChannelSearch, searchMatchDeadline, searchRevision, serverSearchRevision, subscribeSearch, warmSearch } from "@/lib/search/client";
 import { searchAvatarURL } from "@/lib/search/avatars";
 import { SEARCH_OBSERVATION_TTL, SEARCH_POPULARITY_TTL } from "@/lib/search/ranking";
 
@@ -19,7 +19,6 @@ export function useSearch(value: string, active: boolean) {
   const searchable = query.length >= 2 && query.length <= 80 && !clip;
   const enabled = active && searchable;
   useEffect(() => { void warmSearch(); }, []);
-  useEffect(() => { if (active) refreshSearchHistory(); }, [active]);
   useEffect(() => { if (enabled && !vod) void prepareSearchResults(term); }, [enabled, vod, term, revision, clock]);
   useEffect(() => {
     if (!enabled || vod) return;

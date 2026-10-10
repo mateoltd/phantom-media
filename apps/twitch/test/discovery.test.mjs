@@ -19,6 +19,7 @@ test("an unfinished VOD uses a live preview only for its matching archive", () =
   assert.equal(historyPreview(entry, owner), "https://example.com/live.jpg");
   assert.equal(historyPreview({ ...entry, vodId: "124" }, owner), undefined);
   assert.equal(historyPreview({ ...entry, previewThumbnailURL: "https://example.com/vod.jpg" }, owner), "https://example.com/vod.jpg");
+  assert.equal(historyPreview({ ...entry, previewThumbnailURL: "https://example.com/thumb/thumb0-1280x720.jpg" }), "https://example.com/thumb/thumb0-320x180.jpg");
 });
 
 test("recent channels retain recency, normalize duplicates, and bound the lookup", () => {

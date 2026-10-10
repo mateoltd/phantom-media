@@ -166,22 +166,26 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
 .twitch-footer { margin-top: 2rem; }
 .twitch-home .twitch-footer { margin: 0; padding: 12px 0 20px; }
 .twitch-page .twitch-footer { margin-top: auto; }
-.twitch-history-heading { height: auto; align-items: flex-end; }
-.twitch-history-note { margin-top: 4px; font-size: 13px; color: var(--color-text-secondary); }
-.twitch-history-clear { height: 36px; margin-right: -12px; padding: 0 12px; border-radius: 12px; font-size: 13px; color: var(--color-text-secondary); transition: background 160ms, color 160ms; }
-.twitch-history-clear:hover { background: var(--color-surface-light); color: var(--color-text); }
-.twitch-history-clear[data-danger] { background: #49292e; color: #ffc1c4; }
-.twitch-history-clear[data-danger]:hover { background: #5a2f35; color: #fff; }
-.twitch-history-confirm { display: flex; gap: 4px; }
-.twitch-history-confirm .twitch-history-clear { margin-right: 0; }
-.twitch-history-item { position: relative; min-width: 0; container-type: inline-size; }
-.twitch-history-item .twitch-home-tile-meta { padding-right: 28px; }
-/* The tile is itself a button or link, so the remove control sits beside it and is placed over the title row. */
-.twitch-history-remove { position: absolute; top: calc(100cqw * 9 / 16 + 6px); right: -8px; z-index: 3; }
-.twitch-history-empty { display: flex; flex-direction: column; align-items: center; padding: 72px 0; text-align: center; color: var(--color-text-secondary); }
-.twitch-history-empty h2 { margin-top: 20px; font-size: 20px; font-weight: 600; color: var(--color-text); }
-.twitch-history-empty p { max-width: 24rem; margin-top: 10px; font-size: 14px; line-height: 1.6; }
-.twitch-history-empty .cinema-button { margin-top: 24px; }
+/* Watch history opens from the header as a panel over the page: the popover the player's actions use, hung from
+   its button (--anchor-* are measured from it). Everything in it starts on one edge and ends on one edge. */
+.twitch-action-popover.twitch-history-panel { --media-thumbnail-compact-height: 3.75rem; position: fixed; z-index: 50; top: calc(var(--anchor-top) + var(--space-2)); right: auto; left: var(--anchor-right); translate: -100%; display: flex; flex-direction: column; width: 22rem; max-width: calc(var(--anchor-right) - var(--space-2)); max-height: min(32rem, calc(100svh - var(--anchor-top) - var(--space-4))); outline: 0; }
+.twitch-action-popover.twitch-history-panel > header { min-height: 28px; padding: 0 var(--space-2) var(--space-1); }
+.twitch-history-panel > header h2 { font: inherit; }
+/* The list runs to the panel's edges so that its scrollbar does, and pads back to the shared ones. */
+.twitch-history-list { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--space-3); margin-inline: calc(-1 * var(--space-2)); padding: var(--space-1) var(--space-4) var(--space-2); overflow: hidden auto; overscroll-behavior: contain; }
+/* The tile is itself a button, so the remove control sits beside it. Its box hangs past the edge its icon ends on. */
+.twitch-history-list > li { display: flex; align-items: center; gap: var(--space-2); }
+.twitch-history-list .twitch-home-tile { flex: 1; width: auto; gap: var(--space-3); }
+.twitch-history-list .twitch-home-art-title { -webkit-line-clamp: 1; }
+.twitch-history-list > li > button:last-child { width: 28px; height: 28px; margin-right: -8px; }
+/* Opening the panel is not loading: a picture appears when it is ready, with no placeholder shown first. */
+.twitch-history-panel .t-skel-skeleton { display: none; }
+.twitch-history-panel .t-skel-content { transition: none; }
+.twitch-history-empty { padding: var(--space-1) var(--space-2) var(--space-2); font-size: 13px; line-height: 1.6; color: var(--color-text-secondary); }
+.twitch-history-panel > footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-height: 36px; padding: var(--space-1) var(--space-2) 0; font-size: 13px; color: var(--color-text-secondary); }
+/* A text button's edge is its label. */
+.twitch-history-panel > header > .twitch-history-action { width: auto; height: 28px; margin-right: calc(-1 * var(--space-2)); padding: 0 var(--space-2); border-radius: 8px; font-weight: 400; color: var(--color-text-secondary); transition: background 160ms, color 160ms; }
+.twitch-history-panel > header > .twitch-history-action:hover { background: var(--color-surface-hover); color: var(--color-text); }
 /* Channel broadcasts use the same spacing and heading scale as the home feed. */
 .twitch-broadcast-heading { display: flex; align-items: center; min-height: var(--media-heading-height); margin-bottom: var(--media-heading-gap); font-size: var(--media-font-section); line-height: 1.35; font-weight: 600; }
 .twitch-broadcast-grid { display: grid; grid-template-columns: repeat(var(--media-grid-columns), minmax(0, 1fr)); gap: var(--media-grid-row-gap) var(--media-grid-column-gap); }
@@ -900,7 +904,7 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
 
 /* Header actions are quiet tools; only hover/active state gets a surface. */
 .media-header .twitch-nav-action { width: 36px; height: 36px; min-height: 36px; border: 0; border-radius: 8px; background: transparent; color: var(--color-text-secondary); box-shadow: none; }
-.media-header .twitch-nav-action:hover, .media-header .twitch-nav-action[aria-current="page"] { background: var(--color-surface-light); color: var(--color-text); }
+.media-header .twitch-nav-action:hover, .media-header .twitch-nav-action:is([aria-current="page"], [aria-expanded="true"]) { background: var(--color-surface-light); color: var(--color-text); }
 .media-header .twitch-nav-action:focus-visible { outline: 1px solid var(--color-text-tertiary); outline-offset: -2px; }
 .media-header:has(.twitch-nav-action) .media-header-search-trigger { width: 36px; height: 36px; border-radius: 8px; }
 .media-header:has(.twitch-nav-action) .media-header-actions { gap: var(--space-1); }

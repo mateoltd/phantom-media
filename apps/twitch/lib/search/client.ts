@@ -1,5 +1,5 @@
 import { ResourceCache } from "../cache.ts";
-import { HISTORY_STORAGE, validHistory } from "../history.ts";
+import { parseHistory, storedHistory, subscribeHistory } from "../history.ts";
 import { ChannelSearchIndex } from "./ranking.ts";
 import { SEARCH_SEEDS } from "./seeds.ts";
 import { observedChannel, readSearchChannels, type SearchChannel, type SearchVisit } from "./contracts.ts";
@@ -33,13 +33,11 @@ export function initializeSearch() {
   } catch {}
   refreshSearchHistory();
   void prepareSearchRows(index.snapshot().filter(channel => channel.isLive !== undefined).slice(-12)).then(changed);
-  window.addEventListener("storage", event => { if (event.key === HISTORY_STORAGE || event.key === null) refreshSearchHistory(); });
+  subscribeHistory(refreshSearchHistory);
 }
 
-/** Read on opening search too: native storage events do not fire in the writing tab. */
-export function refreshSearchHistory() {
-  let history: SearchVisit[] = [];
-  try { history = validHistory(JSON.parse(localStorage.getItem(HISTORY_STORAGE) ?? "[]")); } catch {}
+function refreshSearchHistory() {
+  const history: SearchVisit[] = parseHistory(storedHistory());
   visits = [...selectedVisits.values(), ...history].slice(0, 100);
   index.put(history.map(({ channel }) => ({ login: channel.toLowerCase(), displayName: channel })));
   changed();
