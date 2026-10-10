@@ -38,8 +38,8 @@ export function CategoryShelf({ shelf }: { shelf: CategoryDirectory["featured"][
       <div className="twitch-category-strip" ref={strip} onScroll={measure}>
         {shelf.streams.map(stream => <RecommendedTile key={stream.id} channel={liveChannel(stream)} />)}
       </div>
-      <button type="button" className="twitch-category-strip-step" data-side="start" hidden={ends.start} onClick={() => page(-1)} aria-label={`Earlier ${shelf.name} streams`}><CaretLeft size={18} weight="bold" /></button>
-      <button type="button" className="twitch-category-strip-step" data-side="end" hidden={ends.end} onClick={() => page(1)} aria-label={`More ${shelf.name} streams`}><CaretRight size={18} weight="bold" /></button>
+      <button type="button" className="twitch-category-strip-step" data-side="start" hidden={ends.start} onClick={() => page(-1)} aria-label={`Earlier ${shelf.name} streams`}><CaretLeft size={16} weight="bold" /></button>
+      <button type="button" className="twitch-category-strip-step" data-side="end" hidden={ends.end} onClick={() => page(1)} aria-label={`More ${shelf.name} streams`}><CaretRight size={16} weight="bold" /></button>
     </div>
   </section>;
 }

@@ -834,18 +834,25 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
 .twitch-category-strip { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - (var(--shelf-streams) - 1) * var(--shelf-gap)) / var(--shelf-streams)); column-gap: var(--shelf-gap); margin-top: -4px; padding-top: 4px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
 .twitch-category-strip::-webkit-scrollbar { display: none; }
 .twitch-category-strip > * { scroll-snap-align: start; }
-/* Steps sit on the previews' centre line, centred on the strip's two edges rather than over a preview.
-   They are the search field's submit button again: the one light, round control the app already has. */
-.twitch-category-strip-step { position: absolute; top: calc((100cqw - (var(--shelf-streams) - 1) * var(--shelf-gap)) / var(--shelf-streams) * 9 / 32 - 18px); z-index: 3; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #e4e6e9; color: #181a1e; transition: transform 160ms ease, background-color 160ms ease; }
+/* Steps are bare carets in the gutters either side of the strip, never over a preview: the start one in the gap after the box art, the end one
+   in the page gutter. Each is as tall as a preview, so the caret lands on the previews' centre line and the whole gutter is the target. */
+.twitch-category-strip-step { position: absolute; top: 0; z-index: 3; display: flex; align-items: center; justify-content: center; width: var(--shelf-gap); height: calc((100cqw - (var(--shelf-streams) - 1) * var(--shelf-gap)) / var(--shelf-streams) * 9 / 16); border-radius: 6px; color: var(--color-text-tertiary); transition: color 160ms ease; }
 .twitch-category-strip-step[hidden] { display: none; }
-.twitch-category-strip-step[data-side="start"] { left: -18px; }
-.twitch-category-strip-step[data-side="end"] { right: -18px; }
-.twitch-category-strip-step:hover { transform: translateY(-1px); background: #fff; }
-.twitch-category-strip-step:focus-visible { outline: 1px solid var(--color-text-secondary); outline-offset: 2px; }
+.twitch-category-strip-step[data-side="start"] { right: 100%; }
+.twitch-category-strip-step[data-side="end"] { left: 100%; }
+.twitch-category-strip-step:hover { color: var(--color-text); }
+.twitch-category-strip-step:focus-visible { outline: 1px solid var(--color-text-secondary); outline-offset: -1px; color: var(--color-text); }
 @media (min-width: 3000px) { .twitch-category-shelf { --shelf-streams: 6; } }
 @media (max-width: 1399px) { .twitch-category-shelf { --shelf-streams: 3; } }
 @media (max-width: 1000px) { .twitch-category-shelf { --shelf-streams: 2; } }
 @media (max-width: 640px) { .twitch-category-shelf { --shelf-streams: 1; --shelf-gap: var(--space-3); } }
+/* Touch pages by swiping, so there are no steps: the strip runs off the screen edge instead and shows the start of the next preview.
+   The spare track keeps the 27 to 64 ratio, so box art and preview still come out the same height. */
+@media (hover: none) {
+  .twitch-category-shelf { --shelf-peek: var(--space-3); grid-template-columns: 27fr repeat(var(--shelf-streams), 64fr) var(--shelf-peek); }
+  .twitch-category-strip { grid-auto-columns: calc((100% - var(--shelf-peek) - var(--shelf-streams) * var(--shelf-gap)) / var(--shelf-streams)); margin-right: calc(-1 * var(--page-gutter)); padding-right: var(--page-gutter); }
+  .twitch-category-strip-step { display: none; }
+}
 /* Stream tiles here wait for their previews in the same dark placeholder as on the home page. */
 .twitch-resource-page .twitch-home-tile .react-loading-skeleton { --base-color: #1b1d20; --highlight-color: #292c30; line-height: 1; }
 .twitch-category-stats strong { font-weight: 600; color: var(--color-text); }
