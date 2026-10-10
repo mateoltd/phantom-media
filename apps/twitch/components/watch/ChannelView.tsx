@@ -74,7 +74,7 @@ export function ChannelView({ channel: served, revalidate = false, videos }: {
               {showingArchive ? <Broadcast size={21} /> : <VideoCamera size={21} />}</button>] : []),
         ]} />}
         chat={chat}
-      ><div className="twitch-watch-details"><VodInfo channel={channel.login} channelDisplayName={channel.displayName} channelProfileImageURL={channel.profileImageURL} title={stream.title} broadcastType="live" isLive titleOnly titleAs="h2" /></div></WatchLayout>}
+      ><div className="twitch-watch-details"><VodInfo channel={channel.login} channelDisplayName={channel.displayName} channelProfileImageURL={channel.profileImageURL} title={stream.title} broadcastType="live" isLive titleOnly titleAs="h2" category={stream.game?.name} /></div></WatchLayout>}
       <ChannelProfile channel={channel} videos={videos} actions={!stream && <Button variant="secondary" onClick={toggleChat} aria-expanded={chatOpen} aria-controls="channel-chat"><ChatCircle weight="regular" size={17} />{chatOpen ? "Hide chat" : "Show chat"}</Button>}>
         {!stream && chatOpen && <div id="channel-chat" className="twitch-standalone-chat">{chat}</div>}
       </ChannelProfile>

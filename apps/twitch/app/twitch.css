@@ -341,7 +341,7 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
   max-width: none;
   margin-inline: 0;
   grid-template-columns: var(--watch-video-width) var(--watch-sidebar-width);
-  grid-template-areas: "video sidebar" "details .";
+  grid-template-areas: "video sidebar" "details details";
   transition: width var(--panel-close-dur) var(--panel-ease), grid-template-columns var(--panel-close-dur) var(--panel-ease);
 }
 .twitch-playback-layout[data-chat-open="true"] {
@@ -354,7 +354,8 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
   width: 100%;
 }
 .twitch-playback-video { grid-area: video; }
-.twitch-playback-details { grid-area: details; }
+/* The title runs the width of the page, not of the video, so it wraps where the page ends. */
+.twitch-playback-details { grid-area: details; width: 100cqw; }
 .twitch-playback-details .twitch-watch-details { padding-top: 0.25rem; }
 .twitch-watch-sidebar {
   grid-area: sidebar;
@@ -417,8 +418,8 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
 .twitch-channel-page .twitch-footer { margin-top: auto; }
 .twitch-channel-profile { --channel-indent: 0px; margin-top: var(--space-5); }
 .twitch-channel-profile:has(.twitch-channel-banner) { --channel-indent: var(--space-5); }
-.twitch-watch-viewport ~ .twitch-channel-profile { margin-top: var(--space-2); }
-.twitch-channel-profile[data-linked] { margin-top: var(--space-6); }
+/* Under a player the channel is a section of its own, set further off than anything inside either block. */
+.twitch-watch-viewport ~ .twitch-channel-profile, .twitch-channel-profile[data-linked] { margin-top: var(--space-10); }
 .twitch-channel-banner { position: relative; height: clamp(6rem, 15vw, 18rem); overflow: hidden; border-radius: 16px; background: var(--color-surface); }
 .twitch-channel-banner img { object-fit: cover; }
 /* Picture, name, then actions. The name gives way before anything wraps. */
@@ -434,6 +435,9 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
 .twitch-channel-name { display: flex; align-items: center; gap: var(--space-2); min-width: 0; font-size: 1.5rem; line-height: 2rem; font-weight: 600; color: var(--color-text); }
 .twitch-channel-name-link { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 .twitch-channel-name-link:hover { color: var(--color-text-secondary); }
+/* On its own page the channel's name is the page title. Under a video it is a section heading, a step down. */
+.twitch-channel-profile:not([data-linked]) .twitch-channel-name { font-size: var(--media-font-page-title); line-height: 2.75rem; }
+.twitch-channel-profile:not([data-linked]) .twitch-channel-header[data-banner] .twitch-channel-names { padding-top: 0; }
 /* One line under the name: the handle stays quiet, and the follower count beside it is set as a measure of the
    channel rather than part of its name, with the figure carrying the weight. */
 .twitch-channel-meta { display: flex; align-items: baseline; gap: var(--space-3); min-width: 0; font-size: 0.875rem; line-height: 1.25rem; }
@@ -441,12 +445,15 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
 .twitch-channel-followers { flex: none; color: var(--color-text-secondary); }
 .twitch-channel-followers strong { font-weight: 600; color: var(--color-text); }
 .twitch-channel-identity > .twitch-watch-actions { grid-column: 3; justify-self: end; align-self: center; }
+/* The tabs belong to the list they switch, so they keep closer to it than to the name above. */
+.twitch-channel-profile .twitch-catalog { margin-top: var(--space-10); }
 .twitch-channel-profile .twitch-catalog-bar { padding-inline: var(--channel-indent); }
 @media (max-width: 640px) {
   .twitch-channel-profile:has(.twitch-channel-banner) { --channel-indent: var(--space-3); }
   .twitch-channel-identity { grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-3); }
   .twitch-channel-header[data-banner] .twitch-channel-portrait { width: 4.5rem; height: 4.5rem; margin-top: -1.25rem; }
   .twitch-channel-header[data-banner] .twitch-channel-names { padding-top: 0; }
+  .twitch-channel-profile:not([data-linked]) .twitch-channel-name { line-height: 2rem; }
   /* Too narrow to keep the button beside the name: it takes its own row, under the picture. */
   .twitch-channel-identity > .twitch-watch-actions { grid-column: 1 / -1; justify-self: start; }
 }
