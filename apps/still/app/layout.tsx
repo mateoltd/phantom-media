@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { TabFocus } from "@phantom/ui";
 import { JetBrains_Mono, Sora } from "next/font/google";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { HISTORY_HINT } from "@/lib/history-hint";
@@ -80,6 +81,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: HISTORY_HINT }} />
       </head>
       <body className="font-sans antialiased">
+        <TabFocus />
         <GlobalSearch />
         {children}
       </body>

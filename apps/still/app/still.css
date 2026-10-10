@@ -86,7 +86,7 @@ html { scrollbar-gutter: stable both-edges; }
 .still-home-search-field { flex: none; width: 100%; pointer-events: auto; transition: width 0.24s cubic-bezier(0.22, 1, 0.36, 1), transform 0.24s cubic-bezier(0.22, 1, 0.36, 1); }
 .still-home-search .search-pill { transition: height 0.24s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.24s ease, border-color 0.16s ease; }
 .still-home-search:not([data-docked]) .search-pill { height: 80px; padding-inline: 24px 12px; background: #202225; border-color: #ffffff30; box-shadow: 0 12px 40px #00000020; }
-.still-home-search:not([data-docked]) .search-pill:focus-within { border-color: #ffffff70; }
+:where(html:not([data-focus-navigation="pointer"])) .still-home-search:not([data-docked]) .search-pill:focus-within { border-color: #ffffff70; }
 .still-home-search:not([data-docked]) .search-pill input { font-size: 1.25rem; padding-inline: 16px; }
 .still-home-search:not([data-docked]) .search-pill input::placeholder { color: #bfc3c9; }
 .still-home-search:not([data-docked]) .search-pill > svg { width: 24px; height: 24px; }

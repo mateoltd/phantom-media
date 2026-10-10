@@ -33,6 +33,7 @@ export { StageSettings } from "./stage-settings";
 export { useSleepTimer } from "./use-sleep-timer";
 export { SleepTimerPicker } from "./sleep-timer-picker";
 export { Switch } from "./switch";
+export { TabFocus } from "./tab-focus";
 export type { SwitchProps } from "./switch";
 export type { SettingsOption, SettingsSection, SignalStrength } from "./stage-settings";
 export { formatTimecode } from "./timecode";

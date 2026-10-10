@@ -141,7 +141,7 @@
 }
 .stage-idle .stage-chrome { translate: 0 6px; }
 .stage-idle .stage-top { translate: 0 -6px; }
-.stage-idle:has(:focus-visible) :is(.stage-chrome, .stage-top) { translate: 0 0; }
+:where(html:not([data-focus-navigation="pointer"])) .stage-idle:has(:focus-visible) :is(.stage-chrome, .stage-top) { translate: 0 0; }
 .scrub-head,
 .scrub-tooltip,
 .scrub-hover { transition: opacity 120ms ease-out; }

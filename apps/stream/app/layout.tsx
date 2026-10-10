@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { TabFocus } from "@phantom/ui";
 import { Suspense } from "react";
 import { RouteMotion } from "@/components/route-motion";
 import { JetBrains_Mono, Sora } from "next/font/google";
@@ -68,6 +69,7 @@ export default function RootLayout({
         {localDebug ? <meta name="phantom-debug" content="1" /> : null}
       </head>
       <body>
+        <TabFocus />
         <Suspense fallback={null}><RouteMotion /></Suspense>
         {children}
       </body>

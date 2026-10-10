@@ -73,6 +73,12 @@ select:not(:disabled) {
   cursor: pointer;
 }
 
+/* Native :focus-visible also responds to typing and media shortcuts. Only Tab
+   navigation enables our focus outlines; retain native behavior without JS. */
+html[data-focus-navigation="pointer"] :focus {
+  outline: none !important;
+}
+
 ::selection {
   background: var(--color-phantom-soft);
   color: var(--color-text);

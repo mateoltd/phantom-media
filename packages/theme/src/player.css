@@ -379,13 +379,13 @@
 .stage-idle .stage-chrome > * {
   pointer-events: none;
 }
-.stage-idle:has(:focus-visible) .stage-chrome,
-.stage-idle:has(:focus-visible) .stage-top,
-.stage-idle:has(:focus-visible) .stage-transport {
+:where(html:not([data-focus-navigation="pointer"])) .stage-idle:has(:focus-visible) .stage-chrome,
+:where(html:not([data-focus-navigation="pointer"])) .stage-idle:has(:focus-visible) .stage-top,
+:where(html:not([data-focus-navigation="pointer"])) .stage-idle:has(:focus-visible) .stage-transport {
   opacity: 1;
 }
-.stage-idle:has(:focus-visible) .stage-transport .stage-control,
-.stage-idle:has(:focus-visible) .stage-chrome > * {
+:where(html:not([data-focus-navigation="pointer"])) .stage-idle:has(:focus-visible) .stage-transport .stage-control,
+:where(html:not([data-focus-navigation="pointer"])) .stage-idle:has(:focus-visible) .stage-chrome > * {
   pointer-events: auto;
 }
 

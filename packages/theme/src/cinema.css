@@ -69,7 +69,7 @@
 }
 
 .tile-hit:hover .tile,
-.tile-hit:focus-visible .tile {
+:where(html:not([data-focus-navigation="pointer"])) .tile-hit:focus-visible .tile {
   transform: translateY(-4px) scale(1.02);
   box-shadow: 0 16px 38px rgba(0, 0, 0, 0.55);
 }
@@ -78,7 +78,7 @@
   outline: none;
 }
 
-.tile-hit:focus-visible .tile {
+:where(html:not([data-focus-navigation="pointer"])) .tile-hit:focus-visible .tile {
   outline: 2px solid var(--color-phantom);
   outline-offset: 2px;
 }
@@ -215,7 +215,7 @@
   box-shadow: none;
 }
 .tile-hit:hover .tile,
-.tile-hit:focus-visible .tile {
+:where(html:not([data-focus-navigation="pointer"])) .tile-hit:focus-visible .tile {
   transform: translateY(-3px);
   box-shadow: none;
 }
