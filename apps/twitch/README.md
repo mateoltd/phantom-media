@@ -56,7 +56,8 @@ account can still return Cloudflare error 1102 even with this media fast path.
 
 Cloudflare Builds deploys this Worker from the `deploy/twitch` branch with
 `/apps/twitch` as its root. That branch only moves to a `@phantom/twitch@<version>`
-release tag once CI has passed on it, so pushes to `main` do not reach production.
+release, which is tagged once the commit has passed CI and built as a preview,
+so pushes to `main` do not reach production.
 The build installs the workspace dependencies and runs OpenNext; Wrangler then
 deploys to both custom domains. Build caching is enabled and preview builds are
 disabled. The Worker watches this app, shared packages, and workspace dependency

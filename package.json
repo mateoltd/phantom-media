@@ -17,8 +17,6 @@
     "changeset": "changeset",
     "version:check": "changeset status --since=origin/main",
     "release:version": "changeset version",
-    "release:tag": "changeset git-tag",
-    "release:push": "git push --atomic origin main $(git tag --points-at main)",
     "deploy:downloader": "pnpm --filter @phantom/downloader run deploy",
     "deploy:stream": "pnpm --filter @phantom/stream deploy",
     "clean": "turbo run clean && rm -rf node_modules"

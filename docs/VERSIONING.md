@@ -55,64 +55,71 @@ app in the changeset with the bump that change deserves.
    `pnpm changeset --empty`.
 3. **To release**, run `pnpm release:version`. It consumes the pending
    changesets, bumps each `package.json`, and writes each workspace's
-   `CHANGELOG.md`. Commit the result as `chore(release): version packages`.
-4. Run `pnpm release:tag` on that commit, then `pnpm release:push`. It pushes
-   `main` and the new tags together, so the release either arrives whole or
-   not at all.
+   `CHANGELOG.md`. Commit the result as `chore(release): version packages`
+   and push it to `main`. That is the whole release: there is nothing to tag
+   and nothing to deploy by hand.
 
 CI runs `pnpm version:check` on every pull request and fails when a workspace
 changed without a changeset.
 
-## Production deploys
+## Releases and production
 
-Production follows release tags, not `main`. Cloudflare Builds deploys each app
-from its own branch: `deploy/twitch` and `deploy/stream`. Downloader has no
-linked Worker: it is versioned like the others but deployed by hand with
-`pnpm deploy:downloader`.
-Each branch is a pointer to the commit that app has in production. They are
-meant to lag behind `main`, and nobody pushes to them by hand.
+A version on `main` that has no tag yet is a pending release. The `Deploy`
+workflow turns it into a real one, and it only does so on a commit that is
+already proven:
 
-The `Deploy` workflow moves them. It does not act on the event that started it:
-every run compares each app's latest release tag with its deploy branch and
-closes the gap, so a missed, repeated, or out-of-order event changes nothing.
-It runs when an app tag is pushed, when CI finishes on `main`, and on demand.
+1. Every push to `main` runs CI, and Cloudflare builds it as a preview. A
+   preview is a full build of the Worker that is not sent to production.
+2. When both have passed, the workflow tags the workspace at that commit.
+3. For Twitch and Stream it then moves the app's `deploy/<app>` branch to the
+   tagged commit. Cloudflare Builds deploys production from that branch, so
+   this is what ships. The workflow waits for that build and reports it.
 
-An app's branch moves to its latest release only when all of these hold:
+Production therefore only ever receives a commit Cloudflare has already built
+once. Packages and Downloader are tagged after CI alone: packages reach
+production through the patch bump they give each dependent app, and Downloader
+has no linked Worker and is deployed by hand with `pnpm deploy:downloader`.
 
-- The tag is a stable version. Pre-releases never deploy.
-- The tagged commit is on `main`.
-- `apps/<app>/package.json` at that commit carries the tag's version.
-- CI passed on that commit. A release tagged before CI finishes waits for it.
-- The move is a fast-forward. A branch is never moved back.
+The workflow runs whenever CI finishes on `main`, and on demand from the
+Actions tab. It acts on the state of the repository, not on the event that
+started it, so running it again is always safe.
 
-Only the tags of those two apps deploy. A package release reaches production through the patch
-bump it gives each dependent app.
+### When a release does not build
 
-GitHub enforces two of these independently of the workflow: `deploy/*`
-branches reject force pushes and deletion, and `@phantom/*` tags cannot be
-moved or deleted once pushed.
+Nothing is lost, because nothing was tagged. The version is still pending.
+Push the fix to `main`; the same version is released by the first commit that
+passes CI and builds as a preview. There is no version to burn and no branch
+to touch.
 
-### When something goes wrong
+The `Deploy` run says which check failed and on which commit.
 
-- **A release did not deploy.** Open the latest `Deploy` run: it says, per app,
-  whether it is waiting for CI, blocked, or already current. Fix the cause and
-  run the workflow again from the Actions tab.
-- **The branch moved but production did not change.** The Cloudflare build
-  failed. Retry it from the Worker's build history.
+### Other cases
+
+- **The production build fails after the preview passed.** The same commit
+  already built, so this is Cloudflare, not the code. Retry the build from the
+  Worker's build history. Runs stay red until it succeeds, so it cannot be
+  missed.
 - **A bad release is live.** Roll the Worker back to its previous deployment in
   Cloudflare, which takes effect immediately, then ship the fix as a new
   release. Deploy branches are not moved back.
-- **A tag was pushed on the wrong commit.** It cannot be removed. Release the
-  next version; the workflow always takes the highest one.
+- **Cloudflare never builds `main`.** The Worker must have builds for
+  non-production branches enabled. Without them a release waits, then fails
+  saying so.
+
+GitHub enforces two rules independently of the workflow: `deploy/*` branches
+reject force pushes and deletion, and `@phantom/*` tags cannot be moved or
+deleted once pushed.
 
 ## Tags
 
 One tag per released workspace, in the form `<package name>@<version>`, for
-example `@phantom/twitch@0.2.0`. Tags are created only by `pnpm release:tag`
-and are never moved or deleted; the repository rejects both.
+example `@phantom/twitch@0.2.0`. Tags are created only by the `Deploy`
+workflow. A tag pushed by hand on a commit Cloudflare has not built is refused
+for deployment.
 
 ## Pre-releases
 
 Use SemVer pre-release identifiers through Changesets' pre mode
 (`pnpm changeset pre enter next`, then `pnpm changeset pre exit`), giving
-versions such as `0.3.0-next.0`. Do not hand-write suffixes.
+versions such as `0.3.0-next.0`. Do not hand-write suffixes. Pre-release
+versions are not tagged or deployed.

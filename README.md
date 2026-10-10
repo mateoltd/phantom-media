@@ -104,9 +104,10 @@ touches a workspace needs one:
 ```sh
 pnpm changeset                        # record which workspaces change, and how
 pnpm release:version                  # apply pending changesets: bump + changelog
-pnpm release:tag                      # tag each released workspace
-pnpm release:push                     # push main and the tags; apps deploy after CI
 ```
+
+Committing that bump to `main` is the release. Tags are created for you, and
+only once the commit has passed CI and built on Cloudflare.
 
 The rules for choosing a bump are in [`docs/VERSIONING.md`](docs/VERSIONING.md).
 
@@ -163,9 +164,10 @@ shared content frame, spacing, type, and element variants used by Twitch.
 
 ## Deployment
 
-Production deploys on release, not on push: once CI passes on an app's release
-tag, its `deploy/<app>` branch moves to that commit, and Cloudflare Builds
-deploys from that branch. See
+Production deploys on release, not on push. Every push to `main` is built by
+Cloudflare as a preview. A new version is tagged only on a commit that passed
+CI and that preview build; its `deploy/<app>` branch then moves to that commit
+and Cloudflare Builds deploys it to production. See
 [`docs/VERSIONING.md`](docs/VERSIONING.md#production-deploys).
 
 All three apps have Cloudflare deployment configuration. Downloader uses a
