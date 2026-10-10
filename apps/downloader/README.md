@@ -250,7 +250,7 @@ boundary.
 ### Requirements
 
 - Node.js 22 or newer
-- pnpm 10
+- pnpm 12.6.0
 - Python 3
 - current `yt-dlp`
 - FFmpeg
