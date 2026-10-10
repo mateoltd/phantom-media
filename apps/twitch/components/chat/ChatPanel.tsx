@@ -55,18 +55,15 @@ export function ChatPanel({ channel, vodId, time = 0, playbackSeekVersion = 0, o
 }
 
 function LiveChat({ channel }: { channel: string }) {
-  const { messages, status, retry } = useLiveChat(channel);
-  return <>
-    <ChatMessages messages={messages} empty={status === "Connected" ? "No messages yet. New messages will appear here." : status} />
-    <div className="twitch-chat-footer"><span>{status === "Connected" ? `Live in ${channel}` : status}</span><IconButton label="Reconnect chat" onClick={retry} size="sm"><ArrowsClockwise weight="regular" size={15} /></IconButton></div>
-  </>;
+  const { messages, status } = useLiveChat(channel);
+  return <ChatMessages messages={messages} empty={status === "Connected" ? "No messages yet. New messages will appear here." : status} />;
 }
 
 function ReplayChat({ vodId, time, playbackSeekVersion, onSeek, tool }: { vodId: string; time: number; playbackSeekVersion: number; onSeek?: (time: number) => void; tool: "search" | "reactions" | null }) {
   const { messages, status, error, seekVersion, resync } = useReplayChat(vodId, time, playbackSeekVersion);
   return <>
     {tool && onSeek ? <ChatSearch vodId={vodId} time={time} onSeek={onSeek} view={tool} /> : <ChatMessages onSeek={onSeek} resetKey={seekVersion} messages={messages} empty={error || (status === "Loading replay…" ? status : "No messages at this point in the video.")} error={error} onRetry={resync} onJumpToLatest={resync} />}
-    <div className="twitch-chat-footer"><span role="status">{status}</span><time className="font-mono">{formatTime(time)}</time><IconButton label="Resync replay" onClick={resync} size="sm"><ArrowsClockwise weight="regular" size={15} /></IconButton></div>
+    <div className="twitch-chat-footer"><span role="status">{status}</span><time className="font-mono">{formatTime(time)}</time></div>
   </>;
 }
 
