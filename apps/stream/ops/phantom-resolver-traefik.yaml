@@ -1,3 +1,4 @@
+# Replace resolver.example.com with the resolver's deployment hostname.
 http:
   routers:
     phantom-resolver-http:
@@ -5,12 +6,12 @@ http:
         - http
       middlewares:
         - redirect-to-https
-      rule: Host(`phantom-resolver.cerfq3.easypanel.host`)
+      rule: Host(`resolver.example.com`)
       service: phantom-resolver
     phantom-resolver-https:
       entryPoints:
         - https
-      rule: Host(`phantom-resolver.cerfq3.easypanel.host`)
+      rule: Host(`resolver.example.com`)
       service: phantom-resolver
       tls:
         certResolver: letsencrypt

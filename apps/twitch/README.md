@@ -1,6 +1,6 @@
 # Phantom Twitch
 
-**[Watch on notwitch.tv](https://notwitch.tv)**: a free, open-source, ad-free
+Phantom Twitch is a free, open-source, ad-free
 Twitch player for live streams and VODs. Search a channel or paste a Twitch
 video or clip link; no account, extension, or installation is required.
 
@@ -54,9 +54,10 @@ NEXT_PUBLIC_BASE_URL=https://your-host.example pnpm --filter @phantom/twitch exe
 pnpm --filter @phantom/twitch exec wrangler deploy --domain your-host.example --domain www.your-host.example --var NEXT_PUBLIC_BASE_URL:https://your-host.example
 ```
 
-The `www` host permanently redirects to the apex while preserving paths and
-query strings. Production hostnames are supplied at deploy time and are kept out
-of this repository.
+Set `NEXT_PUBLIC_BASE_URL` to the canonical apex URL at build time. Its `www`
+host permanently redirects to that origin while preserving paths and query
+strings. When the variable is unset or blank, no host redirect is emitted.
+Production hostnames are supplied through deployment settings.
 
 The custom `worker.js` entry point streams `/api/proxy` media requests directly
 through the Fetch API. All other requests use the generated OpenNext handler.
