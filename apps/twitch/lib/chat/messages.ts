@@ -34,6 +34,10 @@ export function parseChatLine(line: string): ChatMessage | null {
     user,
     color: sanitizeChatColor(tags.color) || chatColor(user),
     text,
+    badges: (tags.badges ?? "").split(",").flatMap(value => {
+      const match = value.match(/^([a-zA-Z0-9_-]{1,100})\/([a-zA-Z0-9_-]{1,100})$/);
+      return match ? [{ id: match[1], version: match[2], title: match[1] }] : [];
+    }).slice(0, 12),
   };
 }
 

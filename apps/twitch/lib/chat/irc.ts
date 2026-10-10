@@ -1,4 +1,5 @@
-import { parseChatLine, type ChatMessage } from "./messages.ts";
+import { badgeImage, parseChatLine, type ChatMessage } from "./messages.ts";
+import { resolveMessageBadges, type BadgeCatalog, type ChatBadge } from "./badges.ts";
 
 export function createLiveChatSession({ channel, updateMessages, onStatus }: {
   channel: string;
@@ -11,6 +12,19 @@ export function createLiveChatSession({ channel, updateMessages, onStatus }: {
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let attempts = 0;
   let pending: ChatMessage[] = [];
+  let badges: BadgeCatalog = new Map();
+  const badgeRequest = new AbortController();
+  // Artwork loading must never delay the IRC connection or interrupt chat.
+  void fetch(`/api/chat/badges?channel=${encodeURIComponent(channel.toLowerCase())}`, { signal: badgeRequest.signal })
+    .then(response => { if (!response.ok) throw new Error("Badges unavailable"); return response.json(); })
+    .then((entries: ChatBadge[]) => {
+      if (stopped || !Array.isArray(entries)) return;
+      badges = new Map(entries.filter(entry => entry && typeof entry.id === "string" && typeof entry.version === "string"
+        && typeof entry.title === "string" && typeof entry.imageUrl === "string" && badgeImage(entry.imageUrl))
+        .map(entry => [`${entry.id}/${entry.version}`, entry]));
+      pending = pending.map(message => resolveMessageBadges(message, badges));
+      updateMessages(current => current.map(message => resolveMessageBadges(message, badges)));
+    }).catch(() => { /* Keep text chat available when badge metadata fails. */ });
   const seen = new Set<string>();
   const flush = window.setInterval(() => {
     if (!pending.length) return;
@@ -63,7 +77,7 @@ export function createLiveChatSession({ channel, updateMessages, onStatus }: {
         onStatus("Connected");
         seen.add(message.id);
         if (seen.size > 2000) seen.delete(seen.values().next().value!);
-        pending = [...pending, message].slice(-150);
+        pending = [...pending, resolveMessageBadges(message, badges)].slice(-150);
       }
     };
     connection.onerror = () => connection.close();
@@ -76,6 +90,7 @@ export function createLiveChatSession({ channel, updateMessages, onStatus }: {
   connect();
   return () => {
     stopped = true;
+    badgeRequest.abort();
     clearInterval(flush);
     clearTimeout(reconnectTimer);
     socket?.close();
