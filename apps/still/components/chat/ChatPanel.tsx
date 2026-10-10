@@ -11,11 +11,13 @@ import { useReplayChat } from "./use-replay-chat";
 import { ChatSearch } from "./ChatSearch";
 import { ChatBadge } from "./ChatBadge";
 
-export function ChatPanel({ channel, vodId, time = 0, playbackSeekVersion = 0, onSeek, onClose }: {
+export function ChatPanel({ channel, vodId, time = 0, playbackSeekVersion = 0, idle = false, onSeek, onClose }: {
   channel: string;
   vodId?: string;
   time?: number;
   playbackSeekVersion?: number;
+  /** Holds the panel's frame without connecting to anything. */
+  idle?: boolean;
   onClose: () => void;
   onSeek?: (time: number) => void;
 }) {
@@ -47,7 +49,8 @@ export function ChatPanel({ channel, vodId, time = 0, playbackSeekVersion = 0, o
           </>}
         </div>
       </div>
-      {mode === "replay" && vodId
+      {idle ? <div className="still-chat-content" />
+        : mode === "replay" && vodId
         ? <ReplayChat key={vodId} vodId={vodId} time={time} playbackSeekVersion={playbackSeekVersion} onSeek={onSeek} tool={tool} />
         : <LiveChat key={channel} channel={channel} />}
     </section>

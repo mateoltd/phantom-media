@@ -138,7 +138,7 @@ export function Chrome({ videoRef, title, isLive, chatOpen, onChatToggle, segmen
         rightExtra={
           <>
             {useDvrTimeline && liveLag > 3 && (
-              <button type="button" onClick={seekToLive} className="stage-control min-w-11 text-[12px] font-medium" aria-label="Jump to live">Live</button>
+              <button type="button" onClick={seekToLive} className="stage-control stage-live-trigger min-w-11 text-[12px] font-medium" aria-label="Jump to live">Live</button>
             )}
             <StageControl
               label={sleepTimer.minutes === null ? "Sleep timer" : `Sleep timer, ${sleepTimer.minutesLeft} minutes left`}

@@ -9,7 +9,7 @@ import { Player } from "@/components/player/Player";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { DownloadButton } from "@/components/downloads/DownloadButton";
 import { Footer } from "@/components/Footer";
-import { WatchLayout } from "./WatchLayout";
+import { WatchLayout, useWatchChat } from "./WatchLayout";
 import { WatchRail } from "./WatchRail";
 import { ShareButton } from "./ShareButton";
 import { VodInfo } from "./VodInfo";
@@ -55,11 +55,12 @@ export function VodView({ vodData, masterUrl, startTime, playerTime, onTimeUpdat
   } : undefined;
   const sourceUrl = mode === "audio" ? `${masterUrl}&mode=audio` : quality ? `${masterUrl}&quality=${encodeURIComponent(quality)}` : masterUrl;
   const timelineSegments = useMemo(() => [...vodData.segments, ...vodData.chapters.map(chapter => ({ id: `chapter:${chapter.id}`, kind: "chapter", start: chapter.start, end: chapter.end, label: chapter.title }))], [vodData.segments, vodData.chapters]);
-  const [chatOpen, setChatOpen] = useState(true);
+  const watchChat = useWatchChat();
+  const chatOpen = watchChat.open;
   const onPlaybackSeek = useCallback(() => setPlaybackSeekVersion((value) => value + 1), []);
-  const toggleChat = () => setChatOpen((open) => !open);
+  const toggleChat = watchChat.toggle;
   const closeChat = () => {
-    setChatOpen(false);
+    watchChat.close();
     requestAnimationFrame(() => {
       document.querySelector<HTMLButtonElement>(".still-watch-rail [aria-controls='watch-chat']")?.focus();
     });
@@ -67,7 +68,7 @@ export function VodView({ vodData, masterUrl, startTime, playerTime, onTimeUpdat
   return (
     <div className="media-content still-watch relative pb-8">
       <div className="pt-2">
-        <WatchLayout chatOpen={chatOpen}
+        <WatchLayout chatOpen={chatOpen} chatState={watchChat.state}
           video={masterUrl ? <Player seekRequest={seekRequest} src={sourceUrl} audioOnly={mode === "audio"} title={vodData.title || `Video ${vodData.vodId}`} subtitle={vodData.channelDisplayName || vodData.channel}
             startTime={sourceTime} isLive={Boolean(vodData.isLiveArchive)} dvrMode={Boolean(vodData.isLiveArchive)}
             segments={timelineSegments} storyboardUrl={vodData.seekPreviewsURL} sourceSelection={sourceSelection}
@@ -81,7 +82,7 @@ export function VodView({ vodData, masterUrl, startTime, playerTime, onTimeUpdat
               <DownloadButton key="download" iconOnly qualities={labeledQualities} channel={vodData.channel} vodId={vodData.vodId} />,
               <ShareButton key="share" iconOnly vodId={vodData.vodId} currentTime={playerTime} />,
             ]} />}
-          chat={<ChatPanel onSeek={seek} channel={vodData.channel} vodId={vodData.vodId} time={playerTime} playbackSeekVersion={playbackSeekVersion} onClose={closeChat} />}
+          chat={<ChatPanel idle={!watchChat.started} onSeek={seek} channel={vodData.channel} vodId={vodData.vodId} time={playerTime} playbackSeekVersion={playbackSeekVersion} onClose={closeChat} />}
         >
         <div className="still-watch-information">
           <div className="still-watch-details"><VodInfo channel={vodData.channel} channelDisplayName={vodData.channelDisplayName} channelProfileImageURL={vodData.channelProfileImageURL}

@@ -29,16 +29,10 @@ html { scrollbar-gutter: stable both-edges; }
 .still-stage-frame .stage-idle:fullscreen .stage-cues { bottom: 6vh; }
 .still-stage-frame .stage-cue { white-space: nowrap; }
 
-/* Small player frames place the clock above the action row rather than over its buttons. */
+/* The shared compact layout puts the toolbar below the video. */
 @container (max-width: 480px) {
-  .still-stage-frame .stage-chrome { padding: 2rem var(--space-3) var(--space-2); }
-  .still-stage-frame .stage-controls { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 0; margin-top: var(--space-1); }
-  .still-stage-frame .stage-controls-left { display: contents; }
-  .still-stage-frame .stage-toolbar-play, .still-stage-frame .stage-volume, .still-stage-frame .stage-chat-trigger { display: none; }
-  .still-stage-frame .stage-timecode { grid-column: 1 / -1; grid-row: 1; margin: 0 0 var(--space-1); font-size: 10px; }
-  .still-stage-frame .stage-volume-group { grid-column: 1; grid-row: 2; }
-  .still-stage-frame .stage-controls-right { grid-column: 2; grid-row: 2; justify-content: flex-end; gap: 0; margin-left: 0; }
-  .still-stage-frame .stage-settings-trigger { min-width: 40px; }
+  .still-stage-frame .stage:not(:fullscreen) { aspect-ratio: auto; }
+  .still-stage-frame .stage-chat-trigger { display: none; }
 }
 /* Beside chat the frame is too short to seat a sheet above the controls, so sheets take the frame's height. */
 @media (min-width: 641px) {
@@ -347,7 +341,7 @@ html:not([data-home-search="hidden"]) .media-header:has(.still-header-search[dat
   grid-template-areas: "video sidebar" "details details";
   transition: width var(--panel-close-dur) var(--panel-ease), grid-template-columns var(--panel-close-dur) var(--panel-ease);
 }
-.still-playback-layout[data-chat-open="true"] {
+.still-playback-layout:is([data-chat-open="true"], [data-chat-open="auto"]) {
   /* Chat takes the remaining frame when the video reaches its height limit. */
   --watch-sidebar-width: calc(100cqw - var(--watch-video-width));
   transition-duration: var(--panel-open-dur);
@@ -559,25 +553,34 @@ html:not([data-home-search="hidden"]) .media-header:has(.still-header-search[dat
 .still-watch-rail .still-rail-action[data-copied="true"], .still-watch-rail .still-rail-downloading { color: var(--color-success); }
 .still-download-ring { position: absolute; inset: 0; width: 44px; height: 44px; }
 
-@media (min-width: 801px) {
+@media (min-width: 1400px) {
   .still-stage-frame { border-radius: 28px 0 0 28px; }
+  /* Until chat is opened or closed by hand, it is open at this width. */
+  .still-playback-layout[data-chat-open="auto"] .t-panel-slide { transform: none; opacity: 1; filter: none; pointer-events: auto; }
 }
 
-@media (max-width: 800px) {
+/* Below the width that seats chat beside it, the video takes the page: as wide as the frame and as tall as the
+   window under the header allows. A window too short for that width keeps the frame and bars the picture. */
+@media (max-width: 1399px) {
   .still-watch-viewport { display: block; min-height: 0; padding-block: 0; }
-  .still-playback-layout, .still-playback-layout[data-chat-open="true"] {
+  .still-stage-frame .stage:not(:fullscreen) { max-height: calc(100svh - var(--media-header-height) - var(--space-4)); }
+  /* The compact layout seats the toolbar under the video, so a cap on the whole stage would cut the toolbar off. */
+  @container (max-width: 480px) {
+    .still-stage-frame .stage:not(:fullscreen) { max-height: none; }
+  }
+  .still-playback-layout, .still-playback-layout[data-chat-open] {
     width: 100%;
     max-width: none;
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "video" "details" "sidebar";
     gap: 0.75rem;
   }
-  .still-watch-sidebar { position: relative; inset: auto; width: 100%; border-radius: 16px; height: 68px; transition: height var(--panel-close-dur) var(--panel-ease); }
+  .still-watch-sidebar { position: relative; inset: auto; width: 100%; border-radius: 20px; height: 68px; transition: height var(--panel-close-dur) var(--panel-ease); }
   .still-playback-layout[data-chat-open="true"] .still-watch-sidebar { height: min(60svh, 460px); transition-duration: var(--panel-open-dur); }
   .still-watch-rail { inset: 0 0 auto; width: 100%; height: 68px; flex-direction: row; padding: 12px; gap: 16px; }
   .still-rail-controls, .still-rail-secondary { flex-direction: row; }
   .still-rail-secondary { margin-top: 0; margin-left: auto; }
-  .still-sidebar-chat { inset: 68px 0 0; border-radius: 0 0 16px 16px; }
+  .still-sidebar-chat { inset: 68px 0 0; border-radius: 0 0 20px 20px; }
   .still-sidebar-chat-inner { min-width: 0; }
   .still-watch-sidebar .still-chat-heading { height: 48px; min-height: 48px; padding-block: var(--space-2); }
 }
@@ -666,8 +669,9 @@ html:not([data-home-search="hidden"]) .media-header:has(.still-header-search[dat
   --tt-bg: #eeeae2;
   --tt-fg: #17191c;
 }
-@media (max-width: 800px) {
-  .still-watch-rail .t-tt { display: none; }
+/* Under the video the rail runs across, so its labels open above it. */
+@media (max-width: 1399px) {
+  .still-watch-rail .t-tt { transform-origin: center bottom; }
 }
 
 /* Shared sidebar content reveal. */
@@ -947,7 +951,7 @@ html:not([data-home-search="hidden"]) .media-header:has(.still-header-search[dat
 .still-download-progress > .job-rail { width: 80px; }
 .still-share-link { display: block; width: calc(100% - var(--space-4)); margin: var(--space-2); padding: var(--space-2); border: 0; border-radius: 8px; background: var(--color-surface-light); color: var(--color-text); font-family: var(--font-mono); font-size: 11px; }
 .still-share-link:focus-visible { outline: 2px solid var(--color-text-tertiary); outline-offset: 2px; }
-@media (max-width: 800px) {
+@media (max-width: 1399px) {
   .still-rail-popover { bottom: calc(100% + var(--space-3)); right: 0; }
   .still-download .still-rail-popover { right: -44px; }
 }

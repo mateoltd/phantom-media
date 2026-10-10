@@ -51,6 +51,7 @@
   to { opacity: 0; }
 }
 .stage-frame {
+  container-type: inline-size;
   width: calc(100% - var(--page-gutter) * 2);
   margin: 1.25rem auto 0;
   border-radius: 28px;
@@ -59,6 +60,7 @@
 .stage {
   position: relative;
   isolation: isolate;
+  container-type: inline-size;
   border-radius: inherit;
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -922,7 +924,7 @@
   .stage {
     height: auto;
     aspect-ratio: 16/9;
-    min-height: 220px;
+    min-height: 0;
   }
   .stage:fullscreen {
     height: 100%;
@@ -1081,17 +1083,52 @@
   }
 }
 
-@media (max-width: 480px) {
-  .stage-toolbar-play {
-    display: none;
+/* On narrow screens the video keeps its ratio; the toolbar sits below it.
+   Absolute overlays use the video's grid area so the transport stays centered. */
+@container (max-width: 480px) {
+  .stage:not(:fullscreen) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    height: auto;
+    min-height: 0;
+    aspect-ratio: auto;
   }
-  .stage-timecode {
-    margin-left: 0.2rem;
-    font-size: 10px;
+  .stage:not(:fullscreen) > video {
+    position: relative;
+    inset: auto;
+    grid-area: 1 / 1;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
   }
-  .stage-duration {
-    display: inline;
+  .stage:not(:fullscreen) > :is(.stage-transport, .stage-top, .stage-cues) { grid-area: 1 / 1 / 2 / 2; }
+  .stage:not(:fullscreen) > .stage-cues { bottom: 12px; }
+  .stage:not(:fullscreen) .stage-top { padding: 4px; background: none; }
+  .stage:not(:fullscreen) .stage-top p { display: none; }
+  .stage:not(:fullscreen) .stage-chrome {
+    position: relative;
+    inset: auto;
+    grid-area: 2 / 1;
+    padding: 0 8px 4px;
+    background: #17191c;
+    cursor: auto;
   }
+  .stage-controls { gap: 0; margin-top: 0; }
+  .stage-controls-left, .stage-controls-right, .stage-volume-group { gap: 0; }
+  .stage-toolbar-play, .stage-volume { display: none; }
+  .stage-controls-right { margin-left: auto; }
+  .stage-timecode { margin-left: 4px; font-size: 10px; }
+  .stage-duration { display: inline; }
+  .stage-settings-trigger { min-width: 44px; }
+  .stage:not(:fullscreen).stage-idle .stage-chrome { opacity: 1; translate: none; }
+  .stage:not(:fullscreen).stage-idle .stage-chrome > * { pointer-events: auto; }
+  .stage-controls:has(.stage-controls-left > .stage-control:not(.stage-toolbar-play), .stage-live-trigger) { flex-wrap: wrap; }
+  .stage-controls:has(.stage-controls-left > .stage-control:not(.stage-toolbar-play), .stage-live-trigger) .stage-controls-left { display: contents; }
+  .stage-controls:has(.stage-controls-left > .stage-control:not(.stage-toolbar-play), .stage-live-trigger) .stage-timecode { order: -1; flex: 0 0 100%; margin: 0 0 4px; }
+}
+@container (max-width: 360px) {
+  .stage-duration { display: none; }
 }
 
 /* Honor the same motion preference for every layer, including delayed reveals. */

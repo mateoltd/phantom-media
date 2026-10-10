@@ -10,7 +10,7 @@ import { Footer } from "@/components/Footer";
 import type { ChannelData } from "@/lib/contracts";
 import type { SliceReceipt } from "@/lib/catalog/contracts";
 import { buildVodPath } from "@/lib/validation";
-import { WatchLayout } from "./WatchLayout";
+import { WatchLayout, useWatchChat } from "./WatchLayout";
 import { WatchRail } from "./WatchRail";
 import { VodInfo } from "./VodInfo";
 import { ChannelProfile } from "./ChannelProfile";
@@ -25,7 +25,8 @@ export function ChannelView({ channel: served, revalidate = false, videos }: {
   const router = useRouter();
   const [fresh, setFresh] = useState<ChannelData>();
   const channel = fresh ?? served;
-  const [chatOpen, setChatOpen] = useState(Boolean(served.stream));
+  const watchChat = useWatchChat(Boolean(served.stream));
+  const chatOpen = watchChat.open;
   const [unlistedArchive, setUnlistedArchive] = useState<{ login: string; masterUrl: string } | null>(null);
   const [watchingArchive, setWatchingArchive] = useState(false);
   const stream = channel.stream;
@@ -54,18 +55,18 @@ export function ChannelView({ channel: served, revalidate = false, videos }: {
       .catch(() => {});
     return () => controller.abort();
   }, [channel.login, listedArchiveId, stream]);
-  const toggleChat = () => setChatOpen((open) => !open);
+  const toggleChat = watchChat.toggle;
   const closeChat = () => {
-    setChatOpen(false);
+    watchChat.close();
     requestAnimationFrame(() => {
       document.querySelector<HTMLButtonElement>(".still-watch-rail [aria-controls='watch-chat'], [aria-controls='channel-chat']")?.focus();
     });
   };
-  const chat = <ChatPanel channel={channel.login} onClose={closeChat} />;
+  const chat = <ChatPanel idle={!watchChat.started} channel={channel.login} onClose={closeChat} />;
 
   return (
     <div className={`media-content still-channel-page ${stream ? "still-watch" : ""} relative pb-8`}>
-      {stream && <WatchLayout chatOpen={chatOpen}
+      {stream && <WatchLayout chatOpen={chatOpen} chatState={watchChat.state}
         video={<Player key={showingArchive ? "archive" : "live"} src={showingArchive && archiveUrl ? archiveUrl : masterUrl} isLive dvrMode={showingArchive} title={stream.title} subtitle={channel.displayName} chatOpen={chatOpen} onChatToggle={toggleChat} />}
         rail={<WatchRail channel={channel.login} displayName={channel.displayName} image={channel.profileImageURL} verified={channel.roles?.isPartner === true} broadcastType="Live" actions={[
           <button key="chat" type="button" className="still-rail-action" onClick={toggleChat} aria-label={chatOpen ? "Hide chat" : "Show chat"} aria-expanded={chatOpen} aria-controls="watch-chat"><ChatCircle size={21} /></button>,

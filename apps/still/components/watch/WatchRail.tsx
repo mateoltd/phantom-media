@@ -41,8 +41,12 @@ export function WatchRail({ channel, displayName, image, verified = false, broad
     const showing = tip.dataset.show === "true";
     if (!showing) tip.style.transition = "none";
     tip.style.width = `${width}px`;
-    tip.style.setProperty("--tt-x", `${r.left - g.left - width - 12}px`);
-    tip.style.setProperty("--tt-y", `${r.top - g.top + (r.height - tip.offsetHeight) / 2}px`);
+    // Beside the video the label opens to the rail's left; under it, above the action and kept inside the bar.
+    const across = getComputedStyle(group).flexDirection === "row";
+    const x = across ? Math.min(Math.max(r.left - g.left + (r.width - width) / 2, 0), g.width - width) : r.left - g.left - width - 12;
+    const y = across ? r.top - g.top - tip.offsetHeight - 8 : r.top - g.top + (r.height - tip.offsetHeight) / 2;
+    tip.style.setProperty("--tt-x", `${x}px`);
+    tip.style.setProperty("--tt-y", `${y}px`);
     if (!showing) {
       void tip.offsetWidth;
       tip.style.transition = "";
