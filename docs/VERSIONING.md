@@ -75,11 +75,12 @@ already proven:
    tagged commit. Cloudflare Builds deploys production from that branch, so
    this is what ships. The workflow waits for that build and reports it.
 
-Still retains `apps/twitch`, `deploy/twitch`, and the `phantom-twitch` Worker
-as compatibility coordinates for the existing Cloudflare Builds configuration.
-Its package and new tags are `@phantom/still`; promotion reads the package name
-from its manifest rather than deriving it from the deployment key. Existing
-`@phantom/twitch` tags remain historical records.
+Still lives in `apps/still`, with package and release tags named `@phantom/still`.
+The release script maps Still to the existing `deploy/twitch` branch and
+`phantom-twitch` Worker. Cloudflare Builds must use `/apps/still` as its root and
+watch `apps/still/**`; update the external build configuration when moving the app.
+Promotion reads the package name from its manifest. Existing `@phantom/twitch`
+tags remain historical records.
 
 Production therefore only ever receives a commit Cloudflare has already built
 once. Packages and Downloader are tagged after CI alone: packages reach

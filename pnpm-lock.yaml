@@ -197,7 +197,7 @@ importers:
         specifier: 'catalog:'
         version: 4.114.0(@cloudflare/workers-types@5.20260724.1)
 
-  apps/twitch:
+  apps/still:
     dependencies:
       '@phantom/theme':
         specifier: workspace:*

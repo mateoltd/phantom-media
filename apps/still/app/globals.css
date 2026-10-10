@@ -1,0 +1,7 @@
+@import "tailwindcss";
+@import "@phantom/theme";
+@import "@phantom/theme/media.css";
+@import "@phantom/theme/player.css";
+@import "./still.css";
+
+@source "../../../packages/ui/src";

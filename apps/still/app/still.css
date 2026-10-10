@@ -1,0 +1,1001 @@
+/* Still-specific layout. Shared media and player styling live in @phantom/theme. */
+/* Reserve matching scrollbar space so the frame is centered in the viewport. */
+html { scrollbar-gutter: stable both-edges; }
+:root {
+  --media-tile-title-size: var(--media-font-card-title);
+  --media-tile-meta-size: var(--media-font-card-meta);
+  --media-tile-badge-size: var(--media-font-badge);
+  --media-tile-badge-inset: var(--space-3);
+  --media-tile-badge-padding: var(--space-1) var(--space-2);
+  --media-tile-line-height: var(--media-card-line-height);
+  --media-tile-caption-padding: var(--space-3) 0 0;
+  --media-tile-meta-spacing: var(--space-1);
+  --media-tile-meta-gap: var(--space-1) var(--space-3);
+}
+.still-stage-frame {
+  width: 100%;
+  margin: 0;
+  container-type: inline-size;
+}
+.still-stage-frame .stage:not(:fullscreen) {
+  height: auto;
+  aspect-ratio: var(--media-thumbnail-ratio);
+  min-height: 0;
+}
+/* Captions sit low and centered and scale with the frame, so a full caption row always fits on one line. */
+.still-stage-frame .stage-cues { --cue-size: clamp(0.75rem, 2.1cqw, 1.25rem); bottom: min(6.25rem, 21cqw); gap: 0; padding-inline: 4%; text-wrap: nowrap; }
+.still-stage-frame .stage-idle .stage-cues { bottom: clamp(0.75rem, 4cqw, 2.5rem); }
+.still-stage-frame .stage:fullscreen .stage-cues { --cue-size: clamp(1rem, 2vw, 2rem); bottom: 7.5rem; }
+.still-stage-frame .stage-idle:fullscreen .stage-cues { bottom: 6vh; }
+.still-stage-frame .stage-cue { white-space: nowrap; }
+
+/* Small player frames place the clock above the action row rather than over its buttons. */
+@container (max-width: 480px) {
+  .still-stage-frame .stage-chrome { padding: 2rem var(--space-3) var(--space-2); }
+  .still-stage-frame .stage-controls { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 0; margin-top: var(--space-1); }
+  .still-stage-frame .stage-controls-left { display: contents; }
+  .still-stage-frame .stage-toolbar-play, .still-stage-frame .stage-volume, .still-stage-frame .stage-chat-trigger { display: none; }
+  .still-stage-frame .stage-timecode { grid-column: 1 / -1; grid-row: 1; margin: 0 0 var(--space-1); font-size: 10px; }
+  .still-stage-frame .stage-volume-group { grid-column: 1; grid-row: 2; }
+  .still-stage-frame .stage-controls-right { grid-column: 2; grid-row: 2; justify-content: flex-end; gap: 0; margin-left: 0; }
+  .still-stage-frame .stage-settings-trigger { min-width: 40px; }
+}
+/* Beside chat the frame is too short to seat a sheet above the controls, so sheets take the frame's height. */
+@media (min-width: 641px) {
+  @container (max-width: 640px) {
+    .still-stage-frame .stage-sheet { inset: var(--space-2) var(--space-2) var(--space-2) auto; width: min(340px, calc(100% - var(--space-2) * 2)); height: fit-content; max-height: calc(100% - var(--space-2) * 2); margin-top: auto; }
+  }
+}
+
+.still-main { min-height: calc(100svh - var(--media-header-height)); }
+.still-vod-loading .job-rail { background: var(--color-surface-hover); }
+/* Start inside the track so the first frame already shows the loading indicator. */
+.still-vod-loading .job-rail-indeterminate { animation-delay: -0.4s; }
+@media (prefers-reduced-motion: reduce) {
+  .still-vod-loading .job-rail-indeterminate { animation: none; transform: translateX(110%); }
+}
+/* The shared navbar remains the single search entry point. */
+.still-home { min-height: calc(100svh - var(--media-header-height)); }
+.still-home-bottom { min-height: inherit; display: flex; flex-direction: column; }
+/* Page frames use the shared media-content container, including the aligned header. */
+.still-page {
+  --feed-heading-height: var(--media-heading-height);
+  --feed-heading-gap: var(--media-heading-gap);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding-top: clamp(var(--space-6), 4vh, 2.75rem);
+}
+/* The home page is a launcher: people arrive knowing what they want, so search is the page and everything
+   else is a shortcut or a suggestion underneath it. The about block below the feed sits on the same columns. */
+.still-home-layout, .still-about { --cols: 4; --gap: var(--media-grid-column-gap); }
+.still-home-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+}
+.still-home-section { margin-top: var(--space-14); }
+.still-home-feed-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); height: var(--feed-heading-height, var(--media-heading-height)); margin-bottom: var(--feed-heading-gap, var(--media-heading-gap)); }
+/* Section headings are h2: the page h1 lives in the server-rendered about block. */
+.still-home-feed-heading h1, .still-home-feed-heading h2 { font-size: var(--media-font-section); line-height: 1.35; font-weight: 600; margin: 0; }
+.still-home-feed-heading > button { margin-right: -9px; }
+
+/* Search, and under it the channels you go back to. Centred, like a browser's new tab: one field, then your shortcuts. */
+.still-home-prompt { margin: clamp(64px, 12svh, 160px) 0 32px; font-size: clamp(2rem, 3vw, 3.5rem); line-height: 1.15; font-weight: 600; letter-spacing: -0.035em; text-align: center; }
+/* The field is the shared search pill. It scrolls with the page until it meets the header, then holds the header's
+   search slot (--dock-* are measured from that slot), above the header and above the tiles its suggestions open over.
+   This box keeps the field's place in the page; the field inside it is what changes size, so nothing below moves. */
+.still-home-search { position: sticky; top: var(--dock-top, 20px); z-index: 41; display: flex; align-items: flex-start; align-self: center; justify-content: center; width: min(100%, 56rem); height: 80px; pointer-events: none; }
+.still-home-search-field { flex: none; width: 100%; pointer-events: auto; transition: width 0.24s cubic-bezier(0.22, 1, 0.36, 1), transform 0.24s cubic-bezier(0.22, 1, 0.36, 1); }
+.still-home-search .search-pill { transition: height 0.24s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.24s ease, border-color 0.16s ease; }
+.still-home-search:not([data-docked]) .search-pill { height: 80px; padding-inline: 24px 12px; background: #202225; border-color: #ffffff30; box-shadow: 0 12px 40px #00000020; }
+.still-home-search:not([data-docked]) .search-pill:focus-within { border-color: #ffffff70; }
+.still-home-search:not([data-docked]) .search-pill input { font-size: 1.25rem; padding-inline: 16px; }
+.still-home-search:not([data-docked]) .search-pill input::placeholder { color: #bfc3c9; }
+.still-home-search:not([data-docked]) .search-pill > svg { width: 24px; height: 24px; }
+.still-home-search:not([data-docked]) .search-pill > button { width: 44px; height: 44px; }
+.still-home-search:not([data-docked]) .search-pill .search-pill-submit { width: 56px; height: 56px; }
+.still-home-search:not([data-docked]) .search-pill-submit svg { width: 24px; height: 24px; }
+.still-home-search[data-docked] .still-home-search-field { width: var(--dock-width); transform: translateX(var(--dock-shift)); }
+/* Docked, it is the header's field: the same values as .media-header .search-pill. */
+.still-home-search[data-docked] .search-pill { background: #101113e6; border-color: #ffffff24; }
+.still-home-search[data-docked] .search-pill input::placeholder, .still-home-search[data-docked] .text-text-tertiary { color: #bfc3c9; }
+.still-channels { display: flex; flex-wrap: wrap; align-self: center; justify-content: center; gap: 0.5rem; max-width: min(100%, 760px); margin-top: 20px; }
+:is(.still-home-search, .still-channels) + .still-home-section { margin-top: clamp(80px, 10svh, 128px); }
+/* The server cannot know your history, so its HTML holds skeletons for the channels and the videos it will add.
+   They show only where a history exists, and only as many as it has: both are known before the first paint. */
+html:not([data-history]) .still-home [data-pending] { display: none; }
+html:not([data-history]) .still-home-section[data-pending] + .still-home-section { margin-top: clamp(80px, 10svh, 128px); }
+.still-channels[data-pending] > span { display: flex; height: 40px; }
+.still-channels[data-pending] br { display: none; }
+html[data-history-channels="0"] .still-channels[data-pending] { display: none; }
+html[data-history-channels="1"] .still-channels[data-pending] > :nth-child(n + 2),
+html[data-history-channels="2"] .still-channels[data-pending] > :nth-child(n + 3),
+html[data-history-channels="3"] .still-channels[data-pending] > :nth-child(n + 4),
+html[data-history-channels="4"] .still-channels[data-pending] > :nth-child(n + 5),
+html[data-history-channels="5"] .still-channels[data-pending] > :nth-child(n + 6),
+html[data-history="1"] .still-home-section[data-pending] .still-home-tile:nth-child(n + 2),
+html[data-history="2"] .still-home-section[data-pending] .still-home-tile:nth-child(n + 3),
+html[data-history="3"] .still-home-section[data-pending] .still-home-tile:nth-child(n + 4) { display: none; }
+/* Same pill as .still-seo-link, with the avatar in front. */
+.still-channel { position: relative; display: flex; flex: none; align-items: center; gap: 0.5rem; height: 40px; padding: 0 0.875rem 0 5px; border: 1px solid var(--color-border); border-radius: 999px; font-size: 0.875rem; color: var(--color-text); transition: border-color 0.15s ease, background-color 0.15s ease; }
+.still-channel:hover { border-color: var(--color-phantom); background: var(--color-surface-hover); }
+.still-channel .still-home-avatar-wrap { width: var(--media-avatar-shortcut); height: var(--media-avatar-shortcut); }
+
+/* One search on screen at a time. The header keeps its slot, empty, for the home search to dock into; on narrow
+   screens, where the header has a button instead of a field, the button waits until the home search has scrolled away. */
+.media-header:has(.still-header-search[data-home]) :is(.media-header-search, .media-header-search-trigger) { transition: opacity 180ms ease, visibility 180ms; }
+html:not([data-home-search="hidden"]) .media-header:has(.still-header-search[data-home]) :is(.media-header-search, .media-header-search-trigger) { opacity: 0; visibility: hidden; pointer-events: none; }
+/* Between the home page and any other, the search is one element moving between the hero and the header. */
+::view-transition-group(.still-search) { z-index: 2; animation-duration: 0.32s; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+/* Its two sizes swap early in the move, so the text is never read twice. */
+::view-transition-old(.still-search), ::view-transition-new(.still-search) { height: 100%; animation-duration: 0.16s; }
+/* The rest of the home page leaves and arrives the way pages do in base.css, under a header that holds still. */
+::view-transition-old(.still-page) { animation: 0.16s ease-in both page-out; }
+::view-transition-new(.still-page) { animation: 0.2s ease-out both page-in; }
+.media-header { view-transition-name: still-header; }
+::view-transition-group(still-header) { z-index: 1; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*), ::view-transition-old(.still-page), ::view-transition-new(.still-page) { animation: none; }
+}
+
+.still-home-avatar-wrap { position: relative; display: block; flex: none; width: var(--media-avatar-fallback); height: var(--media-avatar-fallback); }
+.still-home-avatar { position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; width: 100%; height: 100%; border-radius: 50%; background: var(--color-surface-light); font-size: 16px; color: var(--color-text-secondary); }
+
+.still-home-media-grid { display: grid; grid-template-columns: repeat(var(--media-grid-columns), minmax(0, 1fr)); gap: var(--media-grid-row-gap) var(--media-grid-column-gap); }
+.still-home-layout .still-home-resume-grid { grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); column-gap: var(--gap); }
+.still-home-tile { display: block; min-width: 0; width: 100%; text-align: left; border-radius: 16px; container-type: inline-size; }
+.still-home-art { width: 100%; aspect-ratio: var(--media-thumbnail-ratio); isolation: isolate; }
+/* The channel leads and the stream title sits under it in a quieter voice: titles are written to shout, and the page should not shout with them. */
+.still-home-tile-meta { display: block; padding-top: var(--space-3); }
+.still-home-tile-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); }
+.still-home-tile-channel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--media-font-card-title); font-weight: 500; line-height: var(--media-card-line-height); color: var(--color-text); }
+.still-home-tile-detail { flex: 0 1 auto; min-width: 0; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--media-font-card-meta); line-height: var(--media-card-line-height); color: var(--color-text-tertiary); }
+.still-home-art-title { display: block; margin-top: var(--space-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--media-font-card-meta); line-height: var(--media-card-line-height); color: var(--color-text-secondary); }
+.still-home-live, .still-home-position { position: absolute; right: var(--space-3); z-index: 2; display: flex; flex: none; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-2); border-radius: 6px; background: #08090bcc; font-size: var(--media-font-badge); line-height: var(--media-card-line-height); color: #f4f4f8; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
+.still-home-live { top: var(--space-3); color: #ffacac; }
+.still-home-live span { color: #f4f4f8; }
+.still-home-position { bottom: var(--space-3); }
+/* Continue watching is a reminder, not the main event: a small picture with the text beside it. */
+.still-home-tile.still-home-tile-compact { display: flex; gap: var(--space-4); }
+.still-home-tile-compact .still-home-art { flex: none; width: auto; height: var(--media-thumbnail-compact-height); border-radius: 12px; }
+.still-home-tile-compact .still-home-tile-meta { display: flex; flex: 1; min-width: 0; flex-direction: column; padding: 0; }
+.still-home-tile-compact .still-home-art-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; overflow-wrap: anywhere; }
+.still-home-tile-time { margin-top: auto; font-size: var(--media-font-badge); line-height: var(--media-card-line-height); font-variant-numeric: tabular-nums; color: var(--color-text-tertiary); }
+.still-home-art-fallback { display: flex; height: 100%; align-items: center; justify-content: center; gap: 16px; color: var(--color-text-tertiary); }
+.still-home-art .still-resume-progress { position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; margin: 0; border-radius: 0; background: #ffffff40; }
+.still-resume-progress .job-fill { border-radius: 0; background: var(--color-phantom); box-shadow: none; }
+.still-discovery-empty { padding-block: 24px; font-size: 13px; color: var(--color-text-secondary); }
+.still-footer { margin-top: 2rem; }
+.still-home .still-footer { margin: 0; padding: 12px 0 20px; }
+.still-page .still-footer { margin-top: auto; }
+/* Watch history opens from the header as a panel over the page: the popover the player's actions use, hung from
+   its button (--anchor-* are measured from it). Everything in it starts on one edge and ends on one edge. */
+.still-action-popover.still-history-panel { --media-thumbnail-compact-height: 3.75rem; position: fixed; z-index: 50; top: calc(var(--anchor-top) + var(--space-2)); right: auto; left: var(--anchor-right); translate: -100%; display: flex; flex-direction: column; width: 22rem; max-width: calc(var(--anchor-right) - var(--space-2)); max-height: min(32rem, calc(100svh - var(--anchor-top) - var(--space-4))); outline: 0; }
+.still-action-popover.still-history-panel > header { min-height: 28px; padding: 0 var(--space-2) var(--space-1); }
+.still-history-panel > header h2 { font: inherit; }
+/* The list runs to the panel's edges so that its scrollbar does, and pads back to the shared ones. */
+.still-history-list { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--space-3); margin-inline: calc(-1 * var(--space-2)); padding: var(--space-1) var(--space-4) var(--space-2); overflow: hidden auto; overscroll-behavior: contain; }
+/* The tile is itself a button, so the remove control sits beside it. Its box hangs past the edge its icon ends on. */
+.still-history-list > li { display: flex; align-items: center; gap: var(--space-2); }
+.still-history-list .still-home-tile { flex: 1; width: auto; gap: var(--space-3); }
+.still-history-list .still-home-art-title { -webkit-line-clamp: 1; }
+.still-history-list > li > button:last-child { width: 28px; height: 28px; margin-right: -8px; }
+/* Opening the panel is not loading: a picture appears when it is ready, with no placeholder shown first. */
+.still-history-panel .t-skel-skeleton { display: none; }
+.still-history-panel .t-skel-content { transition: none; }
+.still-history-empty { padding: var(--space-1) var(--space-2) var(--space-2); font-size: 13px; line-height: 1.6; color: var(--color-text-secondary); }
+.still-history-panel > footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-height: 36px; padding: var(--space-1) var(--space-2) 0; font-size: 13px; color: var(--color-text-secondary); }
+/* A text button's edge is its label. */
+.still-history-panel > header > .still-history-action { width: auto; height: 28px; margin-right: calc(-1 * var(--space-2)); padding: 0 var(--space-2); border-radius: 8px; font-weight: 400; color: var(--color-text-secondary); transition: background 160ms, color 160ms; }
+.still-history-panel > header > .still-history-action:hover { background: var(--color-surface-hover); color: var(--color-text); }
+/* Channel broadcasts use the same spacing and heading scale as the home feed. */
+.still-broadcast-heading { display: flex; align-items: center; min-height: var(--media-heading-height); margin-bottom: var(--media-heading-gap); font-size: var(--media-font-section); line-height: 1.35; font-weight: 600; }
+.still-broadcast-grid { display: grid; grid-template-columns: repeat(var(--media-grid-columns), minmax(0, 1fr)); gap: var(--media-grid-row-gap) var(--media-grid-column-gap); }
+/* Continue watching stays one row, whatever the column count. */
+.still-home-resume-grid > :nth-child(n + 5) { display: none; }
+@media (max-width: 1399px) {
+  .still-home-layout, .still-about { --cols: 3; }
+  .still-home-resume-grid > :nth-child(n + 4) { display: none; }
+}
+@media (max-width: 1000px) {
+  .still-home-layout { --cols: 2; }
+  .still-home-resume-grid > :nth-child(n + 3) { display: none; }
+}
+@media (max-width: 900px) {
+  .still-home-layout, .still-about { --cols: 2; }
+}
+@media (max-width: 640px) {
+  .still-page { padding-top: var(--space-3); }
+  .still-home-layout, .still-about { --cols: 1; }
+  .still-home-section { margin-top: var(--space-10); }
+  .still-home-prompt { margin: 32px 0 20px; }
+  .still-channels { width: 100%; max-width: 100%; flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; padding-block: 3px 8px; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; }
+  .still-channels > :is(.still-channel, span) { flex: none; scroll-snap-align: start; }
+  .still-channel { white-space: nowrap; }
+  .still-home-search { position: relative; top: auto; z-index: 20; height: auto; }
+  .still-home-search:not([data-docked]) .search-pill { height: 64px; padding-inline: 16px 8px; }
+  .still-home-search:not([data-docked]) .search-pill input { font-size: 1rem; padding-inline: 4px; }
+  .still-home-search:not([data-docked]) .search-pill > button { width: 36px; height: 36px; }
+  .still-home-search:not([data-docked]) .search-pill .search-pill-submit { width: 44px; height: 44px; }
+  :is(.still-home-search, .still-channels) + .still-home-section,
+  html:not([data-history]) .still-home-section[data-pending] + .still-home-section { margin-top: 48px; }
+  /* As in the header: the placeholder needs the room more than the field needs a magnifier. */
+  .still-home-search .search-pill > svg { display: none; }
+  .still-home-search .search-pill input { padding-inline: 4px; text-overflow: ellipsis; }
+  .still-home-resume-grid > :nth-child(n + 2) { display: none; }
+  .still-home-media-grid, .still-broadcast-grid { grid-template-columns: minmax(0, 1fr); }
+  .still-home .still-footer { margin-top: auto; }
+}
+
+:root {
+  --pulse-dur: 1000ms;
+  --pulse-count: 1;
+  --pulse-min: 0.5;
+  --reveal-dur: 400ms;
+  --reveal-blur: 2px;
+  --reveal-ease: ease-in-out;
+}
+
+/* The wrap stacks two layers on the same coordinates. The
+   skeleton owns the cold pulse + the fade-out side of the
+   reveal; the content owns the fade-in side. They share the
+   same duration / ease so the swap reads as one motion. */
+.t-skel { position: relative; }
+.t-skel-skeleton,
+.t-skel-content {
+  position: absolute;
+  inset: 0;
+}
+
+.t-skel-skeleton {
+  z-index: 1;
+  opacity: 1;
+  filter: blur(0);
+  transition:
+    opacity var(--reveal-dur) var(--reveal-ease),
+    filter  var(--reveal-dur) var(--reveal-ease);
+}
+.t-skel-content {
+  z-index: 2;
+  opacity: 0;
+  filter: blur(var(--reveal-blur));
+  transition:
+    opacity var(--reveal-dur) var(--reveal-ease),
+    filter  var(--reveal-dur) var(--reveal-ease);
+}
+.t-skel.is-revealed .t-skel-skeleton {
+  opacity: 0;
+  filter: blur(var(--reveal-blur));
+}
+.t-skel.is-revealed .t-skel-content {
+  opacity: 1;
+  filter: blur(0);
+}
+/* Snap-back when replaying: kill transitions so the reverse
+   (revealed → skeleton) is instant. Drop `.is-resetting`
+   after a forced reflow and the next reveal animates again. */
+.t-skel.is-resetting .t-skel-skeleton,
+.t-skel.is-resetting .t-skel-content {
+  transition: none !important;
+}
+
+/* Pulse: place the animation on the bar/avatar children, not
+   on the skeleton itself, so the skeleton's opacity / filter
+   stay free for the cross-fade transition above. */
+.t-skel-skeleton.is-pulsing > * {
+  animation: t-skel-pulse var(--pulse-dur) ease-in-out var(--pulse-count);
+}
+@keyframes t-skel-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: var(--pulse-min); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-skel-skeleton, .t-skel-content {
+    transition: none !important;
+  }
+  .t-skel-skeleton.is-pulsing > * { animation: none !important; }
+}
+
+
+.still-home { --base-color: #1b1d20; --highlight-color: #292c30; }
+.still-home .react-loading-skeleton { --base-color: #1b1d20; --highlight-color: #292c30; line-height: 1; }
+.still-home-thumbnail { position: absolute; inset: 0; display: block; z-index: 0; }
+.still-home-thumbnail img { object-fit: cover; }
+.still-home-thumbnail .t-skel-skeleton > span, .still-home-tile-skeleton .still-home-art > span { display: block; height: 100%; }
+.still-home-feed-end { min-height: 24px; margin-top: 28px; color: var(--color-text-tertiary); font-size: 12px; text-align: center; }
+.still-home-feed-end:empty { display: none; }
+.still-home-feed-error { padding: 12px 16px; border: 1px solid var(--color-error); border-radius: 8px; color: var(--color-error); }
+.still-home-feed-end p button { margin-left: 8px; text-decoration: underline; text-underline-offset: 4px; }
+.still-home-feed-end button:disabled { opacity: .45; cursor: wait; }
+.still-home-tile:focus-visible { outline: 1px solid var(--color-text-secondary); outline-offset: -2px; }
+@media (prefers-reduced-motion: reduce) { .still-home .react-loading-skeleton::after { animation: none; } }
+
+.still-home-avatar-content { display: flex; align-items: center; justify-content: center; }
+.still-home-avatar-content img { object-fit: cover; }
+.still-home-avatar .t-skel-skeleton > span, .still-home-avatar-wrap > span:not(.still-home-avatar) { display: block; height: 100%; }
+.still-home-avatar-wrap[data-offline] .still-home-avatar { filter: grayscale(1); }
+.still-home-play { z-index: 1; background: transparent; pointer-events: none; }
+.still-home-tile .still-resume-progress { z-index: 2; }
+.still-home-art-title { transition: color 160ms ease; }
+.still-home-tile:hover .still-home-art-title { color: var(--color-text); }
+.still-home-tile:focus-visible .still-home-art { transform: translateY(-3px); }
+@media (prefers-reduced-motion: reduce) {
+  .still-channel, .still-home-art-title { transition: none; }
+  .still-home-tile:is(:hover,:focus-visible) .still-home-art { transform: none; }
+}
+
+/* Start playback below the header; fit the video and title in the viewport. */
+.still-watch-viewport {
+  container-type: inline-size;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding-block: 1.5rem;
+}
+.still-playback-layout {
+  --watch-sidebar-width: 64px;
+  --watch-expanded-sidebar-width: clamp(336px, 20cqw, 512px);
+  /* Both states fit the expanded chat. Only the sidebar changes size. */
+  --watch-video-width: min(calc(100cqw - var(--watch-expanded-sidebar-width)), calc((100svh - var(--media-header-height) - 8rem) * 16 / 9));
+  display: grid;
+  column-gap: 0;
+  row-gap: 1rem;
+  align-items: stretch;
+  width: calc(var(--watch-video-width) + var(--watch-sidebar-width));
+  max-width: none;
+  margin-inline: 0;
+  grid-template-columns: var(--watch-video-width) var(--watch-sidebar-width);
+  grid-template-areas: "video sidebar" "details details";
+  transition: width var(--panel-close-dur) var(--panel-ease), grid-template-columns var(--panel-close-dur) var(--panel-ease);
+}
+.still-playback-layout[data-chat-open="true"] {
+  /* Chat takes the remaining frame when the video reaches its height limit. */
+  --watch-sidebar-width: calc(100cqw - var(--watch-video-width));
+  transition-duration: var(--panel-open-dur);
+}
+.still-playback-video, .still-playback-details {
+  min-width: 0;
+  width: 100%;
+}
+.still-playback-video { grid-area: video; }
+/* The title runs the width of the page, not of the video, so it wraps where the page ends. */
+.still-playback-details { grid-area: details; width: 100cqw; }
+.still-playback-details .still-watch-details { padding-top: 0.25rem; }
+.still-watch-sidebar {
+  grid-area: sidebar;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  isolation: isolate;
+  z-index: 5;
+  background: #17191c;
+  border-radius: 0 28px 28px 0;
+}
+.still-sidebar-chat { z-index: 1; position: absolute; inset: 0 64px 0 0; overflow: hidden; }
+.still-sidebar-chat-inner { position: absolute; inset: 0; min-width: 272px; --panel-translate-y: 8px; }
+.still-watch-sidebar .still-chat { border-radius: 0; background: transparent; }
+.still-watch-sidebar .still-chat-heading { height: 68px; min-height: 68px; padding: var(--space-3) var(--space-4); }
+.still-watch-sidebar .still-chat-modes button { border-radius: 8px; padding: 6px 8px; font-size: 12px; font-weight: 500; }
+.still-watch-sidebar .still-chat-modes button[aria-pressed="true"] { background: var(--color-surface-light); color: var(--color-text); }
+.still-watch-sidebar .still-chat-heading button:focus-visible { outline: 1px solid #b7bac1; outline-offset: -2px; }
+.still-watch-sidebar .still-chat-messages { padding-inline: var(--space-4); }
+.still-watch-sidebar .still-chat-footer { padding: var(--space-2) var(--space-4) var(--space-3); font-size: 10px; }
+.still-watch-details { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-6); padding: var(--space-5) 0 0; }
+.still-video-info { min-width: 0; flex: 1; }
+.still-video-title { margin: 0; font-size: var(--media-font-player-title); font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.still-video-byline { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 0.75rem; }
+.still-video-channel { display: inline-flex; align-items: center; gap: 0.65rem; min-width: 0; max-width: 100%; font-size: 0.875rem; font-weight: 500; }
+.still-video-channel:hover { color: var(--color-text-secondary); }
+.still-broadcast-type { display: inline-flex; flex-shrink: 0; padding: 0.35rem 0.65rem; border-radius: 999px; background: #ffffff08; color: var(--color-text-secondary); font-size: 0.75rem; line-height: 1; }
+.still-broadcast-live { background: #ef44441a; color: #fca5a5; }
+.still-watch-actions { display: flex; flex-shrink: 0; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.still-watch-actions > button, .still-watch-actions > div > button { height: 40px; }
+.still-share-button { transition: color var(--icon-swap-dur) ease, background-color var(--icon-swap-dur) ease; }
+.still-share-button[data-copied="true"] { background: color-mix(in srgb, var(--color-success) 8%, transparent); }
+.still-share-icon { width: 12px; height: 12px; align-items: center; justify-items: center; }
+.still-share-label { display: inline-grid; }
+.still-share-label > span { grid-area: 1 / 1; transition: opacity var(--icon-swap-dur) ease, transform var(--icon-swap-dur) ease; }
+.still-share-label[data-copied="false"] [data-label="copied"], .still-share-label[data-copied="true"] [data-label="share"] { opacity: 0; transform: translateY(3px); }
+@media (prefers-reduced-motion: reduce) { .still-share-button, .still-share-label > span { transition: none; } }
+.still-chat { display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: hidden; border-radius: 20px; background: #ffffff05; }
+.still-chat-heading { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.65rem 0.75rem; flex-shrink: 0; }
+.still-chat-modes { display: flex; gap: 0.25rem; }
+.still-chat-modes button { white-space: nowrap; border-radius: 999px; padding: 0.45rem 0.8rem; color: var(--color-text-tertiary); font-size: 0.8rem; }
+.still-chat-modes button[aria-pressed="true"] { background: #ffffff0c; color: var(--color-text); }
+.still-chat-content { position: relative; flex: 1; min-height: 0; }
+.still-chat-messages { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 0.35rem 1rem 0.75rem; }
+.still-chat-message { margin: 0; padding-block: 0.3rem; font-size: 0.8rem; line-height: 1.6; overflow-wrap: anywhere; color: var(--color-text-secondary); }
+.still-chat-timestamp { margin-right: 0.5rem; font-family: var(--font-mono); font-size: 0.65rem; color: var(--color-text-tertiary); }
+.still-chat-empty { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; padding: 1rem; text-align: center; font-size: 0.8rem; line-height: 1.7; color: var(--color-text-tertiary); }
+.still-chat-footer { flex: none; min-height: 40px; padding: var(--space-2) var(--space-4); display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-2); font-size: 10px; color: var(--color-text-tertiary); }
+.still-chat-footer > time { font-size: 10px; font-variant-numeric: tabular-nums; }
+.still-chat-follow { position: absolute; bottom: 0.75rem; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.5rem; white-space: nowrap; padding: 0.55rem 0.85rem; border-radius: 999px; background: var(--color-surface-hover); font-size: 0.75rem; }
+.still-standalone-chat { width: 100%; height: 400px; margin-top: 1.5rem; }
+@media (max-width: 1000px) {
+  .still-watch-details { flex-direction: column; gap: 1rem; }
+}
+/* Channel masthead. The creator's banner runs the width of the page, tall enough to still read as their
+   banner. The round picture is clipped onto its lower edge, set a little in from the left, and the name and the
+   tabs under it keep that same indent. */
+.still-channel-page { display: flex; flex-direction: column; min-height: calc(100svh - var(--media-header-height)); }
+.still-channel-page .still-footer { margin-top: auto; }
+.still-channel-profile { --channel-indent: 0px; margin-top: var(--space-5); }
+.still-channel-profile:has(.still-channel-banner) { --channel-indent: var(--space-5); }
+/* Under a player the channel is a section of its own, set further off than anything inside either block. */
+.still-watch-viewport ~ .still-channel-profile, .still-channel-profile[data-linked] { margin-top: var(--space-10); }
+.still-channel-banner { position: relative; height: clamp(6rem, 15vw, 18rem); overflow: hidden; border-radius: 16px; background: var(--color-surface); }
+.still-channel-banner img { object-fit: cover; }
+/* Picture, name, then actions. The name gives way before anything wraps. */
+.still-channel-identity { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3) var(--space-4); min-width: 0; padding-inline: var(--channel-indent); }
+.still-channel-header[data-banner] .still-channel-identity { align-items: start; }
+.still-channel-portrait { display: block; flex: none; width: var(--media-avatar-profile-large); height: var(--media-avatar-profile-large); border-radius: 50%; background: var(--color-surface); }
+.still-channel-portrait-link { flex: none; border-radius: 50%; }
+/* On a banner the picture is larger and overlaps it; the page-coloured ring separates the two pictures. */
+.still-channel-header[data-banner] .still-channel-portrait { position: relative; width: 6rem; height: 6rem; margin-top: -2rem; outline: 4px solid var(--color-bg); }
+.still-channel-names { min-width: 0; }
+.still-channel-header[data-banner] .still-channel-names { padding-top: var(--space-3); }
+.still-channel-title { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.still-channel-name { display: flex; align-items: center; gap: var(--space-2); min-width: 0; font-size: 1.5rem; line-height: 2rem; font-weight: 600; color: var(--color-text); }
+.still-channel-name-link { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.still-channel-name-link:hover { color: var(--color-text-secondary); }
+/* On its own page the channel's name is the page title. Under a video it is a section heading, a step down. */
+.still-channel-profile:not([data-linked]) .still-channel-name { font-size: var(--media-font-page-title); line-height: 2.75rem; }
+.still-channel-profile:not([data-linked]) .still-channel-header[data-banner] .still-channel-names { padding-top: 0; }
+/* One line under the name: the handle stays quiet, and the follower count beside it is set as a measure of the
+   channel rather than part of its name, with the figure carrying the weight. */
+.still-channel-meta { display: flex; align-items: baseline; gap: var(--space-3); min-width: 0; font-size: 0.875rem; line-height: 1.25rem; }
+.still-channel-handle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text-tertiary); }
+.still-channel-followers { flex: none; color: var(--color-text-secondary); }
+.still-channel-followers strong { font-weight: 600; color: var(--color-text); }
+.still-channel-identity > .still-watch-actions { grid-column: 3; justify-self: end; align-self: center; }
+/* The tabs belong to the list they switch, so they keep closer to it than to the name above. */
+.still-channel-profile .still-catalog { margin-top: var(--space-10); }
+.still-channel-profile .still-catalog-bar { padding-inline: var(--channel-indent); }
+@media (max-width: 640px) {
+  .still-channel-profile:has(.still-channel-banner) { --channel-indent: var(--space-3); }
+  .still-channel-identity { grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-3); }
+  .still-channel-header[data-banner] .still-channel-portrait { width: 4.5rem; height: 4.5rem; margin-top: -1.25rem; }
+  .still-channel-header[data-banner] .still-channel-names { padding-top: 0; }
+  .still-channel-profile:not([data-linked]) .still-channel-name { line-height: 2rem; }
+  /* Too narrow to keep the button beside the name: it takes its own row, under the picture. */
+  .still-channel-identity > .still-watch-actions { grid-column: 1 / -1; justify-self: start; }
+}
+.still-channel-about { max-width: 65ch; }
+.still-channel-facts { display: grid; gap: var(--space-3); margin-top: var(--space-8); font-size: 0.875rem; line-height: 1.5; }
+.still-channel-facts > div { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: var(--space-4); }
+.still-channel-facts dt { color: var(--color-text-tertiary); }
+.still-channel-facts dd { margin: 0; color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.still-channel-facts a:hover { color: var(--color-text); }
+@media (max-width: 480px) { .still-channel-facts > div { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+
+/* Catalog: the videos and clips of a channel or category, behind tabs. */
+.still-catalog { --base-color: #1b1d20; --highlight-color: #292c30; margin-top: var(--space-6); }
+.still-catalog-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); min-height: 36px; margin-bottom: var(--space-5); }
+.still-catalog-tabs { display: flex; gap: var(--space-1); }
+.still-catalog-tabs > button { height: 36px; padding: 0 var(--space-2); border-radius: 8px; font-size: 18px; font-weight: 500; color: var(--color-text-tertiary); transition: color 150ms ease, background-color 150ms ease; }
+/* The label, not the button's box, sits on the banner's edge. */
+.still-catalog-tabs > button:first-child { margin-left: calc(-1 * var(--space-2)); }
+.still-catalog-tabs > button:hover { background: var(--color-surface-hover); color: var(--color-text); }
+.still-catalog-tabs > button[aria-selected="true"] { color: var(--color-text); }
+.still-catalog-controls { display: flex; align-items: center; gap: var(--space-2); }
+/* Wrapped under the tabs, the first select's label takes the same edge the tab labels do. */
+@media (max-width: 640px) { .still-catalog-controls { flex-basis: 100%; margin-left: calc(-1 * var(--space-2)); } }
+.still-catalog-notice { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+.still-catalog-notice .still-resource-notice { margin-block: 0; }
+/* The action's label starts where the notice's text does, past its icon. */
+.still-catalog-notice > button { margin-left: calc(18px + var(--space-3) - var(--space-4)); }
+/* A tab or filter replaces what the catalog shows: the old contents fade out, then the new ones fade in.
+   Only opacity moves, so a video playing above never drops a frame for it. */
+.still-catalog-swap { transition: opacity 200ms ease-out; }
+.still-catalog-swap[data-leaving] { opacity: 0; transition: opacity 100ms ease-in; }
+/* An answer that was waited for fades in the same way once it lands. */
+.still-broadcast-grid[data-arrived] { animation: fade-in 200ms ease-out; }
+.still-catalog-end { display: flex; justify-content: center; margin-top: var(--space-8); color: var(--color-text-tertiary); font-size: 12px; line-height: 1.7; text-align: center; }
+/* Every caption keeps room for two title lines, loaded or not, so no row changes height when the titles arrive.
+   A one-line title still has its date directly under it; the spare line falls below. */
+.still-catalog .media-tile-caption { min-height: calc(var(--space-3) + 2 * var(--media-font-card-title) * var(--media-card-line-height) + var(--space-1) + var(--media-font-card-meta) * var(--media-card-line-height)); }
+.still-catalog .media-tile-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; }
+.still-catalog-ghost .media-tile-art > span { display: block; height: 100%; }
+.still-catalog-ghost .media-tile-title { display: block; }
+.still-catalog-ghost .react-loading-skeleton { --base-color: #1b1d20; --highlight-color: #292c30; }
+@media (prefers-reduced-motion: reduce) {
+  .still-catalog-tabs > button { transition: none; }
+  .still-catalog .react-loading-skeleton::after { animation: none; }
+}
+
+.still-watch-rail {
+  z-index: 2;
+  position: absolute;
+  inset: 0 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 64px;
+  gap: 16px;
+  padding: 12px 10px;
+}
+.still-rail-controls { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 8px; }
+.still-rail-secondary { display: flex; flex-direction: column; gap: 6px; margin-top: auto; }
+.still-rail-slot { position: relative; width: 44px; height: 44px; }
+.still-watch-rail .still-rail-action {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #92979f;
+  cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+.still-watch-rail .still-rail-action:hover { color: #f0f0f2; background: #ffffff08; }
+.still-watch-rail .still-rail-action[aria-expanded="true"] { background: #ffffff0d; color: #f0f0f2; }
+.still-watch-rail .still-rail-action:focus-visible { outline: 1px solid #b7bac1; outline-offset: -2px; }
+.still-watch-rail .still-rail-action:disabled { opacity: 0.4; cursor: not-allowed; }
+.still-channel-avatar { position: relative; display: flex; align-items: center; justify-content: center; width: var(--media-avatar-control); height: var(--media-avatar-control); flex-shrink: 0; border-radius: 8px; overflow: hidden; background: transparent; }
+.still-rail-live-badge, .still-channel-live-badge {
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: #c92b3e;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.03em;
+}
+.still-channel-live-badge { bottom: -0.5px; transform: translate(-50%, 50%); }
+.still-verified { flex: none; color: var(--color-phantom); }
+/* Sits on the avatar's corner; the sidebar-coloured disc keeps it legible over any picture. */
+.still-rail-verified { position: absolute; top: -1px; right: -1px; display: flex; padding: 1px; border-radius: 50%; background: #17191c; }
+.still-rail-action .still-share-icon { width: 21px; height: 21px; }
+.still-watch-rail .still-rail-action[data-copied="true"], .still-watch-rail .still-rail-downloading { color: var(--color-success); }
+.still-download-ring { position: absolute; inset: 0; width: 44px; height: 44px; }
+
+@media (min-width: 801px) {
+  .still-stage-frame { border-radius: 28px 0 0 28px; }
+}
+
+@media (max-width: 800px) {
+  .still-watch-viewport { display: block; min-height: 0; padding-block: 0; }
+  .still-playback-layout, .still-playback-layout[data-chat-open="true"] {
+    width: 100%;
+    max-width: none;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "video" "details" "sidebar";
+    gap: 0.75rem;
+  }
+  .still-watch-sidebar { position: relative; inset: auto; width: 100%; border-radius: 16px; height: 68px; transition: height var(--panel-close-dur) var(--panel-ease); }
+  .still-playback-layout[data-chat-open="true"] .still-watch-sidebar { height: min(60svh, 460px); transition-duration: var(--panel-open-dur); }
+  .still-watch-rail { inset: 0 0 auto; width: 100%; height: 68px; flex-direction: row; padding: 12px; gap: 16px; }
+  .still-rail-controls, .still-rail-secondary { flex-direction: row; }
+  .still-rail-secondary { margin-top: 0; margin-left: auto; }
+  .still-sidebar-chat { inset: 68px 0 0; border-radius: 0 0 16px 16px; }
+  .still-sidebar-chat-inner { min-width: 0; }
+  .still-watch-sidebar .still-chat-heading { height: 48px; min-height: 48px; padding-block: var(--space-2); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .still-watch-rail .still-rail-action, .still-playback-layout,
+  .still-watch-sidebar, .still-watch-rail { transition: none !important; }
+}
+
+/* Tooltip motion from transitions-dev. */
+:root {
+  --tt-in-dur: 150ms;
+  --tt-out-dur: 50ms;
+  --tt-scale: 0.98;
+  --tt-delay: 80ms;
+  --tt-in-ease: ease-out;
+  --tt-out-ease: ease-out;
+  --tt-move-dur: 160ms;
+  --tt-move-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --tt-bg: #ffffff;
+  --tt-fg: #2f2f2f;
+}
+
+.t-tt-group {
+  position: relative;
+  display: inline-flex;
+}
+.t-tt {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0;                 /* the JS writes the measured width */
+  overflow: hidden;
+  /* Individual transform properties: the travel (translate) and the
+     appear (scale) run on their own clocks. */
+  translate: var(--tt-x, 0px) 0;
+  scale: var(--tt-scale);
+  transform-origin: 50% 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--tt-bg);
+  color: var(--tt-fg);
+  white-space: nowrap;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    0 2px 6px 0 rgba(0, 0, 0, 0.05),
+    0 4px 42px 0 rgba(0, 0, 0, 0.06);
+  opacity: 0;
+  pointer-events: none;
+  /* Default rule controls the LEAVE state: no delay, so hiding plays
+     immediately. The move lanes are always live. */
+  transition:
+    opacity   var(--tt-out-dur) var(--tt-out-ease),
+    scale     var(--tt-out-dur) var(--tt-out-ease),
+    translate var(--tt-move-dur) var(--tt-move-ease),
+    width     var(--tt-move-dur) var(--tt-move-ease);
+}
+/* The appear delay belongs ONLY to the show rule, so hiding snaps it
+   back to 0. A retarget while showing carries no delay at all. */
+.t-tt[data-show="true"] {
+  opacity: 1;
+  scale: 1;
+  transition:
+    opacity   var(--tt-in-dur) var(--tt-in-ease) var(--tt-delay),
+    scale     var(--tt-in-dur) var(--tt-in-ease) var(--tt-delay),
+    translate var(--tt-move-dur) var(--tt-move-ease),
+    width     var(--tt-move-dur) var(--tt-move-ease);
+}
+.t-tt-text { white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .t-tt { transition: none !important; }
+}
+
+.still-watch-rail.t-tt-group { position: absolute; display: flex; }
+.still-watch-rail .t-tt {
+  top: 0;
+  bottom: auto;
+  translate: var(--tt-x, 0px) var(--tt-y, 0px);
+  transform-origin: right center;
+  z-index: 60;
+  font-size: 12px;
+  --tt-bg: #eeeae2;
+  --tt-fg: #17191c;
+}
+@media (max-width: 800px) {
+  .still-watch-rail .t-tt { display: none; }
+}
+
+/* Shared sidebar content reveal. */
+:root {
+  --panel-open-dur: 400ms;
+  --panel-close-dur: 350ms;
+  --panel-translate-y: 100px;
+  --panel-blur: 2px;
+  --panel-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.t-panel-slide {
+  transform: translateY(var(--panel-translate-y));
+  opacity: 0;
+  filter: blur(var(--panel-blur));
+  pointer-events: none;
+  transition:
+    transform var(--panel-close-dur) var(--panel-ease),
+    opacity   var(--panel-close-dur) var(--panel-ease),
+    filter    var(--panel-close-dur) var(--panel-ease);
+  will-change: transform, opacity, filter;
+}
+.t-panel-slide[data-open="true"] {
+  transform: translateY(0);
+  opacity: 1;
+  filter: blur(0);
+  pointer-events: auto;
+  transition:
+    transform var(--panel-open-dur) var(--panel-ease),
+    opacity   var(--panel-open-dur) var(--panel-ease),
+    filter    var(--panel-open-dur) var(--panel-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-panel-slide { transition: none !important; }
+}
+
+/* Server-rendered content blocks. These render below the app shell and carry
+   the indexable copy, so they must stay readable and well linked. */
+.still-seo {
+  width: 100%;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+.still-seo-inner {
+  padding-block: clamp(var(--space-10), 6vw, var(--space-18)) clamp(var(--space-12), 7vw, 5rem);
+}
+.still-seo-title {
+  margin: 0;
+  font-size: var(--media-font-page-title);
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+.still-seo-lede {
+  margin: 1rem 0 0;
+  max-width: 58ch;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--color-text-secondary);
+}
+.still-seo-body {
+  margin: 0.75rem 0 0;
+  max-width: 65ch;
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  color: var(--color-text-secondary);
+}
+.still-seo-block { margin-top: clamp(2rem, 4vw, 3rem); }
+.still-seo-subheading {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+.still-seo-feature-title { font-size: 0.9375rem; font-weight: 600; color: var(--color-text); }
+.still-seo-feature-body { margin: 0.375rem 0 0; font-size: 0.875rem; line-height: 1.7; color: var(--color-text-secondary); }
+.still-seo-links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+.still-seo-link {
+  display: inline-block;
+  padding: 0.375rem 0.875rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 0.875rem;
+  color: var(--color-text);
+  text-decoration: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+.still-seo-link:hover { border-color: var(--color-phantom); background: var(--color-surface-hover); }
+.still-seo-vods { margin: 1rem 0 0; padding: 0; list-style: none; }
+.still-seo-vod { padding: 0.875rem 0; border-top: 1px solid var(--color-border); }
+.still-seo-vod-link { font-size: 0.9375rem; color: var(--color-text); text-decoration: none; }
+.still-seo-vod-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.still-seo-vod-meta { display: block; margin-top: 0.25rem; font-size: 0.8125rem; color: var(--color-text-tertiary); }
+
+/* The home page's about block: a statement on the left half of the feed's columns, four facts on the right half.
+   One hairline ends the app above it. Nothing inside is boxed or ruled off. */
+.still-about { margin-top: var(--space-18); padding-bottom: var(--space-6); }
+.still-about-inner { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); align-items: baseline; gap: var(--space-14) var(--gap); padding-top: var(--space-14); border-top: 1px solid var(--color-border); }
+.still-about-inner > * { grid-column: 1 / -1; margin: 0; }
+.still-about-head { grid-column: 1 / span 2; }
+.still-about-head .still-seo-lede { max-width: 32rem; }
+/* Each fact is a row: its name on the feed's third column, its line on the fourth. */
+.still-about-facts { grid-column: 3 / -1; display: grid; grid-template-columns: subgrid; row-gap: 12px; }
+.still-about-fact { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; }
+.still-about-fact .still-seo-feature-body { margin: 0; }
+.still-about-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem 1.5rem; font-size: 11px; color: var(--color-text-tertiary); }
+.still-about-foot nav { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; }
+.still-about-foot a { text-decoration: underline; text-underline-offset: 4px; transition: color 0.15s ease; }
+.still-about-foot a:hover { color: var(--color-text); }
+/* "/" can also be showing a video (?v=), which brings its own footer. The about block's closing line replaces it. */
+.still-main:has(+ .still-about) .still-footer { display: none; }
+/* Narrower than four columns, the statement takes the full width and the facts become one row under it. */
+@media (max-width: 1399px) {
+  .still-about-inner { row-gap: var(--space-10); }
+  .still-about-head { grid-column: 1 / -1; }
+  .still-about-facts { grid-column: 1 / -1; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px var(--gap); }
+  .still-about-fact { grid-column: auto; display: block; }
+  .still-about-fact .still-seo-feature-body { margin-top: 0.25rem; }
+}
+@media (max-width: 1100px) {
+  .still-about-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .still-about { margin-top: var(--space-12); }
+  .still-about-inner { padding-top: var(--space-10); }
+  .still-about-facts { grid-template-columns: minmax(0, 1fr); row-gap: 20px; }
+}
+@media (prefers-reduced-motion: reduce) { .still-about-foot a { transition: none; } }
+
+/* Secondary browsing tools stay subordinate to the media. */
+.still-resource-page { display: flex; flex-direction: column; }
+.still-resource-page > .still-page { min-height: inherit; }
+.still-resource-heading { margin-bottom: var(--space-5); }
+.still-resource-heading h1 { margin: 0; font-size: var(--media-font-section); font-weight: 600; line-height: 1.35; }
+.still-resource-heading p { margin-top: var(--space-2); font-size: 12px; color: var(--color-text-tertiary); }
+.still-resource-notice { display: flex; align-items: flex-start; gap: var(--space-3); margin-block: var(--space-5); color: var(--color-text-secondary); }
+.still-resource-notice > svg { flex: none; margin-top: 2px; color: var(--color-text-tertiary); }
+.still-resource-notice h3 { font-size: 13px; font-weight: 500; }
+.still-resource-notice p { margin-top: var(--space-1); font-size: 12px; color: var(--color-text-tertiary); line-height: 1.7; }
+.still-resource-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.still-resource-pill { display: inline-flex; align-items: center; padding: 2px var(--space-2); border-radius: 999px; background: var(--color-surface-light); color: var(--color-text-tertiary); font-size: 10px; }
+.still-resource-number { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* Categories. Box art sits on a grid twice as fine as the video grid, so both end on the same outer edges. */
+.still-category-grid { display: grid; grid-template-columns: repeat(calc(var(--media-grid-columns) * 2), minmax(0, 1fr)); gap: var(--media-grid-row-gap) var(--media-grid-column-gap); }
+.still-category-tile { display: block; min-width: 0; border-radius: 16px; }
+.still-category-tile:focus-visible { outline: 1px solid var(--color-text-secondary); outline-offset: 2px; }
+.still-category-art { aspect-ratio: 3 / 4; }
+.still-category-art-fallback { display: flex; height: 100%; align-items: center; justify-content: center; padding: var(--space-3); text-align: center; font-size: var(--media-font-card-meta); color: var(--color-text-tertiary); }
+/* The most watched categories open the directory as a row each: the category's box art, then a carousel of who leads it.
+   27 to 64 is the width ratio at which 3:4 box art and a 16:9 preview come out the same height. */
+.still-category-shelf { --shelf-streams: 4; --shelf-gap: var(--media-grid-column-gap); display: grid; grid-template-columns: 27fr repeat(var(--shelf-streams), 64fr); column-gap: var(--shelf-gap); margin-bottom: var(--media-grid-row-gap); }
+.still-category-shelf .still-category-tile:focus-visible { outline-offset: -1px; }
+.still-category-strip-frame { position: relative; grid-column: 2 / -1; min-width: 0; container-type: inline-size; }
+/* The strip's own padding is room for a tile's hover lift. */
+.still-category-strip { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - (var(--shelf-streams) - 1) * var(--shelf-gap)) / var(--shelf-streams)); column-gap: var(--shelf-gap); margin-top: -4px; padding-top: 4px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.still-category-strip::-webkit-scrollbar { display: none; }
+.still-category-strip > * { scroll-snap-align: start; }
+/* Steps are bare carets in the gutters either side of the strip, never over a preview: the start one in the gap after the box art, the end one
+   in the page gutter. Each is as tall as a preview, so the caret lands on the previews' centre line and the whole gutter is the target. */
+.still-category-strip-step { position: absolute; top: 0; z-index: 3; display: flex; align-items: center; justify-content: center; width: var(--shelf-gap); height: calc((100cqw - (var(--shelf-streams) - 1) * var(--shelf-gap)) / var(--shelf-streams) * 9 / 16); border-radius: 6px; color: var(--color-text-tertiary); transition: color 160ms ease; }
+.still-category-strip-step[hidden] { display: none; }
+.still-category-strip-step[data-side="start"] { right: 100%; }
+.still-category-strip-step[data-side="end"] { left: 100%; }
+.still-category-strip-step:hover { color: var(--color-text); }
+.still-category-strip-step:focus-visible { outline: 1px solid var(--color-text-secondary); outline-offset: -1px; color: var(--color-text); }
+@media (min-width: 3000px) { .still-category-shelf { --shelf-streams: 6; } }
+@media (max-width: 1399px) { .still-category-shelf { --shelf-streams: 3; } }
+@media (max-width: 1000px) { .still-category-shelf { --shelf-streams: 2; } }
+@media (max-width: 640px) { .still-category-shelf { --shelf-streams: 1; --shelf-gap: var(--space-3); } }
+/* Touch pages by swiping, so there are no steps: the strip runs off the screen edge instead and shows the start of the next preview.
+   The spare track keeps the 27 to 64 ratio, so box art and preview still come out the same height. */
+@media (hover: none) {
+  .still-category-shelf { --shelf-peek: var(--space-3); grid-template-columns: 27fr repeat(var(--shelf-streams), 64fr) var(--shelf-peek); }
+  .still-category-strip { grid-auto-columns: calc((100% - var(--shelf-peek) - var(--shelf-streams) * var(--shelf-gap)) / var(--shelf-streams)); margin-right: calc(-1 * var(--page-gutter)); padding-right: var(--page-gutter); }
+  .still-category-strip-step { display: none; }
+}
+/* Stream tiles here wait for their previews in the same dark placeholder as on the home page. */
+.still-resource-page .still-home-tile .react-loading-skeleton { --base-color: #1b1d20; --highlight-color: #292c30; line-height: 1; }
+.still-category-stats strong { font-weight: 600; color: var(--color-text); }
+.still-category-more { margin: var(--space-10) 0 var(--space-5); font-size: 18px; font-weight: 500; line-height: 1.5rem; }
+/* A category's own page: its box art with the name and figures beside it, then the catalog. */
+.still-category-header { display: flex; align-items: center; gap: var(--space-6); min-width: 0; }
+.still-category-header-art { flex: none; width: 7.5rem; }
+.still-category-names { min-width: 0; }
+.still-category-back { display: inline-flex; align-items: center; gap: var(--space-1); font-size: 12px; line-height: 1.25rem; color: var(--color-text-tertiary); transition: color 150ms ease; }
+.still-category-back:hover { color: var(--color-text); }
+.still-category-name { margin: 0; font-size: var(--media-font-page-title); line-height: 2.75rem; font-weight: 600; overflow-wrap: anywhere; }
+.still-category-stats { display: flex; flex-wrap: wrap; gap: 0 var(--space-4); margin-top: var(--space-1); font-size: 0.875rem; line-height: 1.25rem; color: var(--color-text-secondary); }
+.still-category-names .still-content-labels { margin-top: var(--space-3); }
+.still-category-header + .still-catalog { margin-top: var(--space-10); }
+@media (max-width: 640px) {
+  .still-category-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5) var(--space-3); }
+  .still-category-header { gap: var(--space-4); }
+  .still-category-header-art { width: 5rem; }
+  .still-category-name { line-height: 2rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .still-category-back, .still-category-strip-step { transition: none; }
+  .still-resource-page .still-home-tile .react-loading-skeleton::after { animation: none; }
+}
+.still-watch-information { display: flex; flex-direction: column; min-width: 0; }
+.still-storyboard-frame { position: relative; aspect-ratio: var(--media-thumbnail-ratio); border-radius: 8px; overflow: hidden; background: var(--color-stage); }
+.still-storyboard-frame canvas { width: 100%; height: 100%; object-fit: contain; visibility: hidden; }
+.still-storyboard-frame canvas[data-ready] { visibility: visible; }
+.still-storyboard-frame > [role="status"] { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: var(--media-font-badge); color: var(--color-stage-muted); }
+.still-stage-frame .scrub-tooltip[data-preview] { width: min(208px, 100%); align-items: stretch; padding: var(--space-1); gap: var(--space-1); border: 0; border-radius: 12px; background: var(--color-stage-raised); color: var(--color-stage-text); z-index: 2; }
+.still-stage-frame .scrub-tooltip[data-preview] .still-storyboard-frame { width: 100%; flex: none; }
+.still-stage-frame .scrub-tooltip[data-preview] .scrub-tooltip-meta { display: flex; align-items: center; gap: var(--space-2); min-width: 0; padding-inline: var(--space-1); line-height: 20px; }
+.still-stage-frame .scrub-tooltip[data-preview] .scrub-tooltip-time { flex: none; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: var(--media-font-badge); font-weight: 500; }
+.still-stage-frame .scrub-tooltip[data-preview] .scrub-tooltip-labels { display: flex; flex: 1; flex-direction: row; align-items: center; gap: var(--space-1); min-width: 0; color: var(--color-stage-muted); font-size: 11px; }
+.still-stage-frame .scrub-tooltip[data-preview] .scrub-tooltip-labels > span { min-width: 0; }
+@container (max-width: 480px) {
+  .still-stage-frame .scrub-tooltip[data-preview] { bottom: 100%; display: grid; grid-template-columns: 96px minmax(0, 1fr); width: min(280px, 100%); gap: var(--space-2); }
+  .still-stage-frame .scrub-tooltip[data-preview] .scrub-tooltip-meta { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-content: center; gap: 0 var(--space-1); padding: 0; }
+  .still-stage-frame .scrub-tooltip[data-preview] .scrub-tooltip-time { grid-column: 1; grid-row: 1; }
+  .still-stage-frame .scrub-tooltip[data-preview] .scrub-tooltip-muted { grid-column: 2; grid-row: 1; }
+  .still-stage-frame .scrub-tooltip[data-preview] .scrub-tooltip-labels { grid-column: 1 / -1; grid-row: 2; }
+  .still-stage-frame .scrub-tooltip[data-preview] .scrub-tooltip-labels { flex: none; flex-wrap: wrap; width: 100%; line-height: 16px; max-height: 34px; overflow: hidden; }
+}
+@container (max-width: 300px) {
+  .still-stage-frame .scrub-tooltip[data-preview] { grid-template-columns: 64px minmax(0, 1fr); padding: var(--space-1); gap: var(--space-1); }
+  .still-stage-frame .scrub-tooltip[data-preview] .scrub-tooltip-time { font-size: 10px; line-height: 16px; }
+  .still-stage-frame .scrub-tooltip[data-preview] .scrub-tooltip-labels { flex-wrap: nowrap; font-size: 10px; }
+}
+.still-video-context { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin-top: var(--space-2); }
+.still-video-category { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-text-secondary); font-size: 12px; font-weight: 500; }
+.still-video-category:hover { color: var(--color-text); }
+.still-video-category:focus-visible { outline: 1px solid var(--color-text-tertiary); outline-offset: 4px; border-radius: 4px; }
+.still-content-labels { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.still-content-label { padding: 2px var(--space-2); border-radius: 999px; background: var(--color-surface-light); color: var(--color-text-tertiary); font-size: 10px; line-height: 16px; }
+.still-vod-chapters { min-width: 0; margin-top: var(--space-5); }
+.still-vod-chapters h2 { margin: 0 0 var(--space-2); font-size: 11px; font-weight: 500; color: var(--color-text-tertiary); }
+.still-vod-chapters nav { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(140px, 1fr); gap: var(--space-2); overflow-x: auto; padding-bottom: var(--space-1); scroll-snap-type: x proximity; }
+.still-vod-chapter { position: relative; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--space-1); height: auto; min-height: 60px; padding: var(--space-2) var(--space-3); border-radius: 8px; scroll-snap-align: start; text-align: left; font-size: 12px; font-weight: 500; }
+.still-vod-chapter time { font-family: var(--font-mono); font-size: 10px; font-variant-numeric: tabular-nums; color: var(--color-text-tertiary); }
+.still-vod-chapter > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 18px; }
+.still-vod-chapter[aria-current="true"] { color: var(--color-text); background: var(--color-surface-light); }
+.still-vod-chapter[aria-current="true"] time { color: var(--color-text-secondary); }
+.still-vod-chapter:focus-visible { outline: 1px solid var(--color-text-tertiary); outline-offset: -2px; }
+.still-recording-unavailable { padding: var(--space-4); border-radius: 16px; background: var(--color-surface); }
+.still-recording-unavailable .still-resource-notice { margin-top: 0; }
+.still-chat-actions { display: flex; flex: none; align-items: center; gap: var(--space-1); }
+.still-chat-actions > button { width: 28px; height: 28px; border-radius: 8px; }
+.still-chat-actions [aria-pressed="true"] { color: var(--color-text); background: var(--color-surface-light); }
+.still-chat-tools { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.still-chat-tools-toolbar { flex: none; display: flex; flex-direction: column; gap: var(--space-2); padding: 0 var(--space-4) var(--space-3); }
+.still-chat-tools-toolbar h2 { font-size: var(--media-font-card-title); font-weight: 500; }
+.still-chat-load { justify-content: flex-start; align-self: flex-start; height: 28px; padding-inline: var(--space-2); font-size: 10px; font-weight: 400; color: var(--color-text-tertiary); }
+.still-chat-sample-note { font-size: 11px; color: var(--color-text-tertiary); line-height: 1.6; }
+.still-chat-tools-results { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--space-2) var(--space-4); }
+.still-chat-tools-results .still-chat-empty { gap: var(--space-3); }
+.still-chat-result { width: 100%; justify-content: flex-start; align-items: flex-start; gap: var(--space-3); height: auto; min-height: 44px; padding: var(--space-2); text-align: left; font-size: 12px; }
+.still-chat-result time { flex: none; color: var(--color-text-tertiary); font-family: var(--font-mono); font-size: 10px; font-variant-numeric: tabular-nums; padding-top: 3px; }
+.still-chat-result > span { min-width: 0; overflow-wrap: anywhere; font-weight: 400; line-height: 1.6; }
+.still-chat-reaction { align-items: center; }
+.still-chat-reaction > span:first-of-type { flex: 1; display: flex; flex-direction: column; }
+.still-chat-reaction > span:first-of-type > span { font-size: 10px; color: var(--color-text-tertiary); }
+.still-clip-skeleton { aspect-ratio: var(--media-thumbnail-ratio); border-radius: 16px; }
+.still-clip-details { margin-bottom: var(--space-8); }
+.still-clip-date { margin-top: var(--space-2); font-size: 11px; color: var(--color-text-tertiary); }
+.still-download, .still-share { position: relative; }
+.still-download-trigger, .still-share-trigger { height: 36px; padding-inline: var(--space-3); font-size: 11px; font-weight: 500; }
+.still-action-popover { background: var(--color-surface-light); color: var(--color-text); border: 0; box-shadow: none; position: absolute; z-index: 20; top: calc(100% + var(--space-2)); right: 0; width: 240px; max-width: calc(100vw - 2 * var(--page-gutter)); padding: var(--space-2); border-radius: 12px; }
+.still-rail-popover { top: auto; right: calc(100% + var(--space-3)); bottom: 0; }
+.still-action-popover > header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: 0 var(--space-1) var(--space-2) var(--space-2); font-size: 13px; font-weight: 500; color: var(--color-text); }
+.still-action-popover > header > button { width: 28px; height: 28px; }
+.still-download-options { display: flex; flex-direction: column; gap: var(--space-1); }
+.still-download-options > button { color: var(--color-text-secondary); justify-content: space-between; min-height: 40px; height: auto; padding-inline: var(--space-3); border-radius: 8px; font-size: 12px; font-weight: 500; }
+.still-download-option-detail { color: var(--color-text-tertiary); font-size: 10px; font-family: var(--font-mono); }
+.still-download-state { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3); font-size: 12px; color: var(--color-text-secondary); }
+.still-download-note { font-size: 11px; color: var(--color-text-tertiary); line-height: 1.6; padding: var(--space-2); }
+.still-download-state .still-download-note { padding: 0; }
+.still-download-progress { display: flex; align-items: center; gap: var(--space-2); color: var(--color-text-secondary); font-size: var(--media-font-badge); }
+.still-download-progress > .job-rail { width: 80px; }
+.still-share-link { display: block; width: calc(100% - var(--space-4)); margin: var(--space-2); padding: var(--space-2); border: 0; border-radius: 8px; background: var(--color-surface-light); color: var(--color-text); font-family: var(--font-mono); font-size: 11px; }
+.still-share-link:focus-visible { outline: 2px solid var(--color-text-tertiary); outline-offset: 2px; }
+@media (max-width: 800px) {
+  .still-rail-popover { bottom: calc(100% + var(--space-3)); right: 0; }
+  .still-download .still-rail-popover { right: -44px; }
+}
+.still-recording-position { color: var(--color-text-secondary); font-size: var(--media-font-badge); }
+.still-recording-position .scrub { margin-top: var(--space-2); }
+.still-recording-position .scrub-track { background: var(--color-border); }
+.still-recording-position .scrub-played, .still-recording-position .scrub-head { background: var(--color-phantom); }
+.still-chat-user { font-weight: 600; color: var(--color-text-secondary); }
+.still-chat-badge { display: inline-flex; vertical-align: middle; margin-right: var(--space-1); border-radius: var(--space-1); }
+.still-chat-badge:focus-visible { outline: 2px solid var(--color-phantom); outline-offset: 2px; }
+.still-chat-badge-tooltip {
+  position: fixed;
+  bottom: auto;
+  width: max-content;
+  max-width: min(280px, calc(100vw - var(--space-4)));
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--space-2);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--media-font-badge);
+  line-height: var(--media-card-line-height);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  pointer-events: auto;
+  z-index: 100;
+}
+
+/* Header actions are quiet tools; only hover/active state gets a surface. */
+.media-header .still-nav-action { width: 36px; height: 36px; min-height: 36px; border: 0; border-radius: 8px; background: transparent; color: var(--color-text-secondary); box-shadow: none; }
+.media-header .still-nav-action:hover, .media-header .still-nav-action:is([aria-current="page"], [aria-expanded="true"]) { background: var(--color-surface-light); color: var(--color-text); }
+.media-header .still-nav-action:focus-visible { outline: 1px solid var(--color-text-tertiary); outline-offset: -2px; }
+.media-header:has(.still-nav-action) .media-header-search-trigger { width: 36px; height: 36px; border-radius: 8px; }
+.media-header:has(.still-nav-action) .media-header-actions { gap: var(--space-1); }
+
+/* Still is the product; Phantom Media is the quiet family signature below. */
+.still-brand { display: inline-flex; align-items: center; min-height: 44px; border-radius: 6px; }
+.still-brand-logo { display: block; width: auto; height: 38px; }
+.still-family { display: inline-flex; align-items: center; gap: 9px; color: var(--color-text-tertiary); font-size: 11px; line-height: 1.5; text-decoration: none; }
+.still-family-mark { width: auto; height: 18px; opacity: 0.7; }
+.still-family strong { color: var(--color-text-secondary); font-weight: 500; }
+.still-family:hover, .still-family:hover strong { color: var(--color-text); }
+.still-footer > .still-family { margin-bottom: 10px; }
+.still-about-foot > .still-family { flex-basis: 100%; width: fit-content; margin-bottom: 8px; text-decoration: none; }
+.still-about-foot { align-items: center; }

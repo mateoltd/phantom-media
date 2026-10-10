@@ -15,11 +15,13 @@
 # moved and deploy branches only move forward.
 set -euo pipefail
 
-# Deployment keys retain the existing Cloudflare root/branch/Worker coordinates.
+# App directories use product names; existing Cloudflare Worker and branch names
+# are mapped separately. Cloudflare Builds must use the matching app directory.
 # Product package names (and release tag prefixes) come from package.json.
 # Deployed apps, and the Worker each one's Cloudflare build reports as.
-declare -A WORKERS=([twitch]=phantom-twitch [stream]=phantom-stream)
-APPS=(twitch stream)
+declare -A WORKERS=([still]=phantom-twitch [stream]=phantom-stream)
+declare -A DEPLOY_BRANCHES=([still]=deploy/twitch [stream]=deploy/stream)
+APPS=(still stream)
 # Versioned and tagged, but not deployed from here.
 TAG_ONLY=(apps/downloader packages/config packages/theme packages/ui)
 # What an app is built from besides its own directory.
@@ -165,7 +167,7 @@ release_all() {
 
 # Moves an app's deploy branch to its latest release.
 promote() {
-  local app=$1 branch="deploy/$1" prefix
+  local app=$1 branch="${DEPLOY_BRANCHES[$1]}" prefix
   prefix="$(field origin/main "apps/$app" name)@"
   local version tag sha current packaged state since
 

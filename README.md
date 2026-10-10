@@ -5,7 +5,7 @@ an ad-free alternative Twitch player for live streams, subscriber-only VODs,
 and live rewind through broadcast archives. Watch without a Twitch account,
 with no app analytics or tracking cookies.
 
-[Still documentation](apps/twitch/README.md) and [local setup](#getting-set-up).
+[Still documentation](apps/still/README.md) and [local setup](#getting-set-up).
 
 ## Still: watch on your terms
 
@@ -33,7 +33,7 @@ share a design system and toolchain in this monorepo.
 | ---------------------- | ----------------------------------------------------------------------- |
 | `apps/downloader`      | Phantom Downloader pulls a video or a whole playlist down as a file.    |
 | `apps/stream`          | Phantom Stream finds a film or series and plays it.                     |
-| `apps/twitch`          | Still: ad-free Twitch player, subscriber-only VODs, and live rewind.                            |
+| `apps/still`          | Still: ad-free Twitch player, subscriber-only VODs, and live rewind.                            |
 | `packages/theme`       | Design tokens, base layer and CSS primitives. Tailwind v4.              |
 | `packages/ui`          | React components the apps share, consumed as source.                    |
 | `packages/config`      | tsconfig, ESLint and PostCSS bases.                                     |

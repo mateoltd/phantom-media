@@ -1,7 +1,0 @@
-@import "tailwindcss";
-@import "@phantom/theme";
-@import "@phantom/theme/media.css";
-@import "@phantom/theme/player.css";
-@import "./twitch.css";
-
-@source "../../../packages/ui/src";
