@@ -13,6 +13,7 @@ import {
   ArrowUpRight,
   Clipboard,
   MagnifyingGlass,
+  SealCheck,
   X,
 } from "@phosphor-icons/react/ssr";
 
@@ -27,6 +28,7 @@ export interface SearchSuggestion {
   badge?: string;
   thumbnail?: Thumbnail;
   status?: "live" | "offline";
+  verified?: boolean;
 }
 
 export interface SearchFieldLabels {
@@ -55,11 +57,23 @@ export interface SearchFieldProps {
   onSuggestionSelect?: (suggestion: SearchSuggestion) => void;
   onSuggestionPrefetch?: (suggestion: SearchSuggestion) => void;
   thumbnail?: Thumbnail;
-  size?: "default" | "compact";
+  size?: "default" | "compact" | "small";
+  showSubmit?: boolean;
   className?: string;
 }
 
 const SIZES = {
+  small: {
+    form: "h-8 pl-2 pr-1",
+    icon: 14,
+    input: "px-1.5 text-[12px]",
+    accessory: "h-6 w-6",
+    accessoryIcon: 13,
+    pasteIcon: 14,
+    submit: "h-6 w-6",
+    submitIcon: 14,
+    spinner: "h-3 w-3",
+  },
   default: {
     form: "h-[52px] pl-4 pr-1.5 sm:h-14",
     icon: 19,
@@ -100,6 +114,7 @@ export function SearchField({
   onSuggestionPrefetch,
   thumbnail = "video",
   size = "default",
+  showSubmit = true,
   className = "",
 }: SearchFieldProps) {
   const metrics = SIZES[size];
@@ -233,6 +248,7 @@ export function SearchField({
     }}>
       <form
         onSubmit={handleSubmit}
+        data-size={size}
         className={`search-pill flex items-center gap-1 ${metrics.form}`}
       >
         <MagnifyingGlass
@@ -285,7 +301,7 @@ export function SearchField({
           </button>
         )}
 
-        <button
+        {showSubmit && <button
           type="submit"
           disabled={loading}
           className={`search-pill-submit flex shrink-0 items-center justify-center rounded-full ${metrics.submit}`}
@@ -299,7 +315,7 @@ export function SearchField({
           ) : (
             <ArrowUpRight weight="regular" size={metrics.submitIcon} />
           )}
-        </button>
+        </button>}
       </form>
 
       {open && (
@@ -351,6 +367,8 @@ export function SearchField({
                     >
                       <Artwork
                         src={suggestion.imageUrl}
+                        loading="eager"
+                        decoding={imageType === "avatar" ? "sync" : undefined}
                         sizes={imageType === "avatar" ? "44px" : imageType === "poster" ? "32px" : "76px"}
                         fallback={
                           <span className="flex h-full w-full items-center justify-center text-[13px] font-extrabold text-text-tertiary">
@@ -367,8 +385,13 @@ export function SearchField({
                   )}
 
                   <span className="min-w-0 flex-1">
-                    <span className="line-clamp-1 text-[13px] font-bold text-text">
-                      {suggestion.title}
+                    <span className="flex items-center gap-1">
+                      <span className="min-w-0 truncate text-[13px] font-bold text-text">
+                        {suggestion.title}
+                      </span>
+                      {suggestion.verified && (
+                        <SealCheck weight="fill" size={14} aria-label="Verified" className="shrink-0 text-phantom" />
+                      )}
                     </span>
                     {suggestion.subtitle && (
                       <span className="mt-0.5 block truncate text-[11px] text-text-tertiary">

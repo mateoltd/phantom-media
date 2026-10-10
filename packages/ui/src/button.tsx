@@ -1,8 +1,8 @@
 "use client";
 
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ComponentPropsWithRef, ReactNode } from "react";
 
-type NativeButton = ButtonHTMLAttributes<HTMLButtonElement>;
+type NativeButton = ComponentPropsWithRef<"button">;
 
 const VARIANTS = {
   primary:

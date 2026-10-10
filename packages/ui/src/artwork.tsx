@@ -8,6 +8,8 @@ export interface ArtworkProps {
   alt?: string;
   sizes?: string;
   priority?: boolean;
+  loading?: "eager" | "lazy";
+  decoding?: "sync" | "async" | "auto";
   className?: string;
   fallback?: ReactNode;
 }
@@ -17,6 +19,8 @@ export function Artwork({
   alt = "",
   sizes,
   priority = false,
+  loading,
+  decoding,
   className = "",
   fallback = null,
 }: ArtworkProps) {
@@ -32,6 +36,8 @@ export function Artwork({
       sizes={sizes}
       unoptimized
       priority={priority}
+      loading={loading}
+      decoding={decoding}
       onError={() => setFailedSrc(src)}
       className={`h-full w-full object-cover ${className}`}
     />

@@ -20,7 +20,8 @@ function lockPageScroll(): void {
 
   root.style.overflow = "hidden";
   body.style.overflow = "hidden";
-  if (scrollbarWidth > 0) {
+  // Stable gutters already reserve this space when overflow is hidden.
+  if (scrollbarWidth > 0 && !getComputedStyle(root).scrollbarGutter.includes("stable")) {
     body.style.paddingRight = `${scrollbarWidth}px`;
   }
 

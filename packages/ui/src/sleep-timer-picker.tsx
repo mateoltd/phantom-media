@@ -1,10 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { Liquid } from "liquid-gooey";
-import { Timer, X } from "@phosphor-icons/react/ssr";
-
-const FILLED_ICON = { weight: "fill" as const };
+import { Check, X } from "@phosphor-icons/react/ssr";
+import { SLEEP_TIMER_OPTIONS } from "./use-sleep-timer";
 
 interface SleepTimerPickerProps {
   open: boolean;
@@ -14,40 +12,31 @@ interface SleepTimerPickerProps {
   onChange: (minutes: number | null) => void;
 }
 
-const CHOICES = [
-  { minutes: null, label: "Off", short: "Off", x: -108, y: -36 },
-  { minutes: 15, label: "15 minutes", short: "15m", x: -36, y: -36 },
-  { minutes: 30, label: "30 minutes", short: "30m", x: 36, y: -36 },
-  { minutes: 45, label: "45 minutes", short: "45m", x: 108, y: -36 },
-  { minutes: 60, label: "1 hour", short: "1h", x: -72, y: 36 },
-  { minutes: 90, label: "90 minutes", short: "90m", x: 0, y: 36 },
-  { minutes: 120, label: "2 hours", short: "2h", x: 72, y: 36 },
-] as const;
+function durationLabel(minutes: number) {
+  return minutes === 60 ? "1 hour" : minutes === 120 ? "2 hours" : `${minutes} minutes`;
+}
 
-export function SleepTimerPicker({
-  open,
-  onOpenChange,
-  minutes,
-  minutesLeft,
-  onChange,
-}: SleepTimerPickerProps) {
+export function SleepTimerPicker({ open, onOpenChange, minutes, minutesLeft, onChange }: SleepTimerPickerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const close = useCallback(() => {
+    const trigger = panelRef.current?.closest(".stage")?.querySelector<HTMLButtonElement>(".stage-sleep-trigger");
     onOpenChange(false);
-    panelRef.current?.closest(".stage")?.querySelector<HTMLButtonElement>(".stage-sleep-trigger")?.focus({ preventScroll: true });
+    trigger?.focus({ preventScroll: true });
   }, [onOpenChange]);
 
   useEffect(() => {
+    if (open) panelRef.current?.querySelector<HTMLButtonElement>("[aria-pressed=true]")?.focus({ preventScroll: true });
+  }, [open]);
+
+  useEffect(() => {
     if (!open) return;
-    panelRef.current?.querySelector<HTMLButtonElement>("[aria-pressed=true]")?.focus({ preventScroll: true });
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      event.preventDefault();
-      event.stopPropagation();
-      close();
+      event.preventDefault(); event.stopPropagation(); close();
     };
     const onPointerDown = (event: PointerEvent) => {
-      if (!panelRef.current?.contains(event.target as Node)) close();
+      const target = event.target as HTMLElement;
+      if (!panelRef.current?.contains(target) && !target.closest(".stage-sleep-trigger")) close();
     };
     document.addEventListener("keydown", onKeyDown, true);
     document.addEventListener("pointerdown", onPointerDown);
@@ -57,74 +46,17 @@ export function SleepTimerPicker({
     };
   }, [close, open]);
 
-  return (
-    <>
-      {open && (
-        <button
-          type="button"
-          className="stage-sleep-backdrop"
-          aria-label="Close sleep timer"
-          onClick={close}
-        />
-      )}
-      <div
-        ref={panelRef}
-        className="stage-sleep-sheet"
-        data-open={open}
-        inert={!open}
-        role="dialog"
-        aria-label="Sleep timer"
-        onKeyDown={(event) => event.stopPropagation()}
-      >
-        <div className="stage-sleep-header">
-          <div className="stage-sleep-title">
-            <Timer {...FILLED_ICON} size={18} aria-hidden="true" />
-            <span>Sleep timer</span>
-          </div>
-          <span className="stage-sleep-remaining" aria-live="polite">
-            {minutes === null ? "Off" : `${minutesLeft} min left`}
-          </span>
-          <button
-            type="button"
-            className="stage-control"
-            aria-label="Close sleep timer"
-            onClick={close}
-          >
-            <X weight="regular" size={18} />
-          </button>
-        </div>
-        <Liquid className="stage-sleep-liquid" fill="#383b40" blur={10} contrast={18} shadow="0 4px 12px #0004">
-          {CHOICES.map((choice, index) => {
-            const selected = minutes === choice.minutes;
-            const Icon = Timer;
-            return (
-              <Liquid.Item
-                key={choice.short}
-                className="stage-sleep-liquid-item"
-                x={open ? choice.x : 0}
-                y={open ? choice.y : 0}
-                transition="bouncy"
-                delay={index * 20}
-              >
-                <button
-                  type="button"
-                  className="stage-sleep-choice"
-                  aria-label={choice.minutes === null ? "Turn off sleep timer" : `Stop playback in ${choice.label}`}
-                  aria-pressed={selected}
-                  title={choice.minutes === null ? "Off" : choice.label}
-                  onClick={() => {
-                    onChange(choice.minutes);
-                    close();
-                  }}
-                >
-                  <Icon {...FILLED_ICON} size={17} aria-hidden="true" />
-                  <span>{choice.short}</span>
-                </button>
-              </Liquid.Item>
-            );
-          })}
-        </Liquid>
+  if (!open) return null;
+  const choose = (value: number | null) => { onChange(value); close(); };
+  return <>
+    <button type="button" className="stage-sheet-backdrop" aria-label="Dismiss sleep timer" onClick={close} />
+    <div ref={panelRef} className="stage-sheet stage-sleep-sheet" role="dialog" aria-label="Sleep timer" onKeyDown={event => event.stopPropagation()}>
+      <div className="stage-sheet-header"><span>Sleep timer</span><button type="button" className="stage-control" aria-label="Close sleep timer" onClick={close}><X size={18} /></button></div>
+      <div className="stage-sheet-body">
+        <p className="stage-sheet-note" role="status">{minutes === null ? "Pause playback after a set time." : `Playback pauses in ${minutesLeft} minutes.`}</p>
+        <button type="button" className="stage-sheet-row stage-sleep-off" aria-pressed={minutes === null} onClick={() => choose(null)}><span>Off</span>{minutes === null && <Check size={16} />}</button>
+        <div className="stage-sleep-options">{SLEEP_TIMER_OPTIONS.map(value => <button type="button" key={value} className="stage-sleep-choice" aria-pressed={minutes === value} aria-label={`Stop playback in ${durationLabel(value)}`} onClick={() => choose(value)}>{durationLabel(value)}{minutes === value && <Check size={14} />}</button>)}</div>
       </div>
-    </>
-  );
+    </div>
+  </>;
 }

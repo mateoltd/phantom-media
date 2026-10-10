@@ -56,6 +56,22 @@
   border-color: color-mix(in oklab, var(--color-text) 30%, transparent);
 }
 
+.search-pill[data-size="small"] {
+  border: 0;
+  border-radius: 8px;
+  background: var(--color-surface-light);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.search-pill[data-size="small"] input { font-size: 12px; }
+@media (pointer: coarse) {
+  /* Keep touch fields legible and prevent Safari focus zoom. */
+  .search-pill[data-size="small"] input { font-size: 16px; }
+}
+.search-pill[data-size="small"]:focus-within {
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
 .search-pill-submit {
   background: var(--color-phantom);
   color: #fff;
@@ -315,3 +331,14 @@ select:focus-visible {
     border-top-width: 6px;
   }
 }
+
+/* Compact filters use the same selection and keyboard model as full fields. */
+.styled-select[data-variant="quiet"] .styled-select-trigger { width: auto; height: 32px; min-height: 32px; padding: 0 var(--space-2); gap: var(--space-2); border: 0; border-radius: 8px; background: transparent; box-shadow: none; color: var(--color-text-secondary); }
+.styled-select[data-variant="quiet"] .styled-select-trigger:hover { background: var(--color-surface-light); color: var(--color-text); }
+.styled-select[data-variant="quiet"] .styled-select-trigger:focus-visible { outline: 1px solid var(--color-text-tertiary); outline-offset: -2px; }
+.styled-select[data-variant="quiet"] .styled-select-trigger > span > span { font-size: 12px; font-weight: 400; }
+.styled-select-menu[data-variant="quiet"] { border: 0; border-radius: 12px; box-shadow: none; background: var(--color-surface-light); }
+.styled-select-menu[data-variant="quiet"] [role="option"] { min-height: 36px; font-size: 12px; border-radius: 8px; }
+.styled-select-menu[data-variant="quiet"] [role="option"] > span:first-child { display: none; }
+.styled-select-menu[data-variant="quiet"] [role="option"] > span > span { font-size: 12px; font-weight: 400; }
+.styled-select-menu[data-variant="quiet"] [aria-selected="true"] { background: var(--color-surface-hover); }

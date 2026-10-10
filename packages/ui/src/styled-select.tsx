@@ -26,6 +26,7 @@ interface StyledSelectProps {
   placeholder?: string;
   showSelectedDetail?: boolean;
   compact?: boolean;
+  variant?: "default" | "quiet";
 }
 
 interface MenuPosition {
@@ -46,6 +47,7 @@ export function StyledSelect({
   placeholder = "Select an option",
   showSelectedDetail = false,
   compact = false,
+  variant = "default",
 }: StyledSelectProps) {
   const generatedId = useId();
   const triggerId = id ?? `styled-select-${generatedId}`;
@@ -57,6 +59,11 @@ export function StyledSelect({
   const [open, setOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
 
+  const closeMenu = useCallback(() => {
+    setOpen(false);
+    setMenuPosition(null);
+  }, []);
+
   const selectedIndex = options.findIndex((option) => option.value === value);
   const selectedOption = options[selectedIndex];
 
@@ -65,6 +72,8 @@ export function StyledSelect({
     if (!trigger) return;
 
     const rect = trigger.getBoundingClientRect();
+    // Fixed portals start inside the root's reserved scrollbar gutters.
+    const viewport = document.documentElement.getBoundingClientRect();
     const viewportMargin = 8;
     const gap = 8;
     const desiredHeight = Math.min(288, options.length * 48 + 12);
@@ -75,11 +84,11 @@ export function StyledSelect({
     const maxHeight = Math.max(96, Math.min(desiredHeight, availableHeight));
     const width = Math.min(
       Math.max(rect.width, 180),
-      window.innerWidth - viewportMargin * 2
+      viewport.width - viewportMargin * 2
     );
     const left = Math.min(
-      Math.max(viewportMargin, rect.left),
-      window.innerWidth - width - viewportMargin
+      Math.max(viewportMargin, rect.left - viewport.left),
+      viewport.width - width - viewportMargin
     );
 
     setMenuPosition({
@@ -95,9 +104,6 @@ export function StyledSelect({
     if (!open) return;
 
     updateMenuPosition();
-    const focusFrame = window.requestAnimationFrame(() => {
-      optionRefs.current[Math.max(selectedIndex, 0)]?.focus();
-    });
 
     const closeOnOutsidePress = (event: PointerEvent) => {
       const target = event.target as Node;
@@ -105,7 +111,7 @@ export function StyledSelect({
         !triggerRef.current?.contains(target) &&
         !menuRef.current?.contains(target)
       ) {
-        setOpen(false);
+        closeMenu();
       }
     };
 
@@ -114,15 +120,21 @@ export function StyledSelect({
     window.addEventListener("scroll", updateMenuPosition, true);
 
     return () => {
-      window.cancelAnimationFrame(focusFrame);
       document.removeEventListener("pointerdown", closeOnOutsidePress);
       window.removeEventListener("resize", updateMenuPosition);
       window.removeEventListener("scroll", updateMenuPosition, true);
     };
-  }, [open, selectedIndex, updateMenuPosition]);
+  }, [open, updateMenuPosition, closeMenu]);
+
+  useEffect(() => {
+    const menu = menuRef.current;
+    if (!open || !menuPosition || !menu || menu.contains(document.activeElement)) return;
+    // Positioning schedules another render. Focus only after the portal exists.
+    optionRefs.current[Math.max(selectedIndex, 0)]?.focus();
+  }, [open, menuPosition, selectedIndex]);
 
   const closeAndFocusTrigger = () => {
-    setOpen(false);
+    closeMenu();
     window.requestAnimationFrame(() => triggerRef.current?.focus());
   };
 
@@ -146,6 +158,7 @@ export function StyledSelect({
           <div
             ref={menuRef}
             id={listboxId}
+            data-variant={variant}
             role="listbox"
             aria-labelledby={`${labelId} ${triggerId}`}
             className="styled-select-menu fixed z-[120] overflow-y-auto rounded-2xl border border-border bg-surface-light p-1.5 shadow-[0_18px_50px_rgba(39,31,22,0.22),0_1px_0_rgba(255,255,255,0.9)_inset]"
@@ -171,9 +184,13 @@ export function StyledSelect({
                 optionRefs.current[options.length - 1]?.focus();
               } else if (event.key === "Escape") {
                 event.preventDefault();
+                event.stopPropagation();
                 closeAndFocusTrigger();
               } else if (event.key === "Tab") {
-                setOpen(false);
+                // The portal sits at the end of the document. Resume the native
+                // tab order from its trigger before unmounting the focused option.
+                triggerRef.current?.focus();
+                closeMenu();
               }
             }}
           >
@@ -224,10 +241,10 @@ export function StyledSelect({
       : null;
 
   return (
-    <div className="min-w-0">
+    <div className="styled-select min-w-0" data-variant={variant}>
       <span
         id={labelId}
-        className="mb-2 block text-[11px] font-semibold text-text-secondary"
+        className={variant === "quiet" ? "sr-only" : "mb-2 block text-[11px] font-semibold text-text-secondary"}
       >
         {label}
       </span>
@@ -240,17 +257,17 @@ export function StyledSelect({
         aria-expanded={open}
         aria-controls={listboxId}
         aria-labelledby={`${labelId} ${triggerId}`}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => { if (open) closeMenu(); else setOpen(true); }}
         onKeyDown={(event) => {
           if (event.key === "ArrowDown" || event.key === "ArrowUp") {
             event.preventDefault();
             setOpen(true);
           } else if (event.key === "Escape" && open) {
             event.preventDefault();
-            setOpen(false);
+            closeMenu();
           }
         }}
-        className={`group flex w-full items-center gap-3 rounded-xl border border-border bg-surface text-left text-text shadow-[0_1px_0_rgba(255,255,255,0.9)_inset] outline-none transition-colors hover:border-text/30 disabled:cursor-not-allowed disabled:opacity-50 ${
+        className={`styled-select-trigger group flex w-full items-center gap-3 rounded-xl border border-border bg-surface text-left text-text shadow-[0_1px_0_rgba(255,255,255,0.9)_inset] outline-none transition-colors hover:border-text/30 disabled:cursor-not-allowed disabled:opacity-50 ${
           compact ? "h-11 px-3" : "min-h-12 px-3.5 py-2.5"
         }`}
       >

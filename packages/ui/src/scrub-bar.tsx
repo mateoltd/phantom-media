@@ -1,6 +1,6 @@
 "use client";
 
-import { type PointerEvent, useEffect, useMemo, useRef } from "react";
+import { type PointerEvent, type ReactNode, useEffect, useMemo, useRef } from "react";
 import { PLAYER_SEEK_SECONDS } from "./use-stage-playback";
 import { formatTimecode } from "./timecode";
 import type { TimeListener } from "./timecode";
@@ -20,6 +20,10 @@ export interface ScrubBarProps {
   segmentAppearances?: SegmentAppearances;
   /** Absolute media time at the start of the displayed viewport. */
   timelineStart?: number;
+  /** Optional media content; timecodes, labels and positioning stay owned by the rail. */
+  preview?: ReactNode;
+  /** Absolute media time, or null when the preview closes. Never commits a seek. */
+  onPreview?: (time: number | null) => void;
 }
 
 function percent(value: number, total: number): string {
@@ -35,16 +39,20 @@ export function ScrubBar({
   segments = EMPTY_PLAYBACK_SEGMENTS,
   segmentAppearances,
   timelineStart = 0,
+  preview,
+  onPreview,
 }: ScrubBarProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLButtonElement>(null);
   const tooltipRef = useRef<ScrubTooltipHandle>(null);
   const validSegments = useMemo(() => normalizePlaybackSegments(segments), [segments]);
-  const labelsAt = (time: number) => playbackSegmentLabelsAt(validSegments, timelineStart + time);
+  const segmentsAt = (time: number) => validSegments.filter(({ start, end }) => timelineStart + time >= start && timelineStart + time < end);
   const durationRef = useRef(0);
   const currentTimeRef = useRef(0);
   const scrubbingRef = useRef(false);
   const pendingRatioRef = useRef<number | null>(null);
+  const keyboardPreviewRef = useRef(false);
+  const previewRatioRef = useRef<number | null>(null);
 
   useEffect(() => {
     return subscribe(({ currentTime, duration, bufferedTo }) => {
@@ -67,6 +75,15 @@ export function ScrubBar({
     });
   }, [subscribe, validSegments, timelineStart]);
 
+  // Optional chapter/mute metadata can arrive while a pointer remains still.
+  useEffect(() => {
+    const ratio = previewRatioRef.current;
+    if (ratio === null) return;
+    const time = ratio * durationRef.current;
+    tooltipRef.current?.preview(time, validSegments.filter(({ start, end }) => timelineStart + time >= start && timelineStart + time < end));
+    onPreview?.(timelineStart + time);
+  }, [validSegments, timelineStart, onPreview]);
+
   const ratioAt = (clientX: number): number => {
     const rail = railRef.current;
     if (!rail) return 0;
@@ -78,9 +95,21 @@ export function ScrubBar({
   const previewAt = (ratio: number) => {
     const root = rootRef.current;
     if (!root) return;
+    previewRatioRef.current = ratio;
     root.style.setProperty("--hover", `${ratio * 100}%`);
     const time = ratio * durationRef.current;
-    tooltipRef.current?.preview(time, labelsAt(time));
+    tooltipRef.current?.preview(time, segmentsAt(time));
+    onPreview?.(timelineStart + time);
+  };
+
+  const closePreview = () => {
+    rootRef.current?.classList.remove("scrub-hovering");
+    if (keyboardPreviewRef.current) {
+      previewAt(currentTimeRef.current / (durationRef.current || 1));
+    } else {
+      previewRatioRef.current = null;
+      onPreview?.(null);
+    }
   };
 
   const setScrubbing = (scrubbing: boolean) => {
@@ -96,9 +125,14 @@ export function ScrubBar({
 
   const handlePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0 || durationRef.current <= 0) return;
+    keyboardPreviewRef.current = false;
+    rootRef.current?.classList.remove("scrub-focused");
     event.currentTarget.setPointerCapture(event.pointerId);
     setScrubbing(true);
-    previewSeek(ratioAt(event.clientX));
+    const ratio = ratioAt(event.clientX);
+    rootRef.current?.classList.add("scrub-hovering");
+    previewAt(ratio);
+    previewSeek(ratio);
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLButtonElement>) => {
@@ -119,7 +153,7 @@ export function ScrubBar({
     const ratio = pendingRatioRef.current;
     pendingRatioRef.current = null;
     setScrubbing(false);
-    rootRef.current?.classList.remove("scrub-hovering");
+    closePreview();
     if (!cancelled && ratio !== null) {
       onSeek(ratio * durationRef.current);
     } else {
@@ -159,6 +193,9 @@ export function ScrubBar({
           event.preventDefault();
           event.stopPropagation();
           if (duration <= 0) return;
+          keyboardPreviewRef.current = true;
+          rootRef.current?.classList.add("scrub-focused");
+          previewAt(Math.max(0, Math.min(duration, target)) / duration);
           if (onSeekStep && event.key.startsWith("Arrow")) {
             onSeekStep(event.key === "ArrowLeft" || event.key === "ArrowDown" ? -1 : 1);
           } else {
@@ -169,9 +206,19 @@ export function ScrubBar({
         onPointerMove={handlePointerMove}
         onPointerUp={endScrub}
         onPointerCancel={(event) => endScrub(event, true)}
-        onPointerLeave={() =>
-          rootRef.current?.classList.remove("scrub-hovering")
-        }
+        onLostPointerCapture={(event) => endScrub(event, true)}
+        onPointerLeave={() => { if (!scrubbingRef.current) closePreview(); }}
+        onFocus={(event) => {
+          if (!event.currentTarget.matches(":focus-visible")) return;
+          keyboardPreviewRef.current = true;
+          rootRef.current?.classList.add("scrub-focused");
+          previewAt(currentTimeRef.current / (durationRef.current || 1));
+        }}
+        onBlur={() => {
+          keyboardPreviewRef.current = false;
+          rootRef.current?.classList.remove("scrub-focused");
+          closePreview();
+        }}
       >
         <span className="scrub-track">
           <span className="scrub-buffered" />
@@ -182,7 +229,7 @@ export function ScrubBar({
         </span>
         <span className="scrub-head" />
       </button>
-      <ScrubTooltip ref={tooltipRef} />
+      <ScrubTooltip ref={tooltipRef}>{preview}</ScrubTooltip>
     </div>
   );
 }

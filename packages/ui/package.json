@@ -31,7 +31,6 @@
     "typescript": "catalog:"
   },
   "dependencies": {
-    "@phosphor-icons/react": "catalog:",
-    "liquid-gooey": "^0.2.2"
+    "@phosphor-icons/react": "catalog:"
   }
 }

@@ -89,7 +89,6 @@ export function StageSettings({
   icon = <Gear {...ICON} size={22} />,
   actions = [],
 }: StageSettingsProps) {
-  const [availableHeight, setAvailableHeight] = useState<number | undefined>();
   const [active, setActive] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const settingsId = useId();
@@ -103,17 +102,6 @@ export function StageSettings({
   const section = sections.find((entry) => entry.id === active);
 
   const change = (next: boolean) => {
-    if (next && window.innerWidth > 640) {
-      const triggerTop =
-        rootRef.current?.getBoundingClientRect().top ?? window.innerHeight;
-      const header = document.fullscreenElement
-        ? 0
-        : (document.querySelector("header")?.getBoundingClientRect()
-            .bottom ?? 0);
-      setAvailableHeight(Math.max(160, triggerTop - header - 40));
-    } else {
-      setAvailableHeight(undefined);
-    }
     if (next) setActive(null);
     onOpenChange(next);
   };
@@ -149,6 +137,12 @@ export function StageSettings({
       body?.querySelector<HTMLButtonElement>("button"))?.focus({ preventScroll: true });
   }, [open, active]);
 
+  useEffect(() => {
+    if (!open && sheetRef.current?.contains(document.activeElement)) {
+      rootRef.current?.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true });
+    }
+  }, [open]);
+
   if (sections.length === 0 && actions.length === 0) return null;
 
   const sheet = (
@@ -162,7 +156,6 @@ export function StageSettings({
       <div
         ref={sheetRef}
         className="stage-sheet"
-        style={{ maxHeight: availableHeight }}
         role="dialog"
         aria-label={label}
         id={settingsId}
