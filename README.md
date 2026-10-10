@@ -95,6 +95,21 @@ so a second `pnpm check` on an untouched tree finishes in seconds.
 There is no dev server in the verification path on purpose: `pnpm check` is
 what tells you the tree is sound.
 
+## Versioning
+
+Every app and package carries its own [SemVer](https://semver.org) version,
+starting at `0.1.0`, and moves only through a changeset. A pull request that
+touches a workspace needs one:
+
+```sh
+pnpm changeset                        # record which workspaces change, and how
+pnpm release:version                  # apply pending changesets: bump + changelog
+pnpm release:tag                      # tag each released workspace
+pnpm release:push                     # push main and the tags; apps deploy after CI
+```
+
+The rules for choosing a bump are in [`docs/VERSIONING.md`](docs/VERSIONING.md).
+
 ## How the sharing works
 
 All apps are Next.js 16 with React 19 and Tailwind v4, and pin the same
@@ -147,6 +162,11 @@ The [media layout and size reference](packages/theme/README.md) records the
 shared content frame, spacing, type, and element variants used by Twitch.
 
 ## Deployment
+
+Production deploys on release, not on push: once CI passes on an app's release
+tag, its `deploy/<app>` branch moves to that commit, and Cloudflare Builds
+deploys from that branch. See
+[`docs/VERSIONING.md`](docs/VERSIONING.md#production-deploys).
 
 All three apps have Cloudflare deployment configuration. Downloader uses a
 Container; Stream and Twitch run as Workers through OpenNext. Deploy only the

@@ -54,7 +54,9 @@ the Next dev route shares the same proxy implementation. Server-rendered pages
 and playlist resolution can exceed Workers Free's 10 ms CPU budget, so a free
 account can still return Cloudflare error 1102 even with this media fast path.
 
-Cloudflare Builds deploys this Worker from `main` with `/apps/twitch` as its root.
+Cloudflare Builds deploys this Worker from the `deploy/twitch` branch with
+`/apps/twitch` as its root. That branch only moves to a `@phantom/twitch@<version>`
+release tag once CI has passed on it, so pushes to `main` do not reach production.
 The build installs the workspace dependencies and runs OpenNext; Wrangler then
 deploys to both custom domains. Build caching is enabled and preview builds are
 disabled. The Worker watches this app, shared packages, and workspace dependency

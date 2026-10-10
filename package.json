@@ -1,6 +1,5 @@
 {
   "name": "phantom-media",
-  "version": "1.0.0",
   "private": true,
   "description": "Open-source media tools led by Phantom Twitch: ad-free playback, subscriber-only VODs, and live rewind.",
   "scripts": {
@@ -15,11 +14,17 @@
     "deployment:check:stream": "pnpm --filter @phantom/stream exec opennextjs-cloudflare build && pnpm --filter @phantom/stream exec wrangler deploy --dry-run",
     "container:build:downloader": "docker build -f apps/downloader/Dockerfile -t phantom-media-downloader:local-check .",
     "release:check": "pnpm check && pnpm deployment:check && pnpm container:build:downloader",
+    "changeset": "changeset",
+    "version:check": "changeset status --since=origin/main",
+    "release:version": "changeset version",
+    "release:tag": "changeset git-tag",
+    "release:push": "git push --atomic origin main $(git tag --points-at main)",
     "deploy:downloader": "pnpm --filter @phantom/downloader run deploy",
     "deploy:stream": "pnpm --filter @phantom/stream deploy",
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {
+    "@changesets/cli": "^3.0.3",
     "turbo": "^2.5.8",
     "typescript": "^5.9.3"
   },

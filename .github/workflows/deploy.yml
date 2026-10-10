@@ -1,0 +1,45 @@
+name: Deploy
+
+# Production follows release tags, not main. Cloudflare Builds deploys each app
+# from its deploy/<app> branch; this workflow moves that branch to the app's
+# latest release once CI has passed on it. See docs/VERSIONING.md.
+on:
+  push:
+    tags:
+      - "@phantom/twitch@*"
+      - "@phantom/stream@*"
+      - "@phantom/downloader@*"
+  # A tag usually lands before CI has finished on its commit, and GitHub sends
+  # no tag events at all when more than three tags arrive in one push. The
+  # run after CI is the one that normally does the promotion.
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  checks: read
+
+concurrency:
+  group: media-deploy
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # Always the script from main, whatever commit the event points at.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - run: git fetch --force --tags origin '+refs/heads/deploy/*:refs/remotes/origin/deploy/*'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: .github/scripts/promote-release.sh
+        env:
+          GH_TOKEN: ${{ github.token }}

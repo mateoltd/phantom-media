@@ -349,7 +349,9 @@ pnpm --filter @phantom/stream exec wrangler deploy --domain your-host.example --
 Runtime secrets, including `SUBDL_API_KEY`, are stored in Worker secrets and
 must never be committed to Git.
 
-Cloudflare Builds deploys this Worker from `main` with `/apps/stream` as its root.
+Cloudflare Builds deploys this Worker from the `deploy/stream` branch with
+`/apps/stream` as its root. That branch only moves to a `@phantom/stream@<version>`
+release tag once CI has passed on it, so pushes to `main` do not reach production.
 The build installs the workspace dependencies and runs OpenNext; Wrangler then
 deploys to the configured custom domain. Build caching is enabled and preview
 builds are disabled. The Worker watches this app, shared packages, and workspace
