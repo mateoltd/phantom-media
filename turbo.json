@@ -21,6 +21,7 @@
       "cache": false
     },
     "dev": {
+      "passThroughEnv": ["PHANTOM_DEV_ORIGINS"],
       "cache": false,
       "persistent": true
     },

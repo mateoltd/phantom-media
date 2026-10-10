@@ -5,8 +5,8 @@
   "type": "module",
   "description": "Phantom Stream provides keyless film and series discovery with a source-routing player.",
   "scripts": {
-    "dev": "next dev --turbopack",
-    "dev:debug": "DEBUG=1 next dev --turbopack",
+    "dev": "next dev --turbopack --hostname 0.0.0.0",
+    "dev:debug": "DEBUG=1 next dev --turbopack --hostname 0.0.0.0",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

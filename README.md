@@ -92,6 +92,26 @@ pnpm container:build:downloader       # real Downloader image build
 Turborepo fans tasks out across the workspace and caches what has not changed,
 so a second `pnpm check` on an untouched tree finishes in seconds.
 
+Dev servers listen on `0.0.0.0`. From another device, open
+`http://<development-machine-LAN-or-Tailscale-IP>:<port>` using the port printed
+by Next.js. The dev origin allowlist includes the machine's interface addresses,
+its hostname, `*.local` names, and Tailscale `**.ts.net` names. Hot reload supports
+both `ws:` and `wss:` in development.
+
+For custom DNS names, short Tailscale names that differ from the machine hostname,
+or a container/VM whose interfaces do not include the host's address, add the
+browser-facing hostnames or IP addresses explicitly:
+
+```sh
+PHANTOM_DEV_ORIGINS=devbox,192.168.1.50,dev.example.test pnpm dev
+```
+
+You can also set `PHANTOM_DEV_ORIGINS` in an app's `.env.local`. Entries are
+comma-separated hostnames (no scheme or port); Next.js hostname wildcard patterns
+are supported. Restart the dev servers after changing names or network interfaces.
+These origin allowances apply to Next.js development resources; production CSP
+and API CORS policies keep their existing behavior.
+
 There is no dev server in the verification path on purpose: `pnpm check` is
 what tells you the tree is sound.
 

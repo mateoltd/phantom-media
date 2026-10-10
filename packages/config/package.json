@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./dev-origins": "./dev-origins.mjs",
     "./tsconfig/base.json": "./tsconfig/base.json",
     "./tsconfig/next.json": "./tsconfig/next.json",
     "./tsconfig/library.json": "./tsconfig/library.json",

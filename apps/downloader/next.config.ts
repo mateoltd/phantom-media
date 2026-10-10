@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { NextConfig } from "next";
+import { allowedDevOrigins } from "@phantom/config/dev-origins";
 
 const contentSecurityPolicy = [
   "default-src 'self'",
@@ -9,7 +10,9 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  process.env.NODE_ENV === "development"
+    ? "connect-src 'self' http: https: ws: wss:"
+    : "connect-src 'self'",
   "media-src 'self' blob:",
   "worker-src 'self' blob:",
   "object-src 'none'",
@@ -19,6 +22,7 @@ const contentSecurityPolicy = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: allowedDevOrigins(),
   output: "standalone",
   outputFileTracingRoot: path.join(import.meta.dirname, "../.."),
   poweredByHeader: false,
