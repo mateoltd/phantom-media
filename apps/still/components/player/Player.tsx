@@ -12,6 +12,7 @@ import { useTimeline } from "./use-timeline";
 import { useDisplay } from "./use-display";
 import { useControls } from "./use-controls";
 import { useCaptions } from "./use-captions";
+import { ConnectionWarning } from "./ConnectionWarning";
 
 interface PlayerProps {
   src: string;
@@ -64,11 +65,12 @@ export function Player({ src, delivery = "hls", audioOnly = false, onAudioOnlyCh
           onClick={controls.onVideoClick} />
         <div ref={cuesRef} className="stage-cues stage-cues-backdrop" />
         <div className="stage-top">
-          <div className="min-w-0 flex-1">
+          <div className={`min-w-0 flex-1 ${hls.connectionUnstable ? "pr-12" : ""}`}>
             <p className="truncate text-lg font-medium text-stage-text">{title}</p>
             {subtitle && <p className="mt-1 truncate text-[13px] text-stage-muted">{subtitle}</p>}
           </div>
         </div>
+        {hls.connectionUnstable && <ConnectionWarning />}
         {hls.error && <div role="alert" className="absolute inset-x-0 top-1/3 z-10 bg-black/80 p-4 text-center text-white">{hls.error}</div>}
         <StageTransport playing={media.playing} feedback={controls.feedback} waiting={media.loading}
           onTogglePlay={controls.togglePlay}
