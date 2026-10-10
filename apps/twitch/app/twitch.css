@@ -899,47 +899,10 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
   z-index: 100;
 }
 
-.media-header-inner:has(.twitch-nav-action) { container-type: inline-size; }
 /* Header actions are quiet tools; only hover/active state gets a surface. */
 .media-header .twitch-nav-action { width: 36px; height: 36px; min-height: 36px; border: 0; border-radius: 8px; background: transparent; color: var(--color-text-secondary); box-shadow: none; }
-.media-header .twitch-nav-action:hover, .media-header .twitch-nav-action[aria-expanded="true"], .media-header .twitch-nav-action[aria-current="page"] { background: var(--color-surface-light); color: var(--color-text); }
+.media-header .twitch-nav-action:hover, .media-header .twitch-nav-action[aria-current="page"] { background: var(--color-surface-light); color: var(--color-text); }
 .media-header .twitch-nav-action:focus-visible { outline: 1px solid var(--color-text-tertiary); outline-offset: -2px; }
 .media-header:has(.twitch-nav-action) .media-header-search-trigger { width: 36px; height: 36px; border-radius: 8px; }
-.media-header:has(.twitch-nav-action) .media-header-actions { position: relative; gap: var(--space-1); }
-.twitch-extensions-menu { display: flex; align-items: center; }
-.media-header:has(.twitch-extensions-menu > [aria-expanded="true"]) { z-index: 42; }
-.twitch-extensions-popover { position: absolute; top: calc(100% + var(--space-3)); right: 0; display: flex; flex-direction: column; width: 360px; max-width: 100cqw; max-height: min(480px, calc(100dvh - var(--media-header-height) - var(--space-8))); padding: var(--space-3); border: 0; border-radius: 16px; background: var(--color-surface); color: var(--color-text); overflow: hidden; animation: twitch-extension-open 150ms ease-out; }
-.twitch-extensions-popover > header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: 0 var(--space-1) var(--space-2); }
-.twitch-extensions-popover > header h2 { font-size: 13px; font-weight: 500; }
-.twitch-extensions-popover > header > button { width: 28px; height: 28px; border-radius: 8px; }
-.twitch-extension-search .search-pill[data-size="small"] { background: var(--color-surface-light); border: 0; }
-.twitch-extension-search { margin-bottom: var(--space-2); }
-.twitch-extension-list { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
-.twitch-extension-entry { width: 100%; min-height: 56px; height: auto; padding: var(--space-2); gap: var(--space-3); border-radius: 8px; text-align: left; }
-.twitch-extension-entry > svg { flex: none; color: var(--color-text-tertiary); }
-.twitch-extension-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
-.twitch-extension-entry strong { font-size: 12px; font-weight: 500; color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.twitch-extension-copy > span { font-size: 10px; font-weight: 400; color: var(--color-text-tertiary); }
-.twitch-extension-message { padding: var(--space-5) var(--space-2); font-size: 12px; line-height: 1.7; color: var(--color-text-secondary); }
-.twitch-extension-footnote { font-size: 10px; font-weight: 400; color: var(--color-text-tertiary); line-height: 1.7; }
-.twitch-extensions-popover > .twitch-extension-footnote { flex: none; padding: var(--space-3) var(--space-2) 0; }
-.twitch-extension-back { flex: none; align-self: flex-start; height: 32px; padding-inline: var(--space-2); border-radius: 8px; font-size: 11px; font-weight: 400; }
-.twitch-extension-details { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--space-4) var(--space-2) var(--space-2); }
-.twitch-extension-identity { display: flex; align-items: center; gap: var(--space-3); }
-.twitch-extension-mark { position: relative; flex: none; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; overflow: hidden; color: var(--color-text-secondary); background: var(--color-surface-light); }
-.twitch-extension-mark[data-size="detail"] { width: 40px; height: 40px; border-radius: 12px; }
-.twitch-extension-mark img { object-fit: contain; }
-.twitch-extension-identity h3 { font-size: 14px; font-weight: 500; }
-.twitch-extension-identity p { margin-top: var(--space-1); font-size: 11px; color: var(--color-text-tertiary); }
-.twitch-extension-description { margin-top: var(--space-4); font-size: 12px; line-height: 1.7; color: var(--color-text-secondary); }
-.twitch-extension-version { display: block; margin-top: var(--space-2); font-family: var(--font-mono); font-size: 10px; color: var(--color-text-tertiary); }
-.twitch-extension-download { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-5); }
-.twitch-extension-download > button { align-self: flex-start; }
-.twitch-extension-download button { height: 32px; padding-inline: var(--space-3); font-size: 11px; }
-.twitch-extension-download > [role="alert"] { font-size: 12px; color: var(--color-text-secondary); line-height: 1.7; }
-.twitch-extension-download-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); font-size: 12px; color: var(--color-text-secondary); }
-.twitch-extension-download-row > span { display: flex; flex-direction: column; gap: var(--space-1); }
-.twitch-extension-size { font-family: var(--font-mono); font-size: 10px; color: var(--color-text-tertiary); }
-@keyframes twitch-extension-open { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-@media (prefers-reduced-motion: reduce) { .twitch-extensions-popover { animation: none; } }
+.media-header:has(.twitch-nav-action) .media-header-actions { gap: var(--space-1); }
 @media (max-width: 360px) { .twitch-nav-wordmark > span { display: none; } }

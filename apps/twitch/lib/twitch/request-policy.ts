@@ -6,7 +6,7 @@ export const QUERY_FAMILIES: Record<string, string> = {
   WatchedCategories: "video", DiscoveryDirectory: "directory", DiscoveryCategory: "game-discovery",
   RelatedChannels: "recommendations", DiscoveryExpansionCategory: "game-discovery",
   ChannelVideos: "channel-videos", CategoryVideos: "game-videos", ChannelClips: "channel-clips", CategoryClips: "game-clips",
-  ClipMetadata: "clips", ClipSigning: "clip-signing", ExtensionCatalog: "extensions", ExtensionViewer: "extensions",
+  ClipMetadata: "clips", ClipSigning: "clip-signing",
 };
 
 export function validateVariables(value: unknown): void {

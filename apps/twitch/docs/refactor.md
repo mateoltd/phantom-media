@@ -24,7 +24,7 @@ from behavioral receipts, never used as implementation or test examples.
 | 4: clips, audio and downloads | Native clip player, continuous Range downloads, audio-only mode and bounded HLS output | Removed unbounded ordered writes and silent file-saving restarts; separated expiry, cache freshness and representation identity |
 | 5: sessions and libraries | Independent resource loading, finite sort/type/period/language slices, deduplication and honest coverage | Removed coupled catalog/metadata reads, unsupported live-root filters, root search and guessed live-VOD correlation |
 | 6: replay and navigation | Rich offset replay, official chapters/mute intervals, independent storyboards and session chat search/reactions | Replaced flattened replay and investigation storyboard code; retained explicit same-second gaps and bounded indexes |
-| 7: extensions | Bare-ID viewer lookup and bounded static collection, accessed through the navbar | Snapshot UI/API/polling were removed after review; retained research receipts only |
+| 7: extensions | Nothing shipped; see [Extension catalog removal](#extension-catalog-removal) | Snapshot UI/API/polling and the extension catalog, collection API and receipts were removed after review |
 | 8: integration | Canonical resource/history identities, server/browser ownership, shared byte/permit primitives, browser checks and durable documentation | Removed internal history adapters, legacy discovery GET, unused player props/helpers/exports and the temporary plan/ledger pointer |
 
 Twitch source compatibility remains: non-archive CDN paths, independent Usher
@@ -97,9 +97,7 @@ The retired checklist is retained outside production at
 ## Evidence and remaining scope
 
 Selected sanitized Round 13/15 receipts, request quartets and source hashes live
-in [test/fixtures/research](../test/fixtures/research/README.md). Independently
-captured extension request/HTML/collection receipts live in
-[test/fixtures/extensions](../test/fixtures/extensions/README.md). Production
+in [test/fixtures/research](../test/fixtures/research/README.md). Production
 does not read investigation paths. Signed URLs, tokens and signatures are not
 stored in those fixtures; opt-in player diagnostics omit URL queries.
 
@@ -110,7 +108,7 @@ usable request quartets. Animated previews lack a decoded-media receipt and are
 deferred. Rich activity/shared-chat states and nested moment tags lack captured
 active-state shapes. PubSub is excluded after an acknowledgement without events.
 
-ASR, MP3/M4A conversion, extension execution/dynamic completeness, persistent chat
+ASR, MP3/M4A conversion, persistent chat
 indexes, authenticated APIs and framework migration remain separate work. None
 is an unfinished prerequisite for the shipped phases. Archive audio gaps remain
 silence; catalog slices and crowded replay boundaries expose partial coverage.
@@ -514,3 +512,18 @@ saturation, transport-queue cancellation, semantic expiry and independent row
 publication regressions. A concurrent catalog rewrite updated its stale tests
 before this successful check. Full OpenNext build and Worker deployment dry-run
 passed; the LAN preview was restarted. No deployment was made.
+
+## Extension catalog removal
+
+The user dropped extensions on 10 October 2026: a 20-entry global catalog and a
+base64 export of static files served no viewer. Earlier sections describe that
+surface as it was validated; none of it ships now. Removed the navbar menu and
+its styles, `lib/extensions/`, the catalog/viewer operations and their request
+family, both `/api/extensions` routes, the reserved `extensions` channel name,
+the tests and `test/fixtures/extensions/`.
+
+Running a channel's extensions in the player was checked and not pursued.
+Anonymous reads do return a channel's active extensions with viewer tokens, but
+the hosted pages and Twitch's supervisor frame both restrict `frame-ancestors`
+to Twitch origins, so embedding would need a rewriting proxy and an owned
+replacement for the supervisor.

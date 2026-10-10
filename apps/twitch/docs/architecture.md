@@ -13,7 +13,6 @@ adapters.
 | `lib/catalog/` | Views and the single bounded slice behind each one, source-specific axes and canonical keys |
 | `lib/chat/` | Rich messages, read-only IRC, offset replay lifecycle and bounded session indexes |
 | `lib/previews/` | Historical storyboard geometry and bounded loading |
-| `lib/extensions/` | Catalog/hosted identity, package-scoped static references and bounded collection |
 | `lib/downloads/` | Download preparation, ordered streaming HLS, Range file transfers and abortable output sinks |
 | `lib/discovery/` | Source selection, recommendation ranking and app-owned category expansion |
 | `lib/history.ts` | Canonical resource identities and browser persistence; no legacy storage adapters |
@@ -21,8 +20,7 @@ adapters.
 | `components/` | Matching domain views and React lifecycle adapters; player hooks remain cohesive |
 | `app/` | Pages, validation, status/error mapping and response cache policy |
 
-`playback/data.ts`, `contracts.ts`, catalog contracts and extension contracts are
-pure application DTOs. Raw Twitch types stay beside their operations. A stream ID
+`playback/data.ts`, `contracts.ts` and catalog contracts are pure application DTOs. Raw Twitch types stay beside their operations. A stream ID
 is never a VOD ID: fixed archive references include channel, stream ID and recording
 start. Channel lookup resolves that reference once; its playlist URLs retain it.
 Only VOD/clip identities enter history. Positions are broadcast-relative for VODs
@@ -146,19 +144,12 @@ Live channel cards use their ordinary preview images. The snapshot wall, polling
 controller and snapshot API were removed after user review. Captured snapshot
 receipts remain research evidence only.
 
-Extension collection allows two concurrent collections, two asset requests per
-collection, depth two, 32 files, 2 MB per file and 8 MB total. Every redirect stays
-inside the selected package or the exact public helper URL. Collection does not
-execute HTML/JS or discover authenticated/dynamically requested backend assets.
-Catalog version and the viewer URL's actual hosted version remain separate.
-
 ## Investigation disposition
 
 Investigation modules, tests and wiring were checkpointed, attributed and removed
 or independently rewritten. Their code is not a reference implementation. Durable
 inputs are sanitized behavioral receipts and verified operation contracts in
-`test/fixtures/research/`; additional independently captured extension receipts
-live in `test/fixtures/extensions/`. The temporary plan is replaced by this document
+`test/fixtures/research/`. The temporary plan is replaced by this document
 and the [implementation/validation record](refactor.md).
 
 ## View ownership
@@ -167,16 +158,8 @@ Category and clip pages use the existing media frame and app stylesheet.
 Libraries use compact Videos/Clips buttons, the quiet shared StyledSelect variant
 and a small title filter above MediaTile results. Loaded counts are secondary;
 per-slice receipts stay in state for validation rather than product markup.
-Extensions use a lazy navbar popover with a searchable list and a detail step.
-Catalog-supplied square logos use the shared Artwork component in list rows and
-details. Missing or failed images retain the puzzle fallback in the same reserved
-space. Invalid icon destinations are omitted; optional artwork schema failures
-fall back to the text catalog without retrying integrity or rate errors.
-The popover has no backdrop or focus trap: outside click, focus leaving it and
-Escape dismiss it; Escape restores the trigger. Detail navigation restores focus
-to the selected entry. Asset collection, cancellation and saving are explicit
-actions within the selected detail. The old Explore modal and extensions page
-were removed. Navbar tools use flat icon controls; categories navigate directly.
+The old Explore modal and the extension catalog were removed. Navbar tools use
+flat icon controls; categories navigate directly.
 Clips place their title/date/actions below the player. Shared SearchField,
 StyledSelect, MediaTile, Button, ChannelAvatar and rails remain the UI inventory. The player owns audio mode
 and quality through StageSettings. Chapters live

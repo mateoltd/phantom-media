@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { ClockCounterClockwise, SquaresFour } from "@phosphor-icons/react/ssr";
 import { MediaHeader, Wordmark } from "@phantom/ui";
 import { TwitchSearch } from "./discovery/TwitchSearch";
-import { ExtensionsMenu } from "./extensions/ExtensionsMenu";
 
 export function GlobalSearch() {
   const pathname = usePathname();
@@ -28,7 +27,6 @@ export function GlobalSearch() {
       <Link href="/categories" className="media-header-action twitch-nav-action" aria-label="Browse categories" title="Categories" aria-current={pathname === "/categories" ? "page" : undefined}>
         <SquaresFour size={20} aria-hidden="true" />
       </Link>
-      <ExtensionsMenu />
       <Link href="/watch-history" className="media-header-action twitch-nav-action" aria-label="Watch history" title="Watch history" aria-current={pathname === "/watch-history" ? "page" : undefined}>
         <ClockCounterClockwise weight={pathname === "/watch-history" ? "bold" : "regular"} size={20} aria-hidden="true" />
       </Link>

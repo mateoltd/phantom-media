@@ -15,7 +15,6 @@ video or clip link; no account, extension, or installation is required.
 - Live chat and offset-based VOD replay with badges, colors and emotes.
 - Official chapters, historical storyboard browsing and on-demand sampled chat search/reactions.
 - Channel/category video and clip libraries, one bounded request per selected view.
-- Extension catalog and bounded public static-asset collection, without panel execution.
 - Browser-local history, resume positions, and playback preferences.
 - No app analytics, tracking cookies, or Twitch account requirement.
 
@@ -92,8 +91,5 @@ not included. Blob-only browsers are limited to 256 MB per download; direct file
 saving supports larger transfers.
 
 Use the category icon in the header for [category browsing](/categories).
-Extensions open in an attached navbar panel with local search and extension
-details. Extension exports include collected
-files as base64 JSON plus coverage/errors; package size/depth limits may exclude
-files. PubSub, animated hover previews, activity lights and unpinned operation
+PubSub, animated hover previews, activity lights and unpinned operation
 families remain outside this release.

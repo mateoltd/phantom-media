@@ -52,7 +52,7 @@ HIGHLIGHT edges: sparse types are channel-specific, not categorically empty.
 Batching is ordinary aggregation. Observed cursor-free successes are not a safe-rate
 guarantee. Use cache-first discovery, bounded queues, coalescing, single attempts
 and long family cooldowns. Never enqueue family retries after an integrity flag.
-SideNav is not shipped without its request quartet and has no usable recorded continuation; extension catalog cursor depth stays blocked.
+SideNav is not shipped without its request quartet and has no usable recorded continuation.
 
 ## Media and presentation contracts
 
@@ -95,7 +95,6 @@ SideNav is not shipped without its request quartet and has no usable recorded co
 | Ad-hoc video.moments / chapters | Pinned ChapterSelect operation |
 | video.mutedSegments | Existing ad-hoc muteInfo |
 | Clip REST download / downloads / mediaSecurityKey / assetLocations | videoQualities plus params-enveloped playbackAccessToken |
-| extension(id: clientId:version) | Bare clientId viewerURL with actual version/package hash |
 | Stream archive / restricted / previews | archiveVideo / source-specific diagnostics / previewImageURL |
 | User profileBanner | bannerImageURL without width argument |
 | Index-unmuted / index-muted / index-no-continue | quality/index-dvr; segment fallback is separate |
@@ -108,5 +107,4 @@ Persisted operations need versioned request quartets and per-op validators. Hash
 degradation and variable-contract drift are distinct: Round 15 accepted the mute-alert
 hash but rejected its variables. Keep it disabled/optional, with ad-hoc muteInfo primary.
 Chapters/classification/viewcount have quartets. Other persisted operations need their
-own quartet; raw operation adapters retain their owned selection shapes and fixture receipts. No runtime fishing. Extension collection is bounded public static asset
-retrieval, separate from execution or authenticated panel backends.
+own quartet; raw operation adapters retain their owned selection shapes and fixture receipts. No runtime fishing.

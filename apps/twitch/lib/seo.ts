@@ -66,7 +66,6 @@ export const reservedChannelNames = new Set([
   "videos",
   "watch-history",
   "categories",
-  "extensions",
   "live-wall",
 ]);
 
