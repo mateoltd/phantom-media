@@ -57,7 +57,8 @@ export function Chrome({ videoRef, title, isLive, chatOpen, onChatToggle, segmen
     changeMenu(null);
   };
   const seekToLive = () => {
-    timeline.seekToLive();
+    if (useDvrTimeline) timeline.seekToLive();
+    else hls.jumpToLive();
     showControls();
   };
 
@@ -131,13 +132,13 @@ export function Chrome({ videoRef, title, isLive, chatOpen, onChatToggle, segmen
         timecode={
           <p className="stage-timecode">
             {isLive && !useDvrTimeline
-              ? "Live"
+              ? hls.behindLive ? "Behind live" : "Live"
               : <><span className="text-stage-text">{useDvrTimeline ? `-${formatTime(liveLag)}` : formatTime(currentTime)}</span><span className="stage-duration"> / {useDvrTimeline ? "Live" : formatTime(duration)}</span></>}
           </p>
         }
         rightExtra={
           <>
-            {useDvrTimeline && liveLag > 3 && (
+            {(useDvrTimeline && liveLag > 3 || isLive && !useDvrTimeline && hls.behindLive) && (
               <button type="button" onClick={seekToLive} className="stage-control stage-live-trigger min-w-11 text-[12px] font-medium" aria-label="Jump to live">Live</button>
             )}
             <StageControl

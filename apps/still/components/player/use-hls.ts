@@ -5,6 +5,7 @@ import type { RefObject } from "react";
 import Hls from "hls.js";
 import type { MediaState } from "./use-media";
 import { CONNECTION_ERROR_DETAILS, createConnectionHealth } from "@/lib/media/connection-health";
+import { createLiveLatencyController } from "@/lib/media/live-latency";
 
 interface HlsOptions {
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -60,9 +61,11 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
   const resumeSpeed = useRef(1);
   const hlsRef = useRef<Hls | null>(null);
   const resetConnectionPlaybackRef = useRef<(() => void) | null>(null);
+  const liveControllerRef = useRef<ReturnType<typeof createLiveLatencyController> | null>(null);
   const [levels, setLevels] = useState<{ name: string; index: number }[]>([]);
   const [error, setError] = useState("");
   const [connectionUnstable, setConnectionUnstable] = useState(false);
+  const [behindLive, setBehindLive] = useState(false);
   const reportError = useEffectEvent((kind: "network" | "media") => onMediaError?.(kind));
   const reportVideoSize = useEffectEvent((source: string, width: number, height: number) => onVideoSize?.(source, width, height));
   const [currentLevel, setCurrentLevel] = useState(-1);
@@ -80,18 +83,41 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
     let metadataLoaded = false;
     const connection = createConnectionHealth();
     setConnectionUnstable(false);
+    setBehindLive(false);
+    const plainLive = isLive && !dvrMode;
+    const native = delivery === "file" || !Hls.isSupported();
+    let attachedHls: Hls | null = null;
+    let segmentDuration = 2;
+    const liveController = plainLive ? createLiveLatencyController(video, {
+      native,
+      timeline: () => {
+        const details = attachedHls?.latestLevelDetails;
+        return details ? {
+          live: details.live, targetDuration: details.targetduration, segmentDuration,
+          partTarget: details.partTarget, partHoldBack: details.partHoldBack,
+          age: details.age, edge: details.edge,
+        } : null;
+      },
+      setTargetLatency: seconds => { if (attachedHls) attachedHls.targetLatency = seconds; },
+      refreshTimeline: native ? undefined : () => attachedHls?.startLoad(video.currentTime, true),
+      onSeek: syncDisplayedTime,
+    }) : null;
+    liveControllerRef.current = liveController;
     let previousTime = video.currentTime;
     let playbackGraceUntil = 0;
     const publishConnection = () => setConnectionUnstable(connection.unstable);
     const sampleConnection = () => {
       const now = performance.now();
+      const active = video.played.length > 0 && !video.paused && !video.ended && !video.seeking && !video.error &&
+          now >= playbackGraceUntil && document.visibilityState === "visible";
       connection.playback(now, {
-        active: video.played.length > 0 && !video.paused && !video.ended && !video.seeking && !video.error &&
-          now >= playbackGraceUntil && document.visibilityState === "visible",
+        active,
         starved: video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA,
         progressing: video.currentTime > previousTime,
         online: navigator.onLine,
       });
+      liveController?.tick(active, connection.unstable || !navigator.onLine);
+      setBehindLive(liveController?.behindLive ?? false);
       previousTime = video.currentTime;
       publishConnection();
     };
@@ -108,6 +134,8 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
     document.addEventListener("visibilitychange", resetConnectionPlayback);
     sampleConnection();
     const stopConnectionMonitor = () => {
+      liveController?.destroy();
+      liveControllerRef.current = null;
       resetConnectionPlaybackRef.current = null;
       window.clearInterval(connectionTimer);
       window.removeEventListener("offline", sampleConnection);
@@ -127,7 +155,7 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
       if (!metadataLoaded) return;
       resumePlaying.current = !video.paused;
       resumeTime.current = video.currentTime;
-      resumeSpeed.current = video.playbackRate;
+      resumeSpeed.current = plainLive ? 1 : video.playbackRate;
     };
     const onNativeError = () => {
       if (video.error?.code === 2) {
@@ -147,12 +175,12 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
         syncDisplayedTime(position);
       }
       setLoading(false);
-      video.playbackRate = resumeSpeed.current;
+      video.playbackRate = plainLive ? 1 : resumeSpeed.current;
       if (resumePlaying.current) void video.play().catch(() => {});
     };
     video.addEventListener("loadedmetadata", onLoadedMetadata);
     video.addEventListener("resize", onVideoResize);
-    if (delivery === "file" || !Hls.isSupported()) {
+    if (native) {
       video.src = src;
       return () => {
         stopConnectionMonitor();
@@ -167,6 +195,12 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
     const hls = new Hls({
       enableWorker: true,
       lowLatencyMode: isLive && !dvrMode,
+      ...(plainLive ? {
+        liveSyncDurationCount: 1.5,
+        // Our controller owns rate/seek decisions and recovers its stall margin.
+        maxLiveSyncPlaybackRate: 1,
+        liveSyncOnStallIncrease: 0,
+      } : {}),
       capLevelToPlayerSize: true,
       startLevel: -1,
       autoStartLoad: !(isLive || dvrMode),
@@ -183,6 +217,7 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
       captionsTextTrack3Label: "CC3", captionsTextTrack3LanguageCode: "",
       captionsTextTrack4Label: "CC4", captionsTextTrack4LanguageCode: "",
     });
+    attachedHls = hls;
     hlsRef.current = hls;
     let levelsSynced = false;
 
@@ -203,7 +238,7 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
 
       setLevels(filteredLevels);
       levelsSynced = filteredLevels.length > 0;
-      if ((isLive || dvrMode) && filteredLevels.length > 0) {
+      if (dvrMode && filteredLevels.length > 0) {
         const actualLevels = hls.levels.length > 0 ? hls.levels : sourceLevels;
         const firstLevel = pickInitialLevel(filteredLevels, actualLevels);
         hls.currentLevel = firstLevel;
@@ -222,7 +257,7 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
       syncLevels(data.levels.length > 0 ? data.levels : hls.levels);
       if (isLive || dvrMode) {
         // An archive is opened to catch up, so it starts from the beginning. Only the plain live stream starts at the edge.
-        hls.startLoad(dvrMode ? startTime : startTime > 0 ? startTime : -1);
+        hls.startLoad(dvrMode ? startTime : -1);
       }
       if ((!isLive || dvrMode) && (resumeTime.current ?? startTime) > 0) {
         const position = resumeTime.current ?? startTime;
@@ -251,6 +286,7 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
     });
 
     hls.on(Hls.Events.ERROR, (_, data) => {
+      if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) liveController?.stall();
       if (data.type === Hls.ErrorTypes.NETWORK_ERROR && CONNECTION_ERROR_DETAILS.has(data.details)) {
         connection.networkError(performance.now(), data.fatal);
         publishConnection();
@@ -277,6 +313,17 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
       publishConnection();
     });
 
+    // A resume before metadata or after a stale playlist is completed as soon
+    // as the live window becomes available, without restarting healthy loading.
+    hls.on(Hls.Events.LEVEL_UPDATED, (_, data) => {
+      // Use the largest of the recent complete segments, rather than Twitch's
+      // conservative TARGETDURATION upper bound or an entire broadcast average.
+      const recent = data.details.fragments.slice(-3).map(fragment => fragment.duration)
+        .filter(duration => Number.isFinite(duration) && duration > 0);
+      segmentDuration = recent.length ? Math.max(...recent) : data.details.targetduration;
+      liveController?.refresh();
+    });
+
     hls.loadSource(src);
     hls.attachMedia(video);
 
@@ -298,6 +345,7 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
       const video = videoRef.current;
       // A deliberate quality switch flushes the buffer; allow it to settle.
       resetConnectionPlaybackRef.current?.();
+      liveControllerRef.current?.reset();
       hls.currentLevel = level;
       hls.nextLevel = level;
       hls.loadLevel = level;
@@ -312,7 +360,12 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
     }
   }, [videoRef, dvrMode]);
 
-  return { levels, currentLevel, changeQuality, error, connectionUnstable };
+  const jumpToLive = useCallback(() => {
+    liveControllerRef.current?.goLive();
+    setBehindLive(false);
+  }, []);
+
+  return { levels, currentLevel, changeQuality, jumpToLive, behindLive, error, connectionUnstable };
 }
 
 export type HlsState = ReturnType<typeof useHls>;
