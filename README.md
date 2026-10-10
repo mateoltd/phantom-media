@@ -75,7 +75,7 @@ corepack enable
 pnpm install
 ```
 
-Node 22 or newer, pnpm 10. Everything else comes from the lockfile.
+Node 22 or newer, pnpm 12.6.0. Everything else comes from the lockfile.
 
 ## Working on it
 
