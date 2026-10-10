@@ -129,7 +129,11 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
       levelLoadingMaxRetry: 3,
       fragLoadingMaxRetry: 3,
       capLevelOnFPSDrop: isLive && !dvrMode,
-      renderTextTracksNatively: false,
+      // Twitch does not say which language a caption channel carries, so the tracks are named after the channel.
+      captionsTextTrack1Label: "CC1", captionsTextTrack1LanguageCode: "",
+      captionsTextTrack2Label: "CC2", captionsTextTrack2LanguageCode: "",
+      captionsTextTrack3Label: "CC3", captionsTextTrack3LanguageCode: "",
+      captionsTextTrack4Label: "CC4", captionsTextTrack4LanguageCode: "",
     });
     hlsRef.current = hls;
     let levelsSynced = false;

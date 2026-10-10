@@ -22,6 +22,12 @@ html { scrollbar-gutter: stable both-edges; }
   aspect-ratio: var(--media-thumbnail-ratio);
   min-height: 0;
 }
+/* Captions sit low and centered and scale with the frame, so a full caption row always fits on one line. */
+.twitch-stage-frame .stage-cues { --cue-size: clamp(0.75rem, 2.1cqw, 1.25rem); bottom: min(6.25rem, 21cqw); gap: 0; padding-inline: 4%; text-wrap: nowrap; }
+.twitch-stage-frame .stage-idle .stage-cues { bottom: clamp(0.75rem, 4cqw, 2.5rem); }
+.twitch-stage-frame .stage:fullscreen .stage-cues { --cue-size: clamp(1rem, 2vw, 2rem); bottom: 7.5rem; }
+.twitch-stage-frame .stage-idle:fullscreen .stage-cues { bottom: 6vh; }
+.twitch-stage-frame .stage-cue { white-space: nowrap; }
 
 /* Small player frames place the clock above the action row rather than over its buttons. */
 @container (max-width: 480px) {

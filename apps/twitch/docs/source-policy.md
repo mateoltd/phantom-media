@@ -99,7 +99,7 @@ SideNav is not shipped without its request quartet and has no usable recorded co
 | User profileBanner | bannerImageURL without width argument |
 | Index-unmuted / index-muted / index-no-continue | quality/index-dvr; segment fallback is separate |
 | Terminal search field / videos(ids) / clip VIEWS or LATEST | First-page searchFor plus login lookup / known-ID aliases / TRENDING |
-| Native caption/subtitle fields in tested VOD shapes | No captured caption contract; own ASR is a later product decision |
+| Native caption/subtitle fields in tested VOD shapes | No GraphQL or playlist caption contract. Broadcaster captions travel as CEA-608 data inside live and VOD video segments and the player decodes them; own ASR is a later product decision |
 | Legacy v5 / api users, channels, videos | Closed legacy routes |
 | Following/moderation, invented video lifecycle/owner fields, watchParty/communities/teamBySlug/teams/drop roots | Rejected investigated shapes; no anonymous inference or automated re-probing |
 

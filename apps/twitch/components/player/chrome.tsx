@@ -7,6 +7,7 @@ import type { RefObject } from "react";
 import { formatTime } from "@/lib/format";
 import type { MediaState } from "./use-media";
 import type { HlsState } from "./use-hls";
+import type { Captions } from "./use-captions";
 import type { Timeline } from "./use-timeline";
 import type { Display } from "./use-display";
 import { SPEEDS } from "./use-controls";
@@ -33,6 +34,7 @@ interface ChromeProps {
   storyboardUrl?: string;
   media: MediaState;
   hls: HlsState;
+  captions: Captions;
   timeline: Timeline;
   display: Display;
   controls: Controls;
@@ -41,7 +43,7 @@ interface ChromeProps {
 const FILLED_ICON = { weight: "fill" as const };
 
 export function Chrome({ videoRef, title, isLive, chatOpen, onChatToggle, segments, segmentAppearances, storyboardUrl, audioOnly, onAudioOnlyChange, sourceSelection,
-  media, hls, timeline, display, controls }: ChromeProps) {
+  media, hls, captions, timeline, display, controls }: ChromeProps) {
   const { playing, muted, volume, loading, currentTime, duration, speed, toggleMute, changeVolume } = media;
   const { levels, currentLevel } = hls;
   const { hasTimeline, useDvrTimeline, liveLag } = timeline;
@@ -78,6 +80,17 @@ export function Chrome({ videoRef, title, isLive, chatOpen, onChatToggle, segmen
       value: currentLevel === -1 ? "auto" : String(currentLevel),
       onChange: (value: string) => changeQuality(value === "auto" ? -1 : Number(value)),
       summary: currentLevel === -1 ? "Automatic" : levels.find((level) => level.index === currentLevel)?.name,
+    }] : []),
+    ...(captions.tracks.length > 0 ? [{
+      id: "captions",
+      title: "Captions",
+      options: [
+        { value: "off", label: "Off" },
+        ...captions.tracks.map((track) => ({ value: track, label: captions.tracks.length === 1 ? "On" : track })),
+      ],
+      value: captions.selected ?? "off",
+      onChange: (value: string) => { captions.select(value === "off" ? null : value); changeMenu(null); },
+      summary: captions.selected === null ? "Off" : captions.tracks.length === 1 ? "On" : captions.selected,
     }] : []),
     ...(!isLive ? [{
       id: "speed",

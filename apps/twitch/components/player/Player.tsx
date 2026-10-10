@@ -11,6 +11,7 @@ import { useHls } from "./use-hls";
 import { useTimeline } from "./use-timeline";
 import { useDisplay } from "./use-display";
 import { useControls } from "./use-controls";
+import { useCaptions } from "./use-captions";
 
 interface PlayerProps {
   src: string;
@@ -40,6 +41,7 @@ export function Player({ src, delivery = "hls", audioOnly = false, onAudioOnlyCh
   title = "Twitch video", subtitle, chatOpen = false, onChatToggle }: PlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const cuesRef = useRef<HTMLDivElement>(null);
   const media = useMedia({ videoRef, isLive, onTimeUpdate, onPlaybackSeek });
   const hls = useHls({ videoRef, src, delivery, audioOnly, startTime, isLive, dvrMode, media, onMediaError, onVideoSize });
   const { syncDisplayedTime } = media;
@@ -48,7 +50,8 @@ export function Player({ src, delivery = "hls", audioOnly = false, onAudioOnlyCh
   }, [seekRequest, syncDisplayedTime]);
   const timeline = useTimeline(media, isLive, dvrMode);
   const display = useDisplay(containerRef, videoRef);
-  const controls = useControls(videoRef, media, display);
+  const captions = useCaptions(videoRef, cuesRef, src);
+  const controls = useControls(videoRef, media, display, captions.toggle);
 
   return (
     <div className="stage-frame twitch-stage-frame">
@@ -59,6 +62,7 @@ export function Player({ src, delivery = "hls", audioOnly = false, onAudioOnlyCh
         <video ref={videoRef} className="absolute inset-0" playsInline preload="metadata"
           controlsList="nodownload noremoteplayback" disablePictureInPicture={!display.pipSupported}
           onClick={controls.onVideoClick} />
+        <div ref={cuesRef} className="stage-cues stage-cues-backdrop" />
         <div className="stage-top">
           <div className="min-w-0 flex-1">
             <p className="truncate text-lg font-medium text-stage-text">{title}</p>
@@ -72,7 +76,7 @@ export function Player({ src, delivery = "hls", audioOnly = false, onAudioOnlyCh
           onSeekForward={timeline.canSeek ? () => controls.seekWithFeedback(1) : undefined} />
         <Chrome videoRef={videoRef} title={title} isLive={isLive} chatOpen={chatOpen}
           onChatToggle={onChatToggle} audioOnly={audioOnly} onAudioOnlyChange={onAudioOnlyChange} sourceSelection={sourceSelection} segments={segments} segmentAppearances={segmentAppearances} storyboardUrl={storyboardUrl}
-          media={media} hls={hls} timeline={timeline} display={display} controls={controls} />
+          media={media} hls={hls} captions={captions} timeline={timeline} display={display} controls={controls} />
       </div>
     </div>
   );

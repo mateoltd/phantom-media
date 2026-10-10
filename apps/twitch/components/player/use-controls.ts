@@ -8,7 +8,7 @@ import type { Display } from "./use-display";
 
 export const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] as const;
 
-export function useControls(videoRef: RefObject<HTMLVideoElement | null>, media: MediaState, display: Display) {
+export function useControls(videoRef: RefObject<HTMLVideoElement | null>, media: MediaState, display: Display, toggleCaptions: () => void) {
   const controlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [controlsVisible, setControlsVisible] = useState(true);
@@ -107,6 +107,11 @@ export function useControls(videoRef: RefObject<HTMLVideoElement | null>, media:
           event.preventDefault();
           toggleFullscreen();
           break;
+        case "c":
+          if (event.repeat) return;
+          event.preventDefault();
+          toggleCaptions();
+          break;
         case "p":
           if (event.shiftKey && !event.repeat) {
             event.preventDefault();
@@ -132,7 +137,7 @@ export function useControls(videoRef: RefObject<HTMLVideoElement | null>, media:
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [videoRef, changeSpeed, changeVolume, handlePlaybackKey, showControls, speed, toggleFullscreen, toggleMute, togglePip]);
+  }, [videoRef, changeSpeed, changeVolume, handlePlaybackKey, showControls, speed, toggleCaptions, toggleFullscreen, toggleMute, togglePip]);
 
   const hideControls = useCallback(() => {
     if (videoRef.current?.paused) return;

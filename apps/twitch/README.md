@@ -9,7 +9,7 @@ video or clip link; no account, extension, or installation is required.
 - Ad-free live streams and VOD playback.
 - Subscriber-only Twitch VODs when their source playlists are available, without a Twitch login.
 - Live rewind and seeking through the current broadcast’s archive while the channel is still live, when an archive is available.
-- Quality selection, playback speed, keyboard shortcuts and picture-in-picture.
+- Quality selection, playback speed, broadcaster captions, keyboard shortcuts and picture-in-picture.
 - Native clip playback and continuous MP4 downloads; audio-only archive listening.
 - Bounded TS/MP4 downloads with cancellation; growing archives export a captured window.
 - Live chat and offset-based VOD replay with badges, colors and emotes.
