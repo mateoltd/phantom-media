@@ -45,11 +45,13 @@ export function forgetHistory(matches: (entry: HistoryEntry) => boolean = () => 
   saveHistory(history.filter(entry => !matches(entry)));
   return forgotten;
 }
-/** Puts back what forgetHistory took, in the order it was watched, around anything watched since. A position saved since then is the newer one and stays. */
+/** Puts back what forgetHistory took, in the order it was watched, around anything watched since. Something removed
+    more than once comes back once, as it last was, and a position saved since then is the newer one and stays. */
 export function restoreHistory(forgotten: ForgottenHistory) {
-  try { forgotten.forEach(({ entry, position }) => { if (position && !readStoredPlayback(entry.resource)) localStorage.setItem(playbackKey(entry.resource), String(position)); }); } catch {}
+  const latest = [...new Map(forgotten.map(item => [resourceKey(item.entry.resource), item])).values()];
+  try { latest.forEach(({ entry, position }) => { if (position && !readStoredPlayback(entry.resource)) localStorage.setItem(playbackKey(entry.resource), String(position)); }); } catch {}
   const kept = parseHistory(storedHistory()), keys = new Set(kept.map(entry => resourceKey(entry.resource)));
-  saveHistory([...kept, ...forgotten.map(({ entry }) => entry).filter(entry => !keys.has(resourceKey(entry.resource)))].sort((a, b) => b.timestamp - a.timestamp));
+  saveHistory([...kept, ...latest.map(({ entry }) => entry).filter(entry => !keys.has(resourceKey(entry.resource)))].sort((a, b) => b.timestamp - a.timestamp));
 }
 export function addToHistory(entry: Omit<HistoryEntry, "timestamp">) {
   if (historyPaused()) return;

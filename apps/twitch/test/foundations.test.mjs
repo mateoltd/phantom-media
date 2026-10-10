@@ -38,6 +38,10 @@ test('forgetting history drops resume positions until restored, and a paused his
     assert.equal(parseHistory(storedHistory()).length,1);assert.equal(readStoredPlayback(second),90);
     setHistoryPaused(false);restoreHistory(forgotten);
     assert.equal(parseHistory(storedHistory()).length,2);assert.equal(readStoredPlayback(first),90);
+    const twice=forgetHistory(entry=>resourceKey(entry.resource)==='vod:1');
+    addToHistory({resource:first,channel:'fixturechannel',broadcastType:'archive'});storePlayback(first,300);
+    twice.push(...forgetHistory(entry=>resourceKey(entry.resource)==='vod:1'));restoreHistory(twice);
+    assert.deepEqual(parseHistory(storedHistory()).map(entry=>entry.resource.id).sort(),['1','2']);assert.equal(readStoredPlayback(first),300);
     const cleared=forgetHistory();storePlayback(first,500);restoreHistory(cleared);
     assert.equal(readStoredPlayback(first),500);assert.equal(readStoredPlayback(second),90);
     forgetHistory();
