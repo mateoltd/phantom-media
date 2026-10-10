@@ -2,7 +2,15 @@
 
 Still is the product name. Phantom Media is the collection it belongs to; the
 existing Phantom mark appears with “Part of Phantom Media” in the footer.
-Twitch remains a descriptive reference to the supported platform.
+Twitch remains a descriptive reference to the supported platform. The package is
+`@phantom/still`, and new release tags use `@phantom/still@<version>`. Historical
+`@phantom/twitch` tags remain unchanged.
+
+The directory `apps/twitch`, production branch `deploy/twitch`, and Worker name
+`phantom-twitch` retain their existing identifiers because Cloudflare Builds is
+configured externally to use them. Migrate those three coordinates together with
+the external build settings before renaming them. The release workflow reads the
+package name independently of these deployment coordinates.
 
 Browser storage keys and media proxy response headers retain their existing
 identifiers to preserve preferences, history, resume positions, and cached-client

@@ -28,7 +28,7 @@ with `BREAKING:` so the changelog says so.
 
 ### What the public contract is
 
-- **Apps** (`@phantom/twitch`, `@phantom/stream`, `@phantom/downloader`): what
+- **Apps** (`@phantom/still`, `@phantom/stream`, `@phantom/downloader`): what
   a user or operator relies on. URLs and routes, API route shapes, persisted
   client state (local storage, watch history), and required environment or
   deployment configuration. Removing a route, changing stored data without a
@@ -71,9 +71,15 @@ already proven:
 1. Every push to `main` runs CI, and Cloudflare builds it as a preview. A
    preview is a full build of the Worker that is not sent to production.
 2. When both have passed, the workflow tags the workspace at that commit.
-3. For Twitch and Stream it then moves the app's `deploy/<app>` branch to the
+3. For Still and Stream it then moves the app's `deploy/<app>` branch to the
    tagged commit. Cloudflare Builds deploys production from that branch, so
    this is what ships. The workflow waits for that build and reports it.
+
+Still retains `apps/twitch`, `deploy/twitch`, and the `phantom-twitch` Worker
+as compatibility coordinates for the existing Cloudflare Builds configuration.
+Its package and new tags are `@phantom/still`; promotion reads the package name
+from its manifest rather than deriving it from the deployment key. Existing
+`@phantom/twitch` tags remain historical records.
 
 Production therefore only ever receives a commit Cloudflare has already built
 once. Packages and Downloader are tagged after CI alone: packages reach
@@ -113,7 +119,7 @@ deleted once pushed.
 ## Tags
 
 One tag per released workspace, in the form `<package name>@<version>`, for
-example `@phantom/twitch@0.2.0`. Tags are created only by the `Deploy`
+example `@phantom/still@0.2.0`. Tags are created only by the `Deploy`
 workflow. A tag pushed by hand on a commit Cloudflare has not built is refused
 for deployment.
 

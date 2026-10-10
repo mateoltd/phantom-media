@@ -1,4 +1,4 @@
-# @phantom/twitch
+# @phantom/still
 
 ## 0.2.0
 

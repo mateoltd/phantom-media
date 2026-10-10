@@ -82,7 +82,7 @@ Node 22 or newer, pnpm 10. Everything else comes from the lockfile.
 ```sh
 pnpm dev                              # all apps
 pnpm --filter @phantom/stream dev     # just one
-pnpm --filter @phantom/twitch dev     # Still only
+pnpm --filter @phantom/still dev     # Still only
 pnpm check                            # typecheck, lint, test and build everything
 pnpm deployment:check                 # Worker/OpenNext dry runs, no deployment
 pnpm container:build:downloader       # real Downloader image build

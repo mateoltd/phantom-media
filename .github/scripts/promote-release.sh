@@ -15,6 +15,8 @@
 # moved and deploy branches only move forward.
 set -euo pipefail
 
+# Deployment keys retain the existing Cloudflare root/branch/Worker coordinates.
+# Product package names (and release tag prefixes) come from package.json.
 # Deployed apps, and the Worker each one's Cloudflare build reports as.
 declare -A WORKERS=([twitch]=phantom-twitch [stream]=phantom-stream)
 APPS=(twitch stream)
@@ -163,7 +165,8 @@ release_all() {
 
 # Moves an app's deploy branch to its latest release.
 promote() {
-  local app=$1 branch="deploy/$1" prefix="@phantom/$1@"
+  local app=$1 branch="deploy/$1" prefix
+  prefix="$(field origin/main "apps/$app" name)@"
   local version tag sha current packaged state since
 
   # Highest stable release whose commit is on main. Pre-releases never deploy.

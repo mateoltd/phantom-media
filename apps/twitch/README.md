@@ -34,7 +34,7 @@ From the workspace root:
 
 ```sh
 pnpm install
-pnpm --filter @phantom/twitch dev
+pnpm --filter @phantom/still dev
 ```
 
 The app runs on the default Next.js development port. See the root README for
@@ -50,8 +50,8 @@ For a Cloudflare Worker deployment, build with the canonical URL and provide
 the custom domain to Wrangler:
 
 ```sh
-NEXT_PUBLIC_BASE_URL=https://your-host.example pnpm --filter @phantom/twitch exec opennextjs-cloudflare build
-pnpm --filter @phantom/twitch exec wrangler deploy --domain your-host.example --domain www.your-host.example --var NEXT_PUBLIC_BASE_URL:https://your-host.example
+NEXT_PUBLIC_BASE_URL=https://your-host.example pnpm --filter @phantom/still exec opennextjs-cloudflare build
+pnpm --filter @phantom/still exec wrangler deploy --domain your-host.example --domain www.your-host.example --var NEXT_PUBLIC_BASE_URL:https://your-host.example
 ```
 
 Set `NEXT_PUBLIC_BASE_URL` to the canonical apex URL at build time. Its `www`
@@ -67,12 +67,18 @@ and playlist resolution can exceed Workers Free's 10 ms CPU budget, so a free
 account can still return Cloudflare error 1102 even with this media fast path.
 
 Cloudflare Builds deploys this Worker from the `deploy/twitch` branch with
-`/apps/twitch` as its root. That branch only moves to a `@phantom/twitch@<version>`
+`/apps/twitch` as its root. That branch only moves to a `@phantom/still@<version>`
 release, which is tagged once the commit has passed CI and built as a preview,
 so pushes to `main` do not reach production.
+The `apps/twitch` directory, `deploy/twitch` branch, and `phantom-twitch` Worker
+name are retained deployment coordinates for the existing Cloudflare integration.
+The product package and new release tags are `@phantom/still`; historical Twitch
+tags remain unchanged. See [brand and compatibility](docs/brand.md).
 The build installs the workspace dependencies and runs OpenNext; Wrangler then
-deploys to both custom domains. Build caching is enabled and preview builds are
-disabled. The Worker watches this app, shared packages, and workspace dependency
+deploys to both custom domains. Cloudflare Builds must build `main` as a
+non-production preview and deploy production from `deploy/twitch` so the release
+workflow can verify the preview before promotion. These are required settings;
+the remote configuration has not been inspected. The Worker watches this app, shared packages, and workspace dependency
 files, so changes confined to other apps do not rebuild it.
 
 Playback opens with chat visible. Hide or show chat in the player controls or
