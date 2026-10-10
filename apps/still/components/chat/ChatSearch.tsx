@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowsClockwise, ChatCircle } from "@phosphor-icons/react/ssr";
-import { Button, SearchField, ProgressRail } from "@phantom/ui";
+import { Button, SearchField } from "@phantom/ui";
+import { StillLoader } from "../StillLoader";
 import { createChatIndex } from "@/lib/chat/index";
 import type { ChatMessage } from "@/lib/chat/messages";
 import { formatTime } from "@/lib/format";
@@ -47,7 +48,7 @@ export function ChatSearch({ vodId, time, onSeek, view }: {
     <div className="still-chat-tools-toolbar">
       {view === "search" ? <SearchField autoFocus size="small" showSubmit={false} className="still-chat-search" value={query} onValueChange={setQuery} onSubmit={() => {}} labels={{ placeholder: "Search messages", submit: "Search chat", working: "Searching…", suggestions: "Messages", clear: "Clear chat search", looking: "Searching…" }} /> : <h2>Audience reactions</h2>}
       <Button variant="ghost" className="still-chat-load" disabled={busy} onClick={() => void capture()}><ArrowsClockwise size={15} />{busy ? "Loading messages…" : "Load nearby messages"}</Button>
-      {busy && <ProgressRail percent={0} label="Loading nearby messages" indeterminate slim />}
+      {busy && <StillLoader label="Loading nearby messages…" variant="compact" />}
       {index.size() > 0 && <p className="still-chat-sample-note">{index.size()} messages loaded. Results cover the loaded sample.</p>}
       {error && <p role="alert" className="still-chat-sample-note">{error}</p>}
     </div>

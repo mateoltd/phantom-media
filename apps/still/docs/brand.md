@@ -47,7 +47,12 @@ The primary fill is warm white (`#f4f2eb`) on ink (`#101113`). For light surface
 use ink for the entire mark and retain the transparent eye cutouts. The navbar
 lockup’s eyes slowly narrow to thin, visible lines and quickly reopen on a
 12-second cycle; reduced-motion preferences keep the resting expression.
-Keep the rest of the mark still, without
-shadows, speech tails, or gradients. Keep clear space of at least 8 units on the
+Initial channel, video, and clip loading uses a page-wide screen centered below
+the navbar. Loading states use a gently breathing mark with visible resting eyes and a
+staggered trail of rising Zs. This loop indicates ongoing activity, not a completion
+percentage; measured download and watch progress retain their progress tracks.
+Reduced-motion preferences show the sleeping mark and Zs without animation.
+Keep other uses still, without shadows, speech tails, or gradients.
+Keep clear space of at least 8 units on the
 64-unit mark grid. The header uses the lockup at 38px high, within a 44px
 home-link target; the symbol also works at 16px for a favicon.

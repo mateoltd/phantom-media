@@ -5,6 +5,7 @@ import { DownloadSimple, X } from "@phosphor-icons/react/ssr";
 import { Button, IconButton, ProgressRail } from "@phantom/ui";
 import type { MediaVariant } from "@/lib/contracts";
 import { useDownload } from "./use-download";
+import { StillLoader } from "../StillLoader";
 
 function formatBytes(bytes: number) {
   return bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(0)} KB` : bytes < 1024 ** 3 ? `${(bytes / 1024 ** 2).toFixed(1)} MB` : `${(bytes / 1024 ** 3).toFixed(2)} GB`;
@@ -43,11 +44,11 @@ export function DownloadButton({ qualities, channel, vodId, iconOnly = false, cl
       {!iconOnly && (downloading ? `Cancel (${percent}%)` : "Download")}
       {downloading && iconOnly && <span className="sr-only" role="status">Downloading {state.qualityName}, {percent}%</span>}
     </Button>
-    {downloading && !iconOnly && <div className="still-download-progress"><ProgressRail percent={percent} label="Download progress" indeterminate={!state.progress.total} slim /><span className="still-resource-number">{formatBytes(state.progress.bytes)}</span></div>}
+    {downloading && !iconOnly && <div className="still-download-progress">{state.progress.total ? <ProgressRail percent={percent} label="Download progress" slim /> : <StillLoader label="Downloading…" variant="compact" />}<span className="still-resource-number">{formatBytes(state.progress.bytes)}</span></div>}
     {open && <div id={panelId} className={`still-action-popover still-download-picker ${iconOnly ? "still-rail-popover" : ""}`} role="group" aria-label="Download options">
       <header><span>{state.status === "ready" ? "Ready to save" : "Download"}</span><IconButton label="Close download" size="sm" onClick={() => { cancel(); triggerRef.current?.focus(); }}><X size={16} /></IconButton></header>
       {state.status === "picking" && <div className="still-download-options">{qualities.map(variant => <Button key={variant.key} data-download-option variant="ghost" onClick={() => void prepare(variant)}><span>{variant.name}</span><span className="still-download-option-detail">{variant.kind === "audio" ? "Audio" : variant.resolution ?? ""}</span></Button>)}</div>}
-      {state.status === "preparing" && <div className="still-download-state"><p role="status">Preparing {state.qualityName}…</p><ProgressRail percent={0} label="Preparing download" indeterminate slim /></div>}
+      {state.status === "preparing" && <div className="still-download-state"><StillLoader label={`Preparing ${state.qualityName}…`} variant="compact" /></div>}
       {state.status === "ready" && <div className="still-download-state"><p>{state.prepared.variant.name}</p>{state.prepared.playlist && !state.prepared.playlist.complete && <p className="still-download-note">Saves the available recording window.</p>}<Button data-download-option onClick={() => { triggerRef.current?.focus(); void save(); }}><DownloadSimple size={16} />Save file</Button></div>}
       {state.status === "error" && <div className="still-download-state"><p role="alert">{state.message}</p><Button data-download-option variant="ghost" onClick={() => setState({ status: "picking" })}>Choose a quality</Button></div>}
     </div>}

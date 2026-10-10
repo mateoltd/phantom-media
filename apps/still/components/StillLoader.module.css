@@ -1,0 +1,42 @@
+.loader {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #f4f2eb;
+}
+
+.scene { display: block; flex: none; width: 120px; height: 96px; overflow: visible; }
+.label { color: var(--color-text-secondary); font-size: 13px; line-height: 1.5; text-align: center; }
+.face { transform-origin: 54px 70px; }
+.dream { transform: translate(78px, 35px) scale(0.65); opacity: 0.5; }
+.dream:nth-child(2) { transform: translate(88px, 22px) scale(0.85); opacity: 0.75; }
+.dream:nth-child(3) { transform: translate(100px, 7px); opacity: 0.35; }
+
+.loader[data-variant="compact"] { flex-direction: row; gap: 8px; }
+.loader[data-variant="compact"] .scene { width: 60px; height: 48px; }
+.loader[data-variant="compact"] .label { text-align: left; font-size: 12px; }
+.loader[data-variant="page"] { gap: 20px; }
+.loader[data-variant="page"] .scene { width: 180px; height: 144px; }
+.loader[data-variant="page"] .label { font-size: 14px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .face { animation: breathe 2.8s ease-in-out infinite; }
+  /* Negative delays fill the trail from the first paint, including server fallbacks. */
+  .dream { animation: dream 2.4s linear infinite; animation-delay: -1.6s; }
+  .dream:nth-child(2) { animation-delay: -0.8s; }
+  .dream:nth-child(3) { animation-delay: 0s; }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: translateY(2px) rotate(-4deg) scale(1.03, 0.96); }
+  50% { transform: translateY(-2px) rotate(-1deg) scale(0.99, 1.04); }
+}
+
+@keyframes dream {
+  0% { transform: translate(76px, 40px) scale(0.5); opacity: 0; }
+  18% { opacity: 0.85; }
+  65% { opacity: 0.65; }
+  100% { transform: translate(102px, 3px) scale(1.15); opacity: 0; }
+}

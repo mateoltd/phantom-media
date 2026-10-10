@@ -7,6 +7,7 @@ import { DownloadButton } from "@/components/downloads/DownloadButton";
 import type { ClipPlaybackData } from "@/lib/playback/data";
 import { ResourceNotice } from "../resources/ResourcePage";
 import { Footer } from "../Footer";
+import { VodLoading } from "./VodLoading";
 export function ClipView({ slug, requestedTime }: { slug: string; requestedTime?: number }) {
   const [data, setData] = useState<ClipPlaybackData>();
   useHistoryRecord(data ? { resource: { kind: "clip", slug }, channel: "", broadcastType: "clip", title: data.title, previewThumbnailURL: data.thumbnail, lengthSeconds: data.duration } : null);
@@ -41,9 +42,9 @@ export function ClipView({ slug, requestedTime }: { slug: string; requestedTime?
     }).catch(error => { if (!signingRefresh.current.controller.signal.aborted) setError(error.message); });
   }, [data, quality, slug]);
   const selected = data?.qualities.find(variant => variant.key === quality);
+  if (!data && !error) return <VodLoading label="Loading clip…" />;
   return <main className="still-main"><div className="media-content still-page">
     {error && <ResourceNotice title="Clip unavailable" error>{error}</ResourceNotice>}
-    {!data && !error && <div className="still-clip-skeleton skeleton" role="status" aria-label="Loading clip" />}
     {data && <>
       {selected ? <Player src={selected.playlistUrl} delivery="file" onMediaError={refreshOnError} startTime={sourceTime} onTimeUpdate={onTimeUpdate} title={data.title} sourceSelection={{ options: data.qualities.filter(variant => variant.kind === "video").map(variant => ({ value: variant.key, label: variant.name })), value: quality, onChange: value => { setSourceTime(currentTime.current); setQuality(value); } }} /> : <ResourceNotice title="Video unavailable">This clip has no playable video quality.</ResourceNotice>}
       <div className="still-watch-details still-clip-details">

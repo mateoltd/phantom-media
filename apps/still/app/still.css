@@ -48,12 +48,7 @@ html { scrollbar-gutter: stable both-edges; }
 }
 
 .still-main { min-height: calc(100svh - var(--media-header-height)); }
-.still-vod-loading .job-rail { background: var(--color-surface-hover); }
-/* Start inside the track so the first frame already shows the loading indicator. */
-.still-vod-loading .job-rail-indeterminate { animation-delay: -0.4s; }
-@media (prefers-reduced-motion: reduce) {
-  .still-vod-loading .job-rail-indeterminate { animation: none; transform: translateX(110%); }
-}
+.still-vod-loading { display: grid; place-items: center; width: 100%; padding: var(--space-6); }
 /* The shared navbar remains the single search entry point. */
 .still-home { min-height: calc(100svh - var(--media-header-height)); }
 .still-home-bottom { min-height: inherit; display: flex; flex-direction: column; }
@@ -934,7 +929,6 @@ html:not([data-home-search="hidden"]) .media-header:has(.still-header-search[dat
 .still-chat-reaction { align-items: center; }
 .still-chat-reaction > span:first-of-type { flex: 1; display: flex; flex-direction: column; }
 .still-chat-reaction > span:first-of-type > span { font-size: 10px; color: var(--color-text-tertiary); }
-.still-clip-skeleton { aspect-ratio: var(--media-thumbnail-ratio); border-radius: 16px; }
 .still-clip-details { margin-bottom: var(--space-8); }
 .still-clip-date { margin-top: var(--space-2); font-size: 11px; color: var(--color-text-tertiary); }
 .still-download, .still-share { position: relative; }

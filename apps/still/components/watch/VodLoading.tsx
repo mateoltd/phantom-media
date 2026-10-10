@@ -1,13 +1,10 @@
-import { ProgressRail } from "@phantom/ui";
+import { StillLoader } from "../StillLoader";
 
-/** Shared by the server fallback and the player's initial client render. */
-export function VodLoading() {
+/** Full-page initial loading, shared by route fallbacks and client data fetches. */
+export function VodLoading({ label = "Getting your video ready…" }: { label?: string }) {
   return (
-    <main className="workspace-canvas still-main still-vod-loading relative">
-      <div className="relative mx-auto flex min-h-[calc(100svh-var(--media-header-height))] max-w-sm flex-col items-center justify-center px-4">
-        <ProgressRail percent={0} indeterminate label="Loading Twitch source" className="w-full" />
-        <p className="mt-4 text-sm text-text-tertiary">Loading Twitch source...</p>
-      </div>
+    <main className="workspace-canvas still-main still-vod-loading" aria-busy="true">
+      <StillLoader label={label} variant="page" />
     </main>
   );
 }
