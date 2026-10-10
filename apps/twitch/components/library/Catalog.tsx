@@ -5,9 +5,11 @@ import { Suspense, use, useEffect, useId, useRef, useState, type KeyboardEvent, 
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { Button, MediaTile, StyledSelect } from "@phantom/ui";
-import type { BroadcastType, CatalogItem, CatalogScope, CatalogView, ClipPeriod, SliceReceipt } from "@/lib/catalog/contracts";
-import { CLIP_LANGUAGES, DEFAULT_VIEW, VIDEO_LANGUAGES, VIEW_SIZE, sliceKey, viewSlice } from "@/lib/catalog/slices";
+import type { BroadcastType, CatalogItem, CatalogScope, CatalogView, ClipPeriod, LiveOrder, SliceReceipt } from "@/lib/catalog/contracts";
+import { CLIP_LANGUAGES, DEFAULT_LIVE_VIEW, DEFAULT_VIEW, VIDEO_LANGUAGES, VIEW_SIZE, sliceKey, viewSlice } from "@/lib/catalog/slices";
+import { liveChannel } from "@/lib/categories";
 import { formatCount, formatDate, formatTime } from "@/lib/format";
+import { HomeTileSkeleton, RecommendedTile } from "../discovery/HomeMediaTile";
 import { ResourceNotice } from "../resources/ResourcePage";
 import { useCatalog } from "./use-catalog";
 
@@ -18,8 +20,12 @@ const TYPE_OPTIONS = [{ value: "", label: "All videos" }, ...Object.entries(TYPE
 const SORT_OPTIONS = [{ value: "TIME", label: "Recent" }, { value: "VIEWS", label: "Popular" }];
 const PERIOD_LABELS: Record<ClipPeriod, string> = { LAST_DAY: "Past day", LAST_WEEK: "Past week", LAST_MONTH: "Past month", ALL_TIME: "All time" };
 const PERIOD_OPTIONS = Object.entries(PERIOD_LABELS).map(([value, label]) => ({ value, label }));
+const ORDER_OPTIONS: { value: LiveOrder; label: string }[] = [{ value: "VIEWER_COUNT", label: "Most watched" }, { value: "VIEWER_COUNT_ASC", label: "Least watched" }, { value: "RECENT", label: "Just started" }];
+const LIVE_END: Record<LiveOrder, string> = { VIEWER_COUNT: "The most watched", VIEWER_COUNT_ASC: "The least watched", RECENT: "The latest" };
 const languageNames = new Intl.DisplayNames(["en"], { type: "language" });
-const languagesFor = (media: CatalogView["media"]): readonly string[] => media === "vod" ? VIDEO_LANGUAGES : CLIP_LANGUAGES;
+type Media = CatalogView["media"];
+const isMedia = (tab: string): tab is Media => tab === "live" || tab === "vod" || tab === "clip";
+const languagesFor = (media: Media): readonly string[] => media === "clip" ? CLIP_LANGUAGES : VIDEO_LANGUAGES;
 /** Rows are revealed from what is already loaded, so showing more never costs a request. */
 const STEP = 24;
 /** How long the old contents take to fade out before they are replaced. Matches `.twitch-catalog-swap[data-leaving]`. */
@@ -45,6 +51,7 @@ function holdHeight(element: HTMLElement | null, swapping: boolean) {
 
 /**
  * Videos and clips for a channel or a category, plus any extra panels the page adds as tabs.
+ * A category leads with who is live in it.
  * `initial` is the default view as read by the server, so the first screen needs no request from the browser.
  * `lazy` holds the first request until the catalog is near the screen, for pages where it sits far below.
  */
@@ -59,7 +66,7 @@ export function Catalog({ scope, initial, panels = [], lazy = false }: { scope: 
     observer.observe(element);
     return () => observer.disconnect();
   }, [near]);
-  const [shown, setShown] = useState<Shown>({ view: DEFAULT_VIEW });
+  const [shown, setShown] = useState<Shown>({ view: scope.kind === "game" ? DEFAULT_LIVE_VIEW : DEFAULT_VIEW });
   // The bar answers a tab or filter at once. The contents below fade out first, then change (see `.twitch-catalog-swap`).
   const [next, setNext] = useState<Shown>();
   useEffect(() => {
@@ -76,12 +83,12 @@ export function Catalog({ scope, initial, panels = [], lazy = false }: { scope: 
   }, []);
   const { view, panel } = next ?? shown;
   const active = panel ?? view.media;
-  const tabs = [{ id: "vod", label: "Videos" }, { id: "clip", label: "Clips" }, ...panels];
+  const tabs = [...(scope.kind === "game" ? [{ id: "live", label: "Live" }] : []), { id: "vod", label: "Videos" }, { id: "clip", label: "Clips" }, ...panels];
 
   const setView = (view: CatalogView) => setNext({ view });
   const open = (tab: string) => {
     if (tab === active) return;
-    if (tab !== "vod" && tab !== "clip") return setNext({ view, panel: tab });
+    if (!isMedia(tab)) return setNext({ view, panel: tab });
     // A language Twitch has no clips axis for would be a request that cannot succeed.
     setView(tab === view.media ? view : { ...view, media: tab, language: view.language && languagesFor(tab).includes(view.language) ? view.language : undefined });
   };
@@ -100,7 +107,7 @@ export function Catalog({ scope, initial, panels = [], lazy = false }: { scope: 
     <div className="twitch-catalog-bar">
       <div className="twitch-catalog-tabs" role="tablist" aria-label="Sections" onKeyDown={step}>
         {tabs.map(tab => <button key={tab.id} type="button" role="tab" id={`${id}-tab-${tab.id}`} aria-selected={active === tab.id}
-          aria-controls={`${id}-${tab.id === "vod" || tab.id === "clip" ? "results" : tab.id}`} tabIndex={active === tab.id ? 0 : -1} onClick={() => open(tab.id)}>{tab.label}</button>)}
+          aria-controls={`${id}-${isMedia(tab.id) ? "results" : tab.id}`} tabIndex={active === tab.id ? 0 : -1} onClick={() => open(tab.id)}>{tab.label}</button>)}
       </div>
       {!panel && <div className="twitch-catalog-controls">
         {scope.kind === "channel" && view.media === "vod" && <StyledSelect variant="quiet" label="Video type" value={view.type ?? ""} options={TYPE_OPTIONS}
@@ -108,15 +115,17 @@ export function Catalog({ scope, initial, panels = [], lazy = false }: { scope: 
         {scope.kind === "game" && <StyledSelect variant="quiet" label="Language" value={view.language ?? ""}
           options={[{ value: "", label: "All languages" }, ...languagesFor(view.media).map(value => ({ value, label: languageNames.of(value) ?? value }))]}
           onValueChange={value => setView({ ...view, language: value || undefined })} />}
-        {view.media === "vod"
+        {view.media === "live"
+          ? <StyledSelect variant="quiet" label="Sort" value={view.order} options={ORDER_OPTIONS} onValueChange={value => setView({ ...view, order: value as LiveOrder })} />
+          : view.media === "vod"
           ? <StyledSelect variant="quiet" label="Sort" value={view.sort} options={SORT_OPTIONS} onValueChange={value => setView({ ...view, sort: value as CatalogView["sort"] })} />
           : <StyledSelect variant="quiet" label="Period" value={view.period} options={PERIOD_OPTIONS} onValueChange={value => setView({ ...view, period: value as ClipPeriod })} />}
       </div>}
     </div>
     <div className="twitch-catalog-swap" ref={body} data-leaving={next ? "" : undefined}>
       <div className="twitch-catalog-panel" role="tabpanel" id={`${id}-results`} aria-labelledby={`${id}-tab-${shown.view.media}`} hidden={Boolean(shown.panel)}>
-        <Suspense fallback={<CatalogSkeleton />}>
-          <CatalogResults scope={scope} view={shown.view} ahead={view} initial={initial} enabled={near} onClips={() => open("clip")} />
+        <Suspense fallback={<CatalogSkeleton live={shown.view.media === "live"} />}>
+          <CatalogResults scope={scope} view={shown.view} ahead={view} initial={initial} enabled={near} onOpen={open} />
         </Suspense>
       </div>
       {panels.map(extra => <div key={extra.id} className="twitch-catalog-panel" role="tabpanel" id={`${id}-${extra.id}`} aria-labelledby={`${id}-tab-${extra.id}`} hidden={shown.panel !== extra.id}>{extra.content}</div>)}
@@ -124,7 +133,7 @@ export function Catalog({ scope, initial, panels = [], lazy = false }: { scope: 
   </section>;
 }
 
-function CatalogResults({ scope, view, ahead, initial, enabled, onClips }: { scope: CatalogScope; view: CatalogView; ahead: CatalogView; initial?: Promise<SliceReceipt | null>; enabled: boolean; onClips: () => void }) {
+function CatalogResults({ scope, view, ahead, initial, enabled, onOpen }: { scope: CatalogScope; view: CatalogView; ahead: CatalogView; initial?: Promise<SliceReceipt | null>; enabled: boolean; onOpen: (tab: Media) => void }) {
   const seed = initial ? use(initial) : null;
   const slice = viewSlice(scope, view);
   const key = sliceKey(slice);
@@ -136,11 +145,13 @@ function CatalogResults({ scope, view, ahead, initial, enabled, onClips }: { sco
   if (pending ? awaited !== key : awaited && awaited !== key) setAwaited(pending ? key : undefined);
 
   if (error) return <div className="twitch-catalog-notice"><ResourceNotice title="This didn’t load" error>{error}</ResourceNotice><Button variant="ghost" onClick={retry}>Try again</Button></div>;
-  if (!receipt) return <CatalogSkeleton />;
+  if (!receipt) return <CatalogSkeleton live={view.media === "live"} />;
   if (!receipt.items.length) return <div className="twitch-catalog-notice">
     <Empty scope={scope} view={view} />
     {/* A channel that keeps no videos is often still clipped, so the empty tab points somewhere. */}
-    {scope.kind === "channel" && view.media === "vod" && !view.type && <Button variant="ghost" onClick={onClips}>See clips</Button>}
+    {scope.kind === "channel" && view.media === "vod" && !view.type && <Button variant="ghost" onClick={() => onOpen("clip")}>See clips</Button>}
+    {/* A quiet category still has what was streamed in it before. */}
+    {view.media === "live" && !view.language && <Button variant="ghost" onClick={() => onOpen("vod")}>See videos</Button>}
   </div>;
 
   const count = revealed[key] ?? STEP;
@@ -153,6 +164,8 @@ function CatalogResults({ scope, view, ahead, initial, enabled, onClips }: { sco
     {hidden > 0
       ? <div className="twitch-catalog-end"><Button variant="ghost" onClick={() => setRevealed({ ...revealed, [key]: count + STEP })}>Show more</Button></div>
       // Twitch pages no further than this. Say so, and say how to reach the rest.
+      : view.media === "live"
+        ? receipt.items.length >= VIEW_SIZE && <p className="twitch-catalog-end">{LIVE_END[view.order]} {receipt.items.length} streams. Change the sort{view.language ? "" : " or pick a language"} to find others.</p>
       : total !== undefined && receipt.items.length >= VIEW_SIZE && total > receipt.items.length
         ? <p className="twitch-catalog-end">{view.sort === "TIME" ? "The latest" : "The most viewed"} {receipt.items.length} of {total.toLocaleString("en")} videos. {view.sort === "TIME" ? "Sort by Popular" : "Sort by Recent"} or pick a type to find others.</p>
         : null}
@@ -160,6 +173,8 @@ function CatalogResults({ scope, view, ahead, initial, enabled, onClips }: { sco
 }
 
 function CatalogTile({ item, scope, eager }: { item: CatalogItem; scope: CatalogScope; eager: boolean }) {
+  // A stream looks here as it does on the home page.
+  if (item.kind === "live") return <RecommendedTile channel={liveChannel(item)} />;
   const date = formatDate(item.createdAt);
   return <Link className="media-tile-hit" prefetch={false} href={item.kind === "clip" ? `/clips/${encodeURIComponent(item.slug ?? "")}` : `/videos/${item.id}`}>
     <MediaTile title={item.title} imageUrl={item.thumbnail} titleLines={2} priority={eager} badge={formatTime(item.duration)} meta={<>
@@ -170,6 +185,9 @@ function CatalogTile({ item, scope, eager }: { item: CatalogItem; scope: Catalog
 }
 
 function Empty({ scope, view }: { scope: CatalogScope; view: CatalogView }) {
+  if (view.media === "live") return view.language
+    ? <ResourceNotice title={`Nobody is live in ${languageNames.of(view.language) ?? "this language"}`}>Other languages may have someone.</ResourceNotice>
+    : <ResourceNotice title="Nobody is live">Nobody is streaming this category right now.</ResourceNotice>;
   if (view.media === "clip") return view.period === "ALL_TIME"
     ? <ResourceNotice title="No clips">{scope.kind === "game" ? "Nothing has been clipped in this category yet." : "Nobody has clipped this channel yet."}</ResourceNotice>
     : <ResourceNotice title={`No clips from the ${PERIOD_LABELS[view.period].toLowerCase()}`}>A longer period may have some.</ResourceNotice>;
@@ -180,7 +198,10 @@ function Empty({ scope, view }: { scope: CatalogScope; view: CatalogView }) {
 }
 
 /** Built from the tile's own boxes, so it takes exactly the room the loaded tiles will. */
-function CatalogSkeleton() {
+function CatalogSkeleton({ live = false }: { live?: boolean }) {
+  if (live) return <div className="twitch-broadcast-grid" role="status" aria-label="Loading">
+    {Array.from({ length: 12 }, (_, index) => <HomeTileSkeleton key={index} />)}
+  </div>;
   return <div className="twitch-broadcast-grid" role="status" aria-label="Loading">
     {Array.from({ length: 12 }, (_, index) => <div className="twitch-catalog-ghost" key={index} aria-hidden="true">
       <span className="media-tile-art aspect-video"><Skeleton height="100%" borderRadius={0} /></span>

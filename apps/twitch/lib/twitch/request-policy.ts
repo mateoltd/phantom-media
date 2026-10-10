@@ -6,6 +6,7 @@ export const QUERY_FAMILIES: Record<string, string> = {
   WatchedCategories: "video", DiscoveryDirectory: "directory", DiscoveryCategory: "game-discovery",
   RelatedChannels: "recommendations", DiscoveryExpansionCategory: "game-discovery",
   ChannelVideos: "channel-videos", CategoryVideos: "game-videos", ChannelClips: "channel-clips", CategoryClips: "game-clips",
+  CategoryStreams: "game-streams", CategoryPage: "game-streams", CategoryDirectory: "categories", CategorySearch: "categories",
   ClipMetadata: "clips", ClipSigning: "clip-signing",
 };
 

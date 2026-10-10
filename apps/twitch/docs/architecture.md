@@ -155,6 +155,14 @@ and the [implementation/validation record](refactor.md).
 ## View ownership
 
 Category and clip pages use the existing media frame and app stylesheet.
+`/categories` is one server-read request: the hundred most watched categories,
+the first three each as a row of box art beside a carousel of their top streams. The page has no field of its
+own: the header search suggests categories everywhere, and on `/categories` it
+leads with them and a plain submit becomes `?q=`, answered by Twitch's category
+search. `?game=` reads the category's figures and its opening Live view
+together, so the browser asks for nothing until a tab, sort or language changes.
+A name Twitch does not have falls back to the same search. Live streams reuse the
+home feed's tile; a category's Live view is the `game-streams` catalog slice.
 Libraries use compact Videos/Clips buttons, the quiet shared StyledSelect variant
 and a small title filter above MediaTile results. Loaded counts are secondary;
 per-slice receipts stay in state for validation rather than product markup.
@@ -194,6 +202,13 @@ on dismissal. Mobile layouts use the same tokens and spacing rhythm. History
 prepaint hints and React hydration both read the canonical resource storage and
 exclude clips from channel-shortcut counts.
 
+Watch history has no page of its own. The header's history button opens a panel
+over the current page (`components/history/HistoryMenu.tsx`) that lists what is
+stored, removes single entries or all of them with an undo, and pauses recording. Every
+write goes through `lib/history.ts`, which announces it, so the home page and
+search stay in step with the panel. The panel itself makes no request beyond
+the bounded metadata backfill for entries saved without details.
+
 ## Ranked channel search
 
 Search has three independent layers: `lib/search/ranking.ts` owns deterministic
@@ -202,13 +217,6 @@ hydration, and `client.ts` plus `use-search.ts` own local ranking and progressiv
 UI updates. Both runtimes use the same index implementation, bounded to 2,000
 channels. It precomputes normalized login/display names, handles accents and
 separators, and retains only the top eight matches. Exact, prefix, word,
-Watch history has no page of its own. The header's history button opens a panel
-over the current page (`components/history/HistoryMenu.tsx`) that lists what is
-stored, removes single entries or all of them with an undo, and pauses recording. Every
-write goes through `lib/history.ts`, which announces it, so the home page and
-search stay in step with the panel. The panel itself makes no request beyond
-the bounded metadata backfill for entries saved without details.
-
 substring and bounded typo matching outrank category/title clues. Short ambiguous
 name matches weigh logarithmically bounded follower counts and partner status
 alongside spelling. Longer exact names, explicit @usernames and recent personal

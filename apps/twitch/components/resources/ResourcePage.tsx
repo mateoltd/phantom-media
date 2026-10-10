@@ -2,10 +2,11 @@ import type { ReactNode } from "react";
 import { WarningCircle, Tray } from "@phosphor-icons/react/ssr";
 import { Footer } from "@/components/Footer";
 
-export function ResourcePage({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+/** `heading` stands in for the title and description, for a page that introduces itself in its own way. */
+export function ResourcePage({ title, description, heading, children }: { title?: string; description?: string; heading?: ReactNode; children: ReactNode }) {
   return <main className="twitch-main twitch-resource-page">
     <div className="media-content twitch-page">
-      <header className="twitch-resource-heading"><h1>{title}</h1><p>{description}</p></header>
+      {heading ?? <header className="twitch-resource-heading"><h1>{title}</h1><p>{description}</p></header>}
       {children}
       <Footer />
     </div>

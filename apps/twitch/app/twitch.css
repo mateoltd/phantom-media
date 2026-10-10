@@ -802,7 +802,6 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
 .twitch-resource-heading { margin-bottom: var(--space-5); }
 .twitch-resource-heading h1 { margin: 0; font-size: var(--media-font-section); font-weight: 600; line-height: 1.35; }
 .twitch-resource-heading p { margin-top: var(--space-2); font-size: 12px; color: var(--color-text-tertiary); }
-.twitch-resource-search { width: min(100%, 28rem); margin-bottom: var(--space-6); }
 .twitch-resource-notice { display: flex; align-items: flex-start; gap: var(--space-3); margin-block: var(--space-5); color: var(--color-text-secondary); }
 .twitch-resource-notice > svg { flex: none; margin-top: 2px; color: var(--color-text-tertiary); }
 .twitch-resource-notice h3 { font-size: 13px; font-weight: 500; }
@@ -810,6 +809,58 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
 .twitch-resource-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .twitch-resource-pill { display: inline-flex; align-items: center; padding: 2px var(--space-2); border-radius: 999px; background: var(--color-surface-light); color: var(--color-text-tertiary); font-size: 10px; }
 .twitch-resource-number { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* Categories. Box art sits on a grid twice as fine as the video grid, so both end on the same outer edges. */
+.twitch-category-grid { display: grid; grid-template-columns: repeat(calc(var(--media-grid-columns) * 2), minmax(0, 1fr)); gap: var(--media-grid-row-gap) var(--media-grid-column-gap); }
+.twitch-category-tile { display: block; min-width: 0; border-radius: 16px; }
+.twitch-category-tile:focus-visible { outline: 1px solid var(--color-text-secondary); outline-offset: 2px; }
+.twitch-category-art { aspect-ratio: 3 / 4; }
+.twitch-category-art-fallback { display: flex; height: 100%; align-items: center; justify-content: center; padding: var(--space-3); text-align: center; font-size: var(--media-font-card-meta); color: var(--color-text-tertiary); }
+/* The most watched categories open the directory as a row each: the category's box art, then a carousel of who leads it.
+   27 to 64 is the width ratio at which 3:4 box art and a 16:9 preview come out the same height. */
+.twitch-category-shelf { --shelf-streams: 4; --shelf-gap: var(--media-grid-column-gap); display: grid; grid-template-columns: 27fr repeat(var(--shelf-streams), 64fr); column-gap: var(--shelf-gap); margin-bottom: var(--media-grid-row-gap); }
+.twitch-category-shelf .twitch-category-tile:focus-visible { outline-offset: -1px; }
+.twitch-category-strip-frame { position: relative; grid-column: 2 / -1; min-width: 0; container-type: inline-size; }
+/* The strip's own padding is room for a tile's hover lift. */
+.twitch-category-strip { display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - (var(--shelf-streams) - 1) * var(--shelf-gap)) / var(--shelf-streams)); column-gap: var(--shelf-gap); margin-top: -4px; padding-top: 4px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.twitch-category-strip::-webkit-scrollbar { display: none; }
+.twitch-category-strip > * { scroll-snap-align: start; }
+/* Steps sit on the previews' centre line, centred on the strip's two edges rather than over a preview.
+   They are the search field's submit button again: the one light, round control the app already has. */
+.twitch-category-strip-step { position: absolute; top: calc((100cqw - (var(--shelf-streams) - 1) * var(--shelf-gap)) / var(--shelf-streams) * 9 / 32 - 18px); z-index: 3; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #e4e6e9; color: #181a1e; transition: transform 160ms ease, background-color 160ms ease; }
+.twitch-category-strip-step[hidden] { display: none; }
+.twitch-category-strip-step[data-side="start"] { left: -18px; }
+.twitch-category-strip-step[data-side="end"] { right: -18px; }
+.twitch-category-strip-step:hover { transform: translateY(-1px); background: #fff; }
+.twitch-category-strip-step:focus-visible { outline: 1px solid var(--color-text-secondary); outline-offset: 2px; }
+@media (min-width: 3000px) { .twitch-category-shelf { --shelf-streams: 6; } }
+@media (max-width: 1399px) { .twitch-category-shelf { --shelf-streams: 3; } }
+@media (max-width: 1000px) { .twitch-category-shelf { --shelf-streams: 2; } }
+@media (max-width: 640px) { .twitch-category-shelf { --shelf-streams: 1; --shelf-gap: var(--space-3); } }
+/* Stream tiles here wait for their previews in the same dark placeholder as on the home page. */
+.twitch-resource-page .twitch-home-tile .react-loading-skeleton { --base-color: #1b1d20; --highlight-color: #292c30; line-height: 1; }
+.twitch-category-stats strong { font-weight: 600; color: var(--color-text); }
+.twitch-category-more { margin: var(--space-10) 0 var(--space-5); font-size: 18px; font-weight: 500; line-height: 1.5rem; }
+/* A category's own page: its box art with the name and figures beside it, then the catalog. */
+.twitch-category-header { display: flex; align-items: center; gap: var(--space-6); min-width: 0; }
+.twitch-category-header-art { flex: none; width: 7.5rem; }
+.twitch-category-names { min-width: 0; }
+.twitch-category-back { display: inline-flex; align-items: center; gap: var(--space-1); font-size: 12px; line-height: 1.25rem; color: var(--color-text-tertiary); transition: color 150ms ease; }
+.twitch-category-back:hover { color: var(--color-text); }
+.twitch-category-name { margin: 0; font-size: var(--media-font-page-title); line-height: 2.75rem; font-weight: 600; overflow-wrap: anywhere; }
+.twitch-category-stats { display: flex; flex-wrap: wrap; gap: 0 var(--space-4); margin-top: var(--space-1); font-size: 0.875rem; line-height: 1.25rem; color: var(--color-text-secondary); }
+.twitch-category-names .twitch-content-labels { margin-top: var(--space-3); }
+.twitch-category-header + .twitch-catalog { margin-top: var(--space-10); }
+@media (max-width: 640px) {
+  .twitch-category-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-5) var(--space-3); }
+  .twitch-category-header { gap: var(--space-4); }
+  .twitch-category-header-art { width: 5rem; }
+  .twitch-category-name { line-height: 2rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .twitch-category-back, .twitch-category-strip-step { transition: none; }
+  .twitch-resource-page .twitch-home-tile .react-loading-skeleton::after { animation: none; }
+}
 .twitch-watch-information { display: flex; flex-direction: column; min-width: 0; }
 .twitch-storyboard-frame { position: relative; aspect-ratio: var(--media-thumbnail-ratio); border-radius: 8px; overflow: hidden; background: var(--color-stage); }
 .twitch-storyboard-frame canvas { width: 100%; height: 100%; object-fit: contain; visibility: hidden; }

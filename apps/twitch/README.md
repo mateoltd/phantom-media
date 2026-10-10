@@ -14,6 +14,7 @@ video or clip link; no account, extension, or installation is required.
 - Bounded TS/MP4 downloads with cancellation; growing archives export a captured window.
 - Live chat and offset-based VOD replay with badges, colors and emotes.
 - Official chapters, historical storyboard browsing and on-demand sampled chat search/reactions.
+- A category directory: the most watched categories with their top streams, typo-tolerant category search, and a page per category listing who is live.
 - Channel/category video and clip libraries, one bounded request per selected view.
 - Browser-local history, resume positions, and playback preferences.
 - No app analytics, tracking cookies, or Twitch account requirement.
