@@ -22,6 +22,26 @@ const languageNames = new Intl.DisplayNames(["en"], { type: "language" });
 const languagesFor = (media: CatalogView["media"]): readonly string[] => media === "vod" ? VIDEO_LANGUAGES : CLIP_LANGUAGES;
 /** Rows are revealed from what is already loaded, so showing more never costs a request. */
 const STEP = 24;
+/** How long the old contents take to fade out before they are replaced. Matches `.twitch-catalog-swap[data-leaving]`. */
+const LEAVE_MS = 100;
+type Shown = { view: CatalogView; panel?: string };
+
+/**
+ * Keeps the page as long as what is on screen when shorter contents replace longer ones, so the tabs stay where they
+ * were pressed instead of the page jumping to its new end. Only the room down to the bottom of the window is held,
+ * and scrolling back up gives it away again, so no empty stretch is left to scroll into.
+ */
+function holdHeight(element: HTMLElement | null, swapping: boolean) {
+  if (!element) return;
+  const held = parseFloat(element.style.minHeight) || 0;
+  if (!swapping && !held) return;
+  const box = element.getBoundingClientRect();
+  // What follows the catalog on the page still has to fit under it. A page that is not scrolled cannot jump.
+  const after = document.documentElement.scrollHeight - window.scrollY - box.bottom;
+  const room = window.scrollY > 0 ? Math.ceil(window.innerHeight - box.top - after) : 0;
+  const height = swapping ? room : Math.min(held, room);
+  element.style.minHeight = height > 0 ? `${height}px` : "";
+}
 
 /**
  * Videos and clips for a channel or a category, plus any extra panels the page adds as tabs.
@@ -39,16 +59,31 @@ export function Catalog({ scope, initial, panels = [], lazy = false }: { scope: 
     observer.observe(element);
     return () => observer.disconnect();
   }, [near]);
-  const [view, setView] = useState(DEFAULT_VIEW);
-  const [panel, setPanel] = useState<string>();
+  const [shown, setShown] = useState<Shown>({ view: DEFAULT_VIEW });
+  // The bar answers a tab or filter at once. The contents below fade out first, then change (see `.twitch-catalog-swap`).
+  const [next, setNext] = useState<Shown>();
+  useEffect(() => {
+    if (!next) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const timer = window.setTimeout(() => { holdHeight(body.current, true); setShown(next); setNext(undefined); }, reduced ? 0 : LEAVE_MS);
+    return () => window.clearTimeout(timer);
+  }, [next]);
+  const body = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const release = () => holdHeight(body.current, false);
+    window.addEventListener("scroll", release, { passive: true });
+    return () => window.removeEventListener("scroll", release);
+  }, []);
+  const { view, panel } = next ?? shown;
   const active = panel ?? view.media;
   const tabs = [{ id: "vod", label: "Videos" }, { id: "clip", label: "Clips" }, ...panels];
 
+  const setView = (view: CatalogView) => setNext({ view });
   const open = (tab: string) => {
-    if (tab !== "vod" && tab !== "clip") return setPanel(tab);
-    setPanel(undefined);
+    if (tab === active) return;
+    if (tab !== "vod" && tab !== "clip") return setNext({ view, panel: tab });
     // A language Twitch has no clips axis for would be a request that cannot succeed.
-    if (tab !== view.media) setView({ ...view, media: tab, language: view.language && languagesFor(tab).includes(view.language) ? view.language : undefined });
+    setView(tab === view.media ? view : { ...view, media: tab, language: view.language && languagesFor(tab).includes(view.language) ? view.language : undefined });
   };
   // Arrow keys move between tabs without opening them, so passing over one never starts a request.
   const step = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -78,21 +113,27 @@ export function Catalog({ scope, initial, panels = [], lazy = false }: { scope: 
           : <StyledSelect variant="quiet" label="Period" value={view.period} options={PERIOD_OPTIONS} onValueChange={value => setView({ ...view, period: value as ClipPeriod })} />}
       </div>}
     </div>
-    <div className="twitch-catalog-panel" role="tabpanel" id={`${id}-results`} aria-labelledby={`${id}-tab-${view.media}`} hidden={Boolean(panel)}>
-      <Suspense fallback={<CatalogSkeleton />}>
-        <CatalogResults scope={scope} view={view} initial={initial} enabled={near} onClips={() => open("clip")} />
-      </Suspense>
+    <div className="twitch-catalog-swap" ref={body} data-leaving={next ? "" : undefined}>
+      <div className="twitch-catalog-panel" role="tabpanel" id={`${id}-results`} aria-labelledby={`${id}-tab-${shown.view.media}`} hidden={Boolean(shown.panel)}>
+        <Suspense fallback={<CatalogSkeleton />}>
+          <CatalogResults scope={scope} view={shown.view} ahead={view} initial={initial} enabled={near} onClips={() => open("clip")} />
+        </Suspense>
+      </div>
+      {panels.map(extra => <div key={extra.id} className="twitch-catalog-panel" role="tabpanel" id={`${id}-${extra.id}`} aria-labelledby={`${id}-tab-${extra.id}`} hidden={shown.panel !== extra.id}>{extra.content}</div>)}
     </div>
-    {panels.map(extra => <div key={extra.id} className="twitch-catalog-panel" role="tabpanel" id={`${id}-${extra.id}`} aria-labelledby={`${id}-tab-${extra.id}`} hidden={panel !== extra.id}>{extra.content}</div>)}
   </section>;
 }
 
-function CatalogResults({ scope, view, initial, enabled, onClips }: { scope: CatalogScope; view: CatalogView; initial?: Promise<SliceReceipt | null>; enabled: boolean; onClips: () => void }) {
+function CatalogResults({ scope, view, ahead, initial, enabled, onClips }: { scope: CatalogScope; view: CatalogView; ahead: CatalogView; initial?: Promise<SliceReceipt | null>; enabled: boolean; onClips: () => void }) {
   const seed = initial ? use(initial) : null;
   const slice = viewSlice(scope, view);
   const key = sliceKey(slice);
-  const { receipt, error, retry } = useCatalog(slice, seed, enabled);
+  const { receipt, error, retry } = useCatalog(slice, seed, enabled, viewSlice(scope, ahead));
   const [revealed, setRevealed] = useState<Record<string, number>>({});
+  // The view whose skeleton is up, so that its answer fades in rather than replacing the skeleton at a stroke.
+  const [awaited, setAwaited] = useState<string>();
+  const pending = !receipt && !error;
+  if (pending ? awaited !== key : awaited && awaited !== key) setAwaited(pending ? key : undefined);
 
   if (error) return <div className="twitch-catalog-notice"><ResourceNotice title="This didn’t load" error>{error}</ResourceNotice><Button variant="ghost" onClick={retry}>Try again</Button></div>;
   if (!receipt) return <CatalogSkeleton />;
@@ -106,7 +147,7 @@ function CatalogResults({ scope, view, initial, enabled, onClips }: { scope: Cat
   const hidden = receipt.items.length - count;
   const total = receipt.totalCount;
   return <>
-    <div className="twitch-broadcast-grid">
+    <div className="twitch-broadcast-grid" data-arrived={awaited === key ? "" : undefined}>
       {receipt.items.slice(0, count).map((item, index) => <CatalogTile key={`${item.kind}:${item.id}`} item={item} scope={scope} eager={index < 4} />)}
     </div>
     {hidden > 0

@@ -481,6 +481,12 @@ html:not([data-home-search="hidden"]) .media-header:has(.twitch-header-search[da
 .twitch-catalog-notice .twitch-resource-notice { margin-block: 0; }
 /* The action's label starts where the notice's text does, past its icon. */
 .twitch-catalog-notice > button { margin-left: calc(18px + var(--space-3) - var(--space-4)); }
+/* A tab or filter replaces what the catalog shows: the old contents fade out, then the new ones fade in.
+   Only opacity moves, so a video playing above never drops a frame for it. */
+.twitch-catalog-swap { transition: opacity 200ms ease-out; }
+.twitch-catalog-swap[data-leaving] { opacity: 0; transition: opacity 100ms ease-in; }
+/* An answer that was waited for fades in the same way once it lands. */
+.twitch-broadcast-grid[data-arrived] { animation: fade-in 200ms ease-out; }
 .twitch-catalog-end { display: flex; justify-content: center; margin-top: var(--space-8); color: var(--color-text-tertiary); font-size: 12px; line-height: 1.7; text-align: center; }
 /* Every caption keeps room for two title lines, loaded or not, so no row changes height when the titles arrive.
    A one-line title still has its date directly under it; the spare line falls below. */
