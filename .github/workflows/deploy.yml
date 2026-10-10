@@ -8,7 +8,6 @@ on:
     tags:
       - "@phantom/twitch@*"
       - "@phantom/stream@*"
-      - "@phantom/downloader@*"
   # A tag usually lands before CI has finished on its commit, and GitHub sends
   # no tag events at all when more than three tags arrive in one push. The
   # run after CI is the one that normally does the promotion.

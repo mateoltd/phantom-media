@@ -9,9 +9,10 @@
 # for Cloudflare to report the build, so the run reflects what reached production.
 set -euo pipefail
 
-APPS=(twitch stream downloader)
+# Apps whose Worker is linked to Cloudflare Builds. Downloader is deployed by hand.
+APPS=(twitch stream)
 # The Worker each app's Cloudflare build reports as, in its GitHub check run.
-declare -A WORKERS=([twitch]=phantom-twitch [stream]=phantom-stream [downloader]=ewyoutube)
+declare -A WORKERS=([twitch]=phantom-twitch [stream]=phantom-stream)
 BUILD_TIMEOUT=${BUILD_TIMEOUT:-1200}
 BUILD_POLL=${BUILD_POLL:-20}
 promoted=()

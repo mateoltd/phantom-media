@@ -66,7 +66,9 @@ changed without a changeset.
 ## Production deploys
 
 Production follows release tags, not `main`. Cloudflare Builds deploys each app
-from its own branch: `deploy/twitch`, `deploy/stream`, `deploy/downloader`.
+from its own branch: `deploy/twitch` and `deploy/stream`. Downloader has no
+linked Worker: it is versioned like the others but deployed by hand with
+`pnpm deploy:downloader`.
 Each branch is a pointer to the commit that app has in production. They are
 meant to lag behind `main`, and nobody pushes to them by hand.
 
@@ -83,7 +85,7 @@ An app's branch moves to its latest release only when all of these hold:
 - CI passed on that commit. A release tagged before CI finishes waits for it.
 - The move is a fast-forward. A branch is never moved back.
 
-Only app tags deploy. A package release reaches production through the patch
+Only the tags of those two apps deploy. A package release reaches production through the patch
 bump it gives each dependent app.
 
 GitHub enforces two of these independently of the workflow: `deploy/*`
