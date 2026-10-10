@@ -1,12 +1,11 @@
 # Phantom Media
 
-Free, open-source media tools, led by **[Phantom Twitch](https://notwitch.tv)**:
+Free, open-source media tools, led by **Phantom Twitch**:
 an ad-free alternative Twitch player for live streams, subscriber-only VODs,
 and live rewind through broadcast archives. Watch without a Twitch account,
 with no app analytics or tracking cookies.
 
-**[Open Phantom Twitch →](https://notwitch.tv)** ·
-[Twitch documentation](apps/twitch/README.md) · [Local setup](#getting-set-up)
+[Twitch documentation](apps/twitch/README.md) and [local setup](#getting-set-up).
 
 ## Phantom Twitch: watch on your terms
 

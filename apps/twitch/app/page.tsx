@@ -31,7 +31,6 @@ export default function Home() {
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",
           name: siteConfig.name,
-          alternateName: "Phantom Twitch on notwitch.tv",
           sameAs: siteConfig.repositoryUrl,
           featureList: [
             "Ad-free Twitch playback",
