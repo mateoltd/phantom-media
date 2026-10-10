@@ -1,6 +1,6 @@
 {
   "name": "@phantom/twitch",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "description": "Ad-free Twitch player with subscriber-only VODs, archive-based live rewind, and account-free viewing.",
   "scripts": {
