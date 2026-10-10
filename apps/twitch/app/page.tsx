@@ -1,6 +1,6 @@
 import { DebugVideoScript } from "@/components/DebugVideoScript";
-import { HomeView } from "@/components/HomeView";
-import { HomeContent } from "@/components/HomeContent";
+import { HomeView } from "@/components/discovery/HomeView";
+import { HomeContent } from "@/components/discovery/HomeContent";
 import { StructuredData } from "@/components/structured-data";
 import { isDebugEnabled } from "@/lib/debug";
 import { buildMetadata, getBaseUrl, siteConfig } from "@/lib/seo";

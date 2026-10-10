@@ -1,0 +1,14 @@
+{
+  "pass1": {
+    "extinf": 2204,
+    "lm": null
+  },
+  "pass2": {
+    "extinf": 2260,
+    "lm": "Fri, 09 Oct 2026 14:16:35 GMT",
+    "etag": "W/\"eb34a69ead6d3b58c3c11d6fe9f5fe8f\"",
+    "cache_control": "no-cache"
+  },
+  "delta": 56,
+  "endlist": false
+}

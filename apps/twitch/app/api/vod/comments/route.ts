@@ -1,5 +1,6 @@
+import { errorResponse } from "@/lib/errors";
 import { NextRequest, NextResponse } from "next/server";
-import { fetchVodComments } from "@/lib/twitch";
+import { fetchVodComments } from "@/lib/twitch/comments";
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
@@ -12,8 +13,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(await fetchVodComments(vodId, offset), {
       headers: { "Cache-Control": "public, max-age=15, s-maxage=30" },
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Chat replay is unavailable";
-    return NextResponse.json({ error: message }, { status: message.includes("not found") ? 404 : 502 });
-  }
+  } catch (error) { return errorResponse(error); }
 }

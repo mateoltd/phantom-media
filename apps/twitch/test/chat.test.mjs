@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mergeReplayMessages, messagesAtTime, parseChatLine } from "../lib/chat.ts";
+import { mergeReplayMessages, messagesAtTime, parseChatLine } from "../lib/chat/messages.ts";
 
 const message = (id, offset) => ({ id, offset, user: "viewer", color: "#ffffff", text: id });
 

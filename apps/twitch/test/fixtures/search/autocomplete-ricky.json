@@ -1,0 +1,103 @@
+{
+  "capturedAt": "2026-10-10T15:44:56.377Z",
+  "endpoint": "https://gql.twitch.tv/gql",
+  "operationName": "SearchTray_SearchSuggestions",
+  "variables": {
+    "queryFragment": "ricky",
+    "withOfflineChannelContent": true,
+    "includeIsDJ": false
+  },
+  "response_redacted": {
+    "data": {
+      "searchSuggestions": {
+        "edges": [
+          {
+            "node": {
+              "text": "Rickymainia",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "rickymainia",
+                "isLive": true,
+                "isVerified": true,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/acfca655-17d1-4a17-9717-87e69cc43b52-profile_image-50x50.jpeg"
+              }
+            }
+          },
+          {
+            "node": {
+              "text": "RickysOnOne",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "rickysonone",
+                "isLive": true,
+                "isVerified": true,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/4bf70f1e-1af3-4208-854c-c27908ebc743-profile_image-50x50.png"
+              }
+            }
+          },
+          {
+            "node": {
+              "text": "RickyGlaser",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "rickyglaser",
+                "isLive": true,
+                "isVerified": true,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/22ff3106-9abd-4ef7-8931-a1d0bf77aa60-profile_image-50x50.png"
+              }
+            }
+          },
+          {
+            "node": {
+              "text": "rickyedit",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "rickyedit",
+                "isLive": false,
+                "isVerified": true,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/71fc94fe-171a-41d4-b4cb-f64d3b29a0d7-profile_image-50x50.png"
+              }
+            }
+          },
+          {
+            "node": {
+              "text": "RickystrikisOficial",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "rickystrikisoficial",
+                "isLive": false,
+                "isVerified": true,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/e2860d10-17a9-4496-b780-4b308a4b4d84-profile_image-50x50.png"
+              }
+            }
+          },
+          {
+            "node": {
+              "text": "RickyFri3s",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "rickyfri3s",
+                "isLive": false,
+                "isVerified": true,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/5bbeb7c4-2ed5-442e-90c7-28e0ce719564-profile_image-50x50.png"
+              }
+            }
+          },
+          {
+            "node": {
+              "text": "RickyPorterDillon",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "rickyporterdillon",
+                "isLive": false,
+                "isVerified": true,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/5f81f087-070e-4dec-8812-06a7669c5a64-profile_image-50x50.png"
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "sha256Hash": "2749d8bc89a2ddd37518e23742a4287becd3064c40465d8b57317cabd0efe096"
+}

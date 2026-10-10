@@ -1,13 +1,8 @@
 import { NextRequest } from "next/server";
-import { rewriteLiveMediaPlaylist } from "@/lib/playlist";
-
-const ALLOWED_HOSTS = [
-  /^[a-z0-9-]+\.twitch\.tv$/,
-  /^[a-z0-9-]+\.ttvnw\.net$/,
-  /^[a-z0-9-]+\.playlist\.ttvnw\.net$/,
-  /^[a-z0-9.-]+\.hls\.ttvnw\.net$/,
-  /^[a-z0-9]+\.cloudfront\.net$/,
-];
+import { rewriteLiveMediaPlaylist } from "@/lib/media/hls";
+import { mediaDestination } from "@/lib/media/destination";
+import { readLiveManifest } from "@/lib/media/manifest";
+import { errorResponse } from "@/lib/errors";
 
 export async function GET(request: NextRequest) {
   const url = request.nextUrl.searchParams.get("url");
@@ -23,21 +18,20 @@ export async function GET(request: NextRequest) {
     return new Response("Invalid url", { status: 400 });
   }
 
-  if (!ALLOWED_HOSTS.some((host) => host.test(parsed.hostname))) {
+  try { mediaDestination(parsed); } catch {
     return new Response("Forbidden", { status: 403 });
   }
-
-  const upstream = await fetch(url, { cache: "no-store" });
-  if (!upstream.ok) {
-    return new Response("Upstream playlist error", { status: upstream.status });
+  if (!/\.m3u8$/i.test(parsed.pathname)) {
+    return new Response("Invalid playlist", { status: 400 });
   }
 
-  const rewritten = rewriteLiveMediaPlaylist(await upstream.text(), url);
-
-  return new Response(rewritten, {
-    headers: {
-      "Content-Type": "application/vnd.apple.mpegurl",
-      "Cache-Control": "no-store",
-    },
-  });
+  try {
+    const manifest = await readLiveManifest(url, request.signal);
+    return new Response(rewriteLiveMediaPlaylist(manifest.text, manifest.url), {
+      headers: {
+        "Content-Type": "application/vnd.apple.mpegurl",
+        "Cache-Control": "no-store",
+      },
+    });
+  } catch (error) { return errorResponse(error); }
 }

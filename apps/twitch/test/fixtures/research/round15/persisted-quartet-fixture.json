@@ -1,0 +1,197 @@
+[
+  {
+    "operationName": "VideoPlayer_ChapterSelectButtonVideo",
+    "sha256Hash": "71835d5ef425e154bf282453a926d99b328cdc5e32f36d3a209d0f4778b41203",
+    "variables": {
+      "includePrivate": false,
+      "videoID": "1000000001"
+    },
+    "status": "OK",
+    "response_redacted": {
+      "data": {
+        "video": {
+          "id": "1000000001",
+          "moments": {
+            "edges": [
+              {
+                "node": {
+                  "moments": {
+                    "edges": [],
+                    "__typename": "VideoMomentConnection"
+                  },
+                  "id": "1000000002",
+                  "durationMilliseconds": 1270000,
+                  "positionMilliseconds": 0,
+                  "type": "GAME_CHANGE",
+                  "description": "Just Chatting",
+                  "subDescription": "",
+                  "thumbnailURL": "",
+                  "details": {
+                    "game": {
+                      "id": "1000000003",
+                      "displayName": "fixture-channel",
+                      "boxArtURL": "https://fixture.invalid/redacted",
+                      "__typename": "Game"
+                    },
+                    "__typename": "GameChangeMomentDetails"
+                  },
+                  "video": {
+                    "id": "1000000001",
+                    "lengthSeconds": 18094,
+                    "__typename": "Video"
+                  },
+                  "__typename": "VideoMoment"
+                },
+                "__typename": "VideoMomentEdge"
+              },
+              {
+                "node": {
+                  "moments": {
+                    "edges": [],
+                    "__typename": "VideoMomentConnection"
+                  },
+                  "id": "1000000004",
+                  "durationMilliseconds": 6624000,
+                  "positionMilliseconds": 1270000,
+                  "type": "GAME_CHANGE",
+                  "description": "Machine Party",
+                  "subDescription": "",
+                  "thumbnailURL": "",
+                  "details": {
+                    "game": {
+                      "id": "1000000005",
+                      "displayName": "fixture-channel",
+                      "boxArtURL": "https://fixture.invalid/redacted",
+                      "__typename": "Game"
+                    },
+                    "__typename": "GameChangeMomentDetails"
+                  },
+                  "video": {
+                    "id": "1000000001",
+                    "lengthSeconds": 18094,
+                    "__typename": "Video"
+                  },
+                  "__typename": "VideoMoment"
+                },
+                "__typename": "VideoMomentEdge"
+              },
+              {
+                "...": "2 more"
+              }
+            ],
+            "__typename": "VideoMomentConnection"
+          },
+          "__typename": "Video"
+        }
+      },
+      "extensions": {
+        "durationMilliseconds": 28,
+        "operationName": "VideoPlayer_ChapterSelectButtonVideo"
+      }
+    }
+  },
+  {
+    "operationName": "ContentClassificationContext",
+    "sha256Hash": "57bb6c1aca3631b2b3e74b1c3c8adbecbbcc3becb70ec52d7c5ef0f90d7c3b02",
+    "variables": {
+      "clipSlug": "FixtureClip",
+      "isStream": false,
+      "isClip": false,
+      "isVOD": true,
+      "vodID": "1000000001"
+    },
+    "status": "OK",
+    "response_redacted": {
+      "data": {
+        "video": {
+          "id": "1000000001",
+          "broadcastType": "ARCHIVE",
+          "game": {
+            "id": "1000000003",
+            "name": "Just Chatting",
+            "__typename": "Game"
+          },
+          "owner": {
+            "id": "1000000006",
+            "displayName": "fixture-channel",
+            "__typename": "User"
+          },
+          "contentClassificationLabels": [
+            {
+              "id": "MatureGame",
+              "localizedName": "Mature-rated game",
+              "__typename": "ContentClassificationLabel"
+            }
+          ],
+          "contentClassificationLabelPolicyProperties": {
+            "signPostProperties": {
+              "signPost": "SIGN_POST_TYPE_MATURE",
+              "contentClassificationLabels": [
+                "MatureGame"
+              ],
+              "__typename": "ContentClassificationLabelPolicySignPostProperties"
+            },
+            "contentGateProperties": {
+              "contentGate": "CONTENT_GATE_NOT_REQUIRED",
+              "__typename": "ContentClassificationLabelPolicyContentGateProperties"
+            },
+            "__typename": "ContentClassificationLabelPolicyProperties"
+          },
+          "__typename": "Video"
+        }
+      },
+      "extensions": {
+        "durationMilliseconds": 41,
+        "operationName": "ContentClassificationContext"
+      }
+    }
+  },
+  {
+    "operationName": "VideoPlayer_MutedSegmentsAlertOverlay",
+    "sha256Hash": "c36e7400657815f4704e6063d265dff766ed8fc1590361c6d71e4368805e0b49",
+    "variables": {
+      "videoID": "1000000001"
+    },
+    "status": "ERR",
+    "response_redacted": {
+      "errors": [
+        {
+          "message": "must provide an id",
+          "path": [
+            "video"
+          ]
+        }
+      ],
+      "data": {
+        "video": null
+      },
+      "extensions": {
+        "durationMilliseconds": 3,
+        "operationName": "VideoPlayer_MutedSegmentsAlertOverlay"
+      }
+    },
+    "verdict": "variable-contract-rotated",
+    "evidence": "hash accepted (not PersistedQueryNotFound); 'must provide an id' for {}. {id}(str/int), {videoID}, +includePrivate/-clipSlug \u2014 client build changed the op's expected variables. Persisted mute-alert marked OPTIONAL; shipped mute path is the ad-hoc muteInfo query (twitch.ts:161), round-9 shape stable."
+  },
+  {
+    "operationName": "UseViewCount",
+    "sha256Hash": "95e6bd7acfbb2f220c17e387805141b77b43b18e5b27b4f702713e9ddbe6b907",
+    "variables": {
+      "channelLogin": "fixture-channel"
+    },
+    "status": "OK",
+    "response_redacted": {
+      "data": {
+        "user": {
+          "id": "1000000006",
+          "stream": null,
+          "__typename": "User"
+        }
+      },
+      "extensions": {
+        "durationMilliseconds": 41,
+        "operationName": "UseViewCount"
+      }
+    }
+  }
+]

@@ -1,0 +1,35 @@
+{
+  "chunked": {
+    "status": 200,
+    "n_extinf": 1519,
+    "segs": [
+      "0.ts",
+      "1.ts",
+      "2.ts",
+      "1517.ts",
+      "1518.ts"
+    ]
+  },
+  "720p60": {
+    "status": 200,
+    "n_extinf": 1519,
+    "segs": [
+      "0.ts",
+      "1.ts",
+      "2.ts",
+      "1517.ts",
+      "1518.ts"
+    ]
+  },
+  "audio_only": {
+    "status": 200,
+    "n_extinf": 1519,
+    "segs": [
+      "0.ts",
+      "1.ts",
+      "2.ts",
+      "1517.ts",
+      "1518.ts"
+    ]
+  }
+}

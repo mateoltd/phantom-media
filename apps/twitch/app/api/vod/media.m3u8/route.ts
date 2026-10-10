@@ -1,7 +1,10 @@
+import { errorResponse } from "@/lib/errors";
+import { readManifest } from "@/lib/media/manifest";
+import { playbackCacheControl } from "@/lib/playback/freshness";
 import { NextRequest } from "next/server";
 import { debugServer } from "@/lib/debug";
-import { readPlaybackSource, resolvePlayback } from "@/lib/resolve";
-import { rewriteMediaPlaylist } from "@/lib/playlist";
+import { readPlaybackSource, resolvePlayback } from "@/lib/playback/resolve";
+import { rewriteMediaPlaylist } from "@/lib/media/hls";
 
 export async function GET(request: NextRequest) {
   const source = readPlaybackSource(request.nextUrl.searchParams);
@@ -12,7 +15,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = await resolvePlayback(source);
+    const data = await resolvePlayback(source, request.signal);
     const selectedQuality = data.qualities.find((entry) => entry.key === quality);
 
     if (!selectedQuality) {
@@ -20,43 +23,22 @@ export async function GET(request: NextRequest) {
       return new Response("Quality not found", { status: 404 });
     }
 
-    const upstream = await fetch(selectedQuality.playlistUrl, {
-      cache: "no-store",
-    });
-
-    if (!upstream.ok) {
-      debugServer("media.m3u8", "upstream playlist error", {
-        source,
-        quality,
-        status: upstream.status,
-        playlistUrl: selectedQuality.playlistUrl,
-      });
-      return new Response("Upstream playlist error", { status: upstream.status });
-    }
-
-    debugServer("media.m3u8", "serving media playlist", {
-      source,
-      quality,
-      playlistUrl: selectedQuality.playlistUrl,
-    });
-    const playlistText = await upstream.text();
-    const isCompleteVod = playlistText.includes("#EXT-X-ENDLIST");
+    const manifest = await readManifest(selectedQuality.playlistUrl, request.signal);
+    const playlistText = manifest.text;
     const rewritten = rewriteMediaPlaylist(
       playlistText,
-      selectedQuality.playlistUrl,
+      manifest.url ?? selectedQuality.playlistUrl,
       true
     );
 
     return new Response(rewritten, {
       headers: {
         "Content-Type": "application/vnd.apple.mpegurl",
-        "Cache-Control": isCompleteVod
-          ? "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800"
-          : "no-store",
+        "Cache-Control": playbackCacheControl(manifest.complete ? "complete" : "growing"),
       },
     });
-  } catch {
+  } catch (error) {
     debugServer("media.m3u8", "failed to resolve vod", { source, quality });
-    return new Response("VOD not found", { status: 404 });
+    return errorResponse(error);
   }
 }

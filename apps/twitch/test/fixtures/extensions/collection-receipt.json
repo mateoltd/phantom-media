@@ -1,0 +1,31 @@
+{
+  "location": {
+    "clientId": "d4uvtfdr04uq6raoenvj7m86gdk16v",
+    "version": "2.4.6",
+    "packageHash": "d775e8e53e5dde1be9b27b8194184ada",
+    "viewerUrl": "https://d4uvtfdr04uq6raoenvj7m86gdk16v.ext-twitch.tv/d4uvtfdr04uq6raoenvj7m86gdk16v/2.4.6/d775e8e53e5dde1be9b27b8194184ada/overlay.html",
+    "root": "https://d4uvtfdr04uq6raoenvj7m86gdk16v.ext-twitch.tv/d4uvtfdr04uq6raoenvj7m86gdk16v/2.4.6/d775e8e53e5dde1be9b27b8194184ada/"
+  },
+  "assets": [
+    {
+      "url": "https://d4uvtfdr04uq6raoenvj7m86gdk16v.ext-twitch.tv/d4uvtfdr04uq6raoenvj7m86gdk16v/2.4.6/d775e8e53e5dde1be9b27b8194184ada/overlay.html",
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 523
+    },
+    {
+      "url": "https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js",
+      "contentType": "application/javascript",
+      "bytes": 126547
+    }
+  ],
+  "totalBytes": 127070,
+  "skipped": [],
+  "failures": [
+    {
+      "url": "https://d4uvtfdr04uq6raoenvj7m86gdk16v.ext-twitch.tv/d4uvtfdr04uq6raoenvj7m86gdk16v/2.4.6/d775e8e53e5dde1be9b27b8194184ada/js/main.af1c9ccb50ae7922f3ad.js",
+      "reason": "Asset exceeds 2 MB"
+    }
+  ],
+  "coverage": "static-references-only",
+  "stop": "finished"
+}

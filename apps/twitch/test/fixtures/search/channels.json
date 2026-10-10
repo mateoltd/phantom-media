@@ -1,0 +1,31 @@
+{
+  "operationName": "SearchChannels",
+  "query": "query SearchChannels($logins: [String!]!) { users(logins:$logins) { id login displayName profileImageURL(width:150) stream { title viewersCount game { name } } } }",
+  "variables": {
+    "logins": [
+      "rubius",
+      "auronplay"
+    ]
+  },
+  "response": {
+    "data": {
+      "users": [
+        {
+          "id": "39276140",
+          "login": "rubius",
+          "displayName": "Rubius",
+          "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/a2592e98-5ba6-4c9a-9d9e-cf036d6f64c2-profile_image-150x150.jpg",
+          "stream": null
+        },
+        {
+          "id": "459331509",
+          "login": "auronplay",
+          "displayName": "auronplay",
+          "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/f1ea7d5a-ab2c-4e91-bba5-3ce211adfc3b-profile_image-150x150.png",
+          "stream": null
+        }
+      ]
+    }
+  },
+  "provenance": "Independent directed anonymous two-channel capture, 2026-10-10; no investigation code consumed."
+}

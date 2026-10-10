@@ -1,5 +1,6 @@
+import { errorResponse } from "@/lib/errors";
 import { NextRequest, NextResponse } from "next/server";
-import { searchChannels } from "@/lib/twitch";
+import { searchChannels } from "@/lib/search/service";
 
 export async function GET(request: NextRequest) {
   const query = (request.nextUrl.searchParams.get("q") ?? "").trim();
@@ -12,17 +13,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const results = await searchChannels(query);
+    const result = await searchChannels(query, request.signal);
     return NextResponse.json(
-      { results },
+      result,
       {
         headers: {
-          "Cache-Control": "public, max-age=60, s-maxage=120",
+          "Cache-Control": "public, max-age=30, s-maxage=30",
         },
       }
     );
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 502 });
-  }
+  } catch (error) { return errorResponse(error); }
 }

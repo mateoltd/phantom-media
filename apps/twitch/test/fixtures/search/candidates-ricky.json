@@ -1,0 +1,812 @@
+{
+  "capturedAt": "2026-10-10T15:25:34.689Z",
+  "endpoint": "https://gql.twitch.tv/gql",
+  "request": {
+    "query": "query SearchCandidates($query:String!){searchFor(userQuery:$query,platform:\"web\",options:{targets:[{index:CHANNEL,limit:40}]}){channels{edges{item{... on User{id login displayName profileImageURL(width:150) followers{totalCount} roles{isPartner} stream{title viewersCount game{name}}}}}}}}",
+    "variables": {
+      "query": "ricky"
+    }
+  },
+  "response": {
+    "data": {
+      "searchFor": {
+        "channels": {
+          "edges": [
+            {
+              "item": {
+                "id": "115657971",
+                "login": "rickyedit",
+                "displayName": "rickyedit",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/71fc94fe-171a-41d4-b4cb-f64d3b29a0d7-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 1429252
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "50561071",
+                "login": "ricky",
+                "displayName": "Ricky",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/ricky-profile_image-0d1c9ee3ff56914e-150x150.jpeg",
+                "followers": {
+                  "totalCount": 43822
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "37030654",
+                "login": "rickyy",
+                "displayName": "Rickyy",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/c0bcae6f-c5c7-4c48-b135-2bcb704e0b8f-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 4737
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Will I even mentally make it to prestige 5?",
+                  "viewersCount": 2,
+                  "game": {
+                    "name": "Escape from Tarkov"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "121864705",
+                "login": "rickyberwick",
+                "displayName": "RickyBerwick",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/d15b360b-9ff7-469b-a912-ca7ae7a139cb-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 44536
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "115695918",
+                "login": "rocky_",
+                "displayName": "RocKy_",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/c8005646-3303-4cf3-97e6-c3dcdc06859e-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 543236
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": {
+                  "title": "FC PRO OPEN JOUR 1 w/ les 256 Meilleurs joueurs d'Europe OUEST (!holy) (!razer) (!eneba)",
+                  "viewersCount": 4470,
+                  "game": {
+                    "name": "EA Sports FC 27"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "147870973",
+                "login": "ricky03",
+                "displayName": "Ricky03",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/db665229-dea2-4bd7-91c9-5a1690972677-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 79788
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "1530412561",
+                "login": "ricky83fn",
+                "displayName": "ricky83fn",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/352aadb5-d4a4-4172-ace9-0a25457455f6-profile_image-150x150.jpeg",
+                "followers": {
+                  "totalCount": 12
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "w keyamo le lobby 🔴aura handcam🔴!pc !res !mouse !tastiera !sens !setting !tasti",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Fortnite"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "28506912",
+                "login": "therealrickyyo",
+                "displayName": "therealrickyyo",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/e4c7323e-e6cc-4f0d-adc1-d721d38c9108-profile_image-150x150.jpeg",
+                "followers": {
+                  "totalCount": 28
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "star wars outlaws side content",
+                  "viewersCount": 8,
+                  "game": {
+                    "name": "Star Wars Outlaws"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "37105711",
+                "login": "rickymainia",
+                "displayName": "Rickymainia",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/acfca655-17d1-4a17-9717-87e69cc43b52-profile_image-150x150.jpeg",
+                "followers": {
+                  "totalCount": 74882
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": {
+                  "title": "Polaris Tag 2 🟢!halle 🟢  !events🟢!holy🟢!emp🟢!hator🟢!shakes🟢!opera 🟢!merch🟢 ᴰᵃᵘᵉʳʷᵉʳᵇᵉˢᵉⁿᵈᵘⁿᵍ",
+                  "viewersCount": 566,
+                  "game": {
+                    "name": "IRL"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "515082314",
+                "login": "rickyglaser",
+                "displayName": "RickyGlaser",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/22ff3106-9abd-4ef7-8931-a1d0bf77aa60-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 16889
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": {
+                  "title": "Food Delivery Simulator (IRL)",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "IRL"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1492485332",
+                "login": "rickyriccardo835",
+                "displayName": "rickyriccardo835",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/a4a4ea6f-d893-45af-931b-5c4b5bf1038a-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 5
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Bears vs Eagles gow",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Madden NFL 27"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "198208561",
+                "login": "rocky2613",
+                "displayName": "rocky2613",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/ed041651-a834-4318-a351-61106afc04d2-profile_image-150x150.jpeg",
+                "followers": {
+                  "totalCount": 465
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "rocky2613 chaud  GTA RP révolution très chaud",
+                  "viewersCount": 4,
+                  "game": {
+                    "name": "Grand Theft Auto V"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1322336715",
+                "login": "rickyevogaming",
+                "displayName": "RickyEvoGaming",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/e48254cb-0a33-4dd1-9d12-88050bcd4d55-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 43
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Arc Raiders",
+                  "viewersCount": 0,
+                  "game": {
+                    "name": "ARC Raiders"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "75346359",
+                "login": "rickysonone",
+                "displayName": "RickysOnOne",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/4bf70f1e-1af3-4208-854c-c27908ebc743-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 12564
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": {
+                  "title": "This is WAR!!!",
+                  "viewersCount": 37,
+                  "game": {
+                    "name": "Chivalry 2"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1089235871",
+                "login": "rickythevirgo",
+                "displayName": "rickythevirgo",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/8175682e-c2ff-4183-bd79-a851bf625d85-profile_image-150x150.jpeg",
+                "followers": {
+                  "totalCount": 35
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "prettyricky",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Just Chatting"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1520643346",
+                "login": "rickyrckt247",
+                "displayName": "rickyrckt247",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/aa82976c-593a-40d6-8263-7a5e78e4ed84-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 26
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "🚨 24/7 @RickyRackety STREAMS! 🚨",
+                  "viewersCount": 2,
+                  "game": {
+                    "name": "Always On"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "49815546",
+                "login": "rckykun",
+                "displayName": "RckyKun",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/e2a2b173-111c-4a32-be11-de025e44c3ff-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 2460
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Pokemon Chamoions Grind 21 November 12 Stunden Charity Stream",
+                  "viewersCount": 6,
+                  "game": {
+                    "name": "Pokémon Champions"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "782192651",
+                "login": "ricky21p",
+                "displayName": "ricky21p",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/dc2d2406-84d2-4d56-b716-a7e8c30485b2-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 5
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "FORZA HORIZON 5",
+                  "viewersCount": 2,
+                  "game": {
+                    "name": "Forza Horizon 5"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "207709525",
+                "login": "g42rick",
+                "displayName": "G42rick",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/9c5676fb-386e-462e-94d8-6a4088f4721f-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 228
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "ROAD TO GTA 6 - CAYO + KORTZ HEIST GRIND",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Grand Theft Auto V"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "121856786",
+                "login": "torocky",
+                "displayName": "ToRocky",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/ef29f3c1-d9a4-44fd-a0dd-61689fea0183-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 2830
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "[ITA/ENG] CLOVE LV 10 PRIMA DELLA FINE DELL'ATTO? 💜 !sub 💎 !prime 🗨️ !commands",
+                  "viewersCount": 12,
+                  "game": {
+                    "name": "VALORANT"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "778404741",
+                "login": "ttv_tricky1",
+                "displayName": "TTV_TRICKY1",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/e060703b-0d0f-4427-ae1e-a565ce546258-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 452
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "its a bird, its a plane, nope its a mexican!",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Fortnite"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "810860261",
+                "login": "rickikage",
+                "displayName": "RickiKage",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/c26a1f96-bd4d-4126-b750-530fbbbcd6e0-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 852
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Invocation et conseils 🍥💎🕺",
+                  "viewersCount": 6,
+                  "game": {
+                    "name": "Naruto Shippuden: Ultimate Ninja Blazing"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "188546166",
+                "login": "rickypox",
+                "displayName": "RickyPox",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/01a90271-bf5e-40b9-855c-a8f308011c7f-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 306
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "SOLO DUOS || TFT CLIMBING || REACTS?!?",
+                  "viewersCount": 3,
+                  "game": {
+                    "name": "Teamfight Tactics"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "129875183",
+                "login": "richy",
+                "displayName": "Richy",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/62e2f7f4-52c5-4c47-b25c-3be92ebbeaf2-profile_image-150x150.jpg",
+                "followers": {
+                  "totalCount": 3036
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": {
+                  "title": "🧑‍🌾LVL 218+ AND 85+Bars🧑‍🌾#1 Assault POV🧑‍🌾GOLD AK✅🧑‍🌾",
+                  "viewersCount": 15,
+                  "game": {
+                    "name": "WARDOGS"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "401968220",
+                "login": "rickystaythicky",
+                "displayName": "rickystaythicky",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/e0c971d1-6f39-4a74-b855-031efc2cc7e9-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 101
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "LEARNING NEW CHAMPS!!! NEW MAIN???!! ROAD TO GOLD !?!?!?",
+                  "viewersCount": 2,
+                  "game": {
+                    "name": "League of Legends"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "40728833",
+                "login": "onlyricky_x",
+                "displayName": "onlyRicky_x",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/66310ec0-5aad-4f6b-bf78-bd8dd17de2b6-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 1995
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Five Nights at Cap'n Clark's Ottoman Empire w/ @fluffybunnykanina @queentaigalily and @rainareadsyt | !discord !quote+ !standee",
+                  "viewersCount": 12,
+                  "game": {
+                    "name": "Escape the Backrooms"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "195165959",
+                "login": "lasttruebatman",
+                "displayName": "LasttrueBatman",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/33667f0e-83ee-4a11-907b-c5edb2e7fc32-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 1096
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Tatooine Nights: The Ballad of  Ricky Poddy !sr",
+                  "viewersCount": 3,
+                  "game": {
+                    "name": "STAR WARS: Galactic Racer"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "929176531",
+                "login": "rickyfromwish",
+                "displayName": "rickyfromwish",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/5a84ecff-3c9c-430f-ab83-0b39250fee66-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 16
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "1322961082",
+                "login": "rickylivefifa",
+                "displayName": "rickylivefifa",
+                "profileImageURL": "https://static-cdn.jtvnw.net/user-default-pictures-uv/215b7342-def9-11e9-9a66-784f43822e80-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 13
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "LosPollosHermanos",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "EA Sports FC 27"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "59440764",
+                "login": "trickymist",
+                "displayName": "TrickyMist",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/c71f7d61-497b-4c00-a7ef-bf8487f64ce8-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 525
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Just Drinking & Vibing 🍻😉",
+                  "viewersCount": 2,
+                  "game": {
+                    "name": "Karaoke Party"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "758893627",
+                "login": "iro_ricky",
+                "displayName": "いろりっきー",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/16e2fdfd-81c9-4e34-be50-225c8ff97763-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 1151
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "【ネタバレ注意＆禁止】CEG本社をﾌﾞｯｺﾜｧｽ！ @iro_ricky",
+                  "viewersCount": 16,
+                  "game": {
+                    "name": "SILENT HILL: townfall"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1130916589",
+                "login": "rickybmixin",
+                "displayName": "rickybmixin",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/b2c579d6-f832-4553-acb6-e80ef33717e4-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 440
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "1516220421",
+                "login": "rickyricksosiikk13",
+                "displayName": "rickyricksosiikk13",
+                "profileImageURL": "https://static-cdn.jtvnw.net/user-default-pictures-uv/215b7342-def9-11e9-9a66-784f43822e80-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 11
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "[STNR] NBK RickyRickk on call of duty bo7",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Call of Duty: Warzone"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "96604083",
+                "login": "ricoy",
+                "displayName": "Ricoy",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/ricoy-profile_image-3a5c89918e06fa42-150x150.png",
+                "followers": {
+                  "totalCount": 515218
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "89732318",
+                "login": "trickyjims",
+                "displayName": "trickyjims",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/31b363bd-852a-4f32-8078-b43fcc84d533-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 888
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "make that mulah DAWG | follow -> 5 pushups || PANDA ARMY !pandas",
+                  "viewersCount": 9,
+                  "game": {
+                    "name": "WARDOGS"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "437071684",
+                "login": "ricky_smoove",
+                "displayName": "Ricky_Smoove",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/cb069dc5-f0b2-44ef-9558-a76b98834e6a-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 967
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "The Never Ending Stream Day 20",
+                  "viewersCount": 5,
+                  "game": {
+                    "name": "Escape from Tarkov"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "791676209",
+                "login": "rickrillagaming",
+                "displayName": "RickRillaGaming",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/a113e365-1aba-4da3-8a69-fcb6e24e6d24-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 745
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "We Outsiddde! #CornbreadRp #TrapStoryRp | Vibe Squad |  New Server",
+                  "viewersCount": 0,
+                  "game": {
+                    "name": "Fortnite"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "109678881",
+                "login": "risky420",
+                "displayName": "risky420",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/0bb15512-0145-4e1d-80f7-57d7c89d3c9d-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 254
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "come say hi",
+                  "viewersCount": 2,
+                  "game": {
+                    "name": "Marvel's Spider-Man 2"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "474575453",
+                "login": "paterjudas",
+                "displayName": "PaterJudas",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/81a13f6f-ef2a-436a-895c-9a0943670803-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 3213
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "[Dead Famous] Rick Owens - Kleinkrimineller mit großen Ambitionen|  !server | !clip  | !dogs | !dc | !yt |",
+                  "viewersCount": 47,
+                  "game": {
+                    "name": "Grand Theft Auto V"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "72236274",
+                "login": "rickyuhh",
+                "displayName": "rickyuhh",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/1b09833c-0ac4-4ae5-8d26-2b435e9ff505-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 197
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": null
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

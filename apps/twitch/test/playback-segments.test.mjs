@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { getVodPlaybackSegments } from "../lib/playback-segments.ts";
+import { getVodPlaybackSegments } from "../lib/playback/segments.ts";
 
 test("Twitch metadata becomes provider-independent playback segments in one pass", () => {
   const video = { muteInfo: { mutedSegmentConnection: { nodes: [

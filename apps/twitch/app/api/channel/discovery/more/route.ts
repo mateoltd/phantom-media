@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { DiscoveryUpstreamError, fetchMoreChannelDiscovery } from "@/lib/twitch";
+import { UpstreamError } from "@/lib/errors";
+import { fetchMoreChannelDiscovery } from "@/lib/discovery/load";
+import { DiscoveryContinuationError } from "@/lib/discovery/continuation";
 
 export async function GET(request: NextRequest) {
   const cursor = request.nextUrl.searchParams.get("cursor") ?? "";
@@ -12,7 +14,8 @@ export async function GET(request: NextRequest) {
     const data = await fetchMoreChannelDiscovery(cursor, languages);
     return NextResponse.json(data, { headers: { "Cache-Control": "private, max-age=30" } });
   } catch (error) {
-    const upstream = error instanceof DiscoveryUpstreamError ? error : new DiscoveryUpstreamError(502, 15);
+    if (error instanceof DiscoveryContinuationError) return NextResponse.json({ error: error.message }, { status: 400, headers: { "Cache-Control": "no-store" } });
+    const upstream = error instanceof UpstreamError ? error : new UpstreamError("transport", 15);
     return NextResponse.json({ error: upstream.message }, {
       status: upstream.status, headers: { ...(upstream.retryAfter ? { "Retry-After": String(upstream.retryAfter) } : {}), "Cache-Control": "no-store" },
     });

@@ -1,19 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import type { RefObject } from "react";
 import Hls from "hls.js";
-import type { ResolvedQuality } from "@/lib/validation";
 import type { MediaState } from "./use-media";
 
 interface HlsOptions {
   videoRef: RefObject<HTMLVideoElement | null>;
   src: string;
-  qualities: ResolvedQuality[];
+  delivery: "hls" | "file";
+  audioOnly: boolean;
   isLive: boolean;
   dvrMode: boolean;
   startTime: number;
   media: MediaState;
+  onMediaError?: (kind: "network" | "media") => void;
+  onVideoSize?: (source: string, width: number, height: number) => void;
 }
 
 function pickInitialLevel(
@@ -37,7 +39,7 @@ function labelHlsLevel(level: Hls["levels"][number]) {
     attrs?.["STABLE-VARIANT-ID"] ??
     attrs?.["IVS-NAME"] ??
     attrs?.VIDEO ??
-    level.name;
+    attrs?.NAME ?? level.name;
 
   if (twitchName) {
     if (twitchName === "chunked") return "Source";
@@ -50,12 +52,17 @@ function labelHlsLevel(level: Hls["levels"][number]) {
     : "Quality";
 }
 
-export function useHls({ videoRef, src, qualities, isLive, dvrMode, startTime, media }: HlsOptions) {
+export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, startTime, media, onMediaError, onVideoSize }: HlsOptions) {
   const { syncDisplayedTime, setLoading, setSeekableStart, setSeekableEnd } = media;
+  const resumePlaying = useRef(false);
+  const resumeTime = useRef<number | undefined>(undefined);
+  const resumeSpeed = useRef(1);
   const hlsRef = useRef<Hls | null>(null);
   const [levels, setLevels] = useState<{ name: string; index: number }[]>([]);
+  const [error, setError] = useState("");
+  const reportError = useEffectEvent((kind: "network" | "media") => onMediaError?.(kind));
+  const reportVideoSize = useEffectEvent((source: string, width: number, height: number) => onVideoSize?.(source, width, height));
   const [currentLevel, setCurrentLevel] = useState(-1);
-  const debugVideo = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "1";
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -66,33 +73,45 @@ export function useHls({ videoRef, src, qualities, isLive, dvrMode, startTime, m
       video.load();
     };
 
+    let recoveries = 0;
+    let metadataLoaded = false;
+    const onVideoResize = () => {
+      if (metadataLoaded && !audioOnly && video.videoWidth > 0 && video.videoHeight > 0) {
+        reportVideoSize(src, video.videoWidth, video.videoHeight);
+      }
+    };
+    const capturePlayback = () => {
+      // Strict Mode can clean up before a source has loaded. That empty element
+      // must not replace a deep link or the previous source's playback state.
+      if (!metadataLoaded) return;
+      resumePlaying.current = !video.paused;
+      resumeTime.current = video.currentTime;
+      resumeSpeed.current = video.playbackRate;
+    };
+    const onNativeError = () => { setError("Media is unavailable"); setLoading(false); reportError(video.error?.code === 2 ? "network" : "media"); };
+    setError("");
+    video.addEventListener("error", onNativeError);
     const onLoadedMetadata = () => {
-      if (!isLive && startTime > 0) {
-        video.currentTime = startTime;
-        syncDisplayedTime(startTime);
+      metadataLoaded = true;
+      onVideoResize();
+      if ((!isLive || dvrMode) && (resumeTime.current ?? startTime) > 0) {
+        const position = resumeTime.current ?? startTime;
+        video.currentTime = position;
+        syncDisplayedTime(position);
       }
       setLoading(false);
+      video.playbackRate = resumeSpeed.current;
+      if (resumePlaying.current) void video.play().catch(() => {});
     };
-
-    if (debugVideo) {
-      console.info("[phantom-hls] player init", {
-        src,
-        isLive,
-        dvrMode,
-        hlsSupported: Hls.isSupported(),
-        nativeHls: video.canPlayType("application/vnd.apple.mpegurl"),
-        providedQualities: qualities.map((quality) => quality.name),
-      });
-    }
-
-    if (!Hls.isSupported()) {
-      if (debugVideo) {
-        console.info("[phantom-hls] using native hls fallback");
-      }
+    video.addEventListener("loadedmetadata", onLoadedMetadata);
+    video.addEventListener("resize", onVideoResize);
+    if (delivery === "file" || !Hls.isSupported()) {
       video.src = src;
-      video.addEventListener("loadedmetadata", onLoadedMetadata);
       return () => {
         video.removeEventListener("loadedmetadata", onLoadedMetadata);
+        video.removeEventListener("resize", onVideoResize);
+        video.removeEventListener("error", onNativeError);
+        capturePlayback();
         resetVideo();
       };
     }
@@ -122,6 +141,7 @@ export function useHls({ videoRef, src, qualities, isLive, dvrMode, startTime, m
 
       const filteredLevels = sourceLevels
         .map((level) => {
+          if (audioOnly || level.audioCodec && !level.videoCodec) return null;
           const index = hls.levels.indexOf(level);
           const levelIndex = index >= 0 ? index : sourceLevels.indexOf(level);
           if (level.codecs?.startsWith("hev1") && !hevcSupported) return null;
@@ -139,39 +159,23 @@ export function useHls({ videoRef, src, qualities, isLive, dvrMode, startTime, m
         hls.loadLevel = firstLevel;
         hls.autoLevelCapping = -1;
         setCurrentLevel(firstLevel);
-        if (debugVideo) {
-          console.info("[phantom-hls] selected initial level", {
-            level: firstLevel,
-            levelInfo: hls.levels[firstLevel],
-          });
-        }
+
       } else {
         setCurrentLevel(-1);
       }
     };
 
     hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
-      if (debugVideo) {
-        console.info("[phantom-hls] manifest parsed", {
-          isLive,
-          levels: data.levels.map((level) => ({
-            name: level.name,
-            width: level.width,
-            height: level.height,
-            frameRate: level.frameRate,
-            bitrate: level.bitrate,
-            url: level.url?.[0],
-          })),
-        });
-      }
+
       syncLevels(data.levels.length > 0 ? data.levels : hls.levels);
       if (isLive || dvrMode) {
         // An archive is opened to catch up, so it starts from the beginning. Only the plain live stream starts at the edge.
         hls.startLoad(dvrMode ? startTime : startTime > 0 ? startTime : -1);
       }
-      if (!isLive && startTime > 0) {
-        video.currentTime = startTime;
-        syncDisplayedTime(startTime);
+      if ((!isLive || dvrMode) && (resumeTime.current ?? startTime) > 0) {
+        const position = resumeTime.current ?? startTime;
+        video.currentTime = position;
+        syncDisplayedTime(position);
       }
       setLoading(false);
     });
@@ -187,16 +191,7 @@ export function useHls({ videoRef, src, qualities, isLive, dvrMode, startTime, m
         const start = first.start;
         const end = last.start + last.duration;
         if (Number.isFinite(start) && Number.isFinite(end) && end > start) {
-          if (debugVideo) {
-            console.info("[phantom-hls] live window", {
-              isLive,
-              level: data.level,
-              fragments: data.details.fragments.length,
-              start,
-              end,
-              duration: end - start,
-            });
-          }
+
           setSeekableStart(start);
           setSeekableEnd(end);
         }
@@ -204,10 +199,9 @@ export function useHls({ videoRef, src, qualities, isLive, dvrMode, startTime, m
     });
 
     hls.on(Hls.Events.ERROR, (_, data) => {
-      if (debugVideo) {
-        console.warn("[phantom-hls] error", data);
-      }
+
       if (!data.fatal) return;
+      if (recoveries++ >= 2) { setError("Media is unavailable"); setLoading(false); reportError(data.type === Hls.ErrorTypes.NETWORK_ERROR ? "network" : "media"); hls.destroy(); hlsRef.current = null; return; }
       if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
         hls.startLoad();
       } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
@@ -222,11 +216,15 @@ export function useHls({ videoRef, src, qualities, isLive, dvrMode, startTime, m
     hls.attachMedia(video);
 
     return () => {
+      video.removeEventListener("loadedmetadata", onLoadedMetadata);
+      video.removeEventListener("resize", onVideoResize);
+      video.removeEventListener("error", onNativeError);
+      capturePlayback();
       hls.destroy();
       hlsRef.current = null;
       resetVideo();
     };
-  }, [videoRef, debugVideo, dvrMode, isLive, qualities, src, startTime, syncDisplayedTime, setLoading, setSeekableStart, setSeekableEnd]);
+  }, [videoRef, dvrMode, isLive, delivery, audioOnly, src, startTime, syncDisplayedTime, setLoading, setSeekableStart, setSeekableEnd]);
 
   const changeQuality = useCallback((level: number) => {
     if (hlsRef.current) {
@@ -246,7 +244,7 @@ export function useHls({ videoRef, src, qualities, isLive, dvrMode, startTime, m
     }
   }, [videoRef, dvrMode]);
 
-  return { levels, currentLevel, changeQuality };
+  return { levels, currentLevel, changeQuality, error };
 }
 
 export type HlsState = ReturnType<typeof useHls>;

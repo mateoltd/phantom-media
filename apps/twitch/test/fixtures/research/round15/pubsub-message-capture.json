@@ -1,0 +1,20 @@
+{
+  "streamId": "1000000066",
+  "durationSec": 90.0,
+  "messages": [],
+  "keepalive": [
+    {
+      "t": 0.0,
+      "serverPing->psn": true
+    },
+    {
+      "t": 50.0,
+      "serverPing->psn": true
+    },
+    {
+      "t": 55.0,
+      "clientPing": true
+    }
+  ],
+  "messageCaptured": false
+}

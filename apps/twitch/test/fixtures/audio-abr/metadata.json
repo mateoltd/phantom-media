@@ -1,0 +1,15 @@
+{
+  "data": {
+    "video": {
+      "id": "2895228400",
+      "owner": {
+        "login": "miraieta"
+      },
+      "title": "Production ABR regression",
+      "createdAt": "2026-10-08T16:05:19Z",
+      "broadcastType": "ARCHIVE",
+      "lengthSeconds": 16342,
+      "seekPreviewsURL": "https://fixture.cloudfront.net/miraieta-2895228400/storyboards/info.json"
+    }
+  }
+}

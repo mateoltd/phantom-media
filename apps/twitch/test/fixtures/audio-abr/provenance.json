@@ -1,0 +1,11 @@
+{
+  "vodId": "2895228400",
+  "capturedAt": "2026-10-09T17:07:23.437Z",
+  "source": "Owned PlaybackAccessToken and VideoMetadata reads for the reported VOD",
+  "originalMasterSha256": "799bf1708e40bb91bfff03b44df02420cf90669a25dce458105db7e3c69192e8",
+  "transformations": [
+    "Signed CDN URIs replaced with deterministic fixture locations preserving track path identity",
+    "Unrelated master headers removed",
+    "Metadata title and locator replaced; no tokens/signatures retained"
+  ]
+}

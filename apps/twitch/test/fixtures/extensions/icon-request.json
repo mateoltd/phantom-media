@@ -1,0 +1,31 @@
+{
+  "operationName": "ExtensionCatalog",
+  "query": "query ExtensionCatalog { extensions(first:1) { edges { node { id name authorName summary iconURLs { square100 } } } } }",
+  "variables": {},
+  "response": {
+    "data": {
+      "extensions": {
+        "edges": [
+          {
+            "node": {
+              "id": "d4uvtfdr04uq6raoenvj7m86gdk16v:2.4.6",
+              "name": "Prime Gaming Benefits Reminder",
+              "authorName": "Prime Gaming",
+              "summary": "Reminds Prime Gaming members to claim their channel subscription and other Prime benefits",
+              "iconURLs": {
+                "square100": "https://extensions-discovery-images.twitch.tv/d4uvtfdr04uq6raoenvj7m86gdk16v/2.2.41/logo9ddb9aba-c647-4e34-900e-7b488d158a00"
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "provenance": "Independent single-entry anonymous capture, 2026-10-10; no investigation code consumed.",
+  "asset": {
+    "status": 200,
+    "contentType": "image/png",
+    "bytes": 950,
+    "sha256": "a52a125d9a1647a013d5f79d7468fa36b6d9a74a71c2d5f645c86b75f3595b4a"
+  }
+}

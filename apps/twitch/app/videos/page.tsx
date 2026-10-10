@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { StructuredData } from "@/components/structured-data";
-import { FEATURED_CHANNELS } from "@/lib/featured-channels";
+import { FEATURED_CHANNELS } from "@/lib/discovery/featured";
 import { buildMetadata, getBaseUrl, siteConfig } from "@/lib/seo";
 
 export const metadata = buildMetadata({

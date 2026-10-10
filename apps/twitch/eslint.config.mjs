@@ -4,9 +4,14 @@ const config = [
   { ignores: ["next-env.d.ts", ".wrangler/**"] },
   ...nextConfig,
   {
-    // Imported Twitch player and chat initialize browser state in effects.
-    // Their event and cleanup flow is retained while the UI is ported.
+    // Browser hooks synchronize media and external resources in effects.
     rules: { "react-hooks/set-state-in-effect": "off" },
+  },
+  {
+    files: ["components/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: ["@/lib/twitch/*", "@/lib/playback/resolve", "@/lib/playback/current-archive", "@/lib/playback/clips", "@/lib/playback/attributes", "@/lib/media/proxy", "@/lib/media/presentation", "@/lib/media/manifest", "@/lib/media/destination"] }],
+    },
   },
 ];
 

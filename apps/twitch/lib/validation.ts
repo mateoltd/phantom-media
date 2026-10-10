@@ -1,20 +1,3 @@
-export interface ResolvedQuality {
-  key: string;
-  name: string;
-  resolution: string;
-  frameRate: number;
-  bandwidth: number;
-  codec: string;
-  playlistUrl: string;
-}
-
-export interface VodResolveResult {
-  vodId: string;
-  channel: string;
-  broadcastType: string;
-  qualities: ResolvedQuality[];
-}
-
 export function extractVodId(input: string): string | null {
   const trimmed = input.trim();
 
@@ -43,20 +26,20 @@ export function extractChannelName(input: string): string | null {
   return null;
 }
 
-export function parseStartTime(value: string | null): number {
-  if (!value) return 0;
+export function parseStartTime(value: unknown): number | undefined {
+  if (typeof value !== "string" || !value.trim()) return undefined;
 
   const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+  if (!Number.isFinite(parsed) || parsed < 0) return undefined;
 
   return Math.floor(parsed);
 }
 
-export function buildVodPath(vodId: string, startTime = 0): string {
+export function buildVodPath(vodId: string, startTime?: number): string {
   const params = new URLSearchParams();
-  const normalizedTime = parseStartTime(String(startTime || ""));
+  const normalizedTime = parseStartTime(startTime === undefined ? null : String(startTime));
 
-  if (normalizedTime > 0) {
+  if (normalizedTime !== undefined) {
     params.set("t", normalizedTime.toString());
   }
 
@@ -68,11 +51,15 @@ export function buildChannelPath(channel: string): string {
   return `/${encodeURIComponent(channel.toLowerCase())}`;
 }
 
-export function isCloudFrontUrl(url: string): boolean {
+export function extractClipSlug(input: string): string | null {
+  const value = input.trim();
+  const local = /^\/clips\/([A-Za-z0-9_-]{1,150})(?:[?#].*)?$/.exec(value);
+  if (local) return local[1];
   try {
-    const parsed = new URL(url);
-    return parsed.hostname.endsWith(".cloudfront.net");
-  } catch {
-    return false;
-  }
+    const url = new URL(value);
+    if (!/^https?:$/.test(url.protocol)) return null;
+    const parts = url.pathname.split("/").filter(Boolean);
+    const slug = url.hostname === "clips.twitch.tv" ? parts[0] : /^(www\.)?twitch\.tv$/.test(url.hostname) && parts[1] === "clip" ? parts[2] : undefined;
+    return slug && /^[A-Za-z0-9_-]{1,150}$/.test(slug) ? slug : null;
+  } catch { return null; }
 }

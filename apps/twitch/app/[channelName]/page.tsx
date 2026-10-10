@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { DebugVideoScript } from "@/components/DebugVideoScript";
-import { VodApp } from "@/components/VodApp";
-import { VodLoading } from "@/components/VodLoading";
-import { ChannelContent } from "@/components/ChannelContent";
+import { WatchPage } from "@/components/watch/WatchPage";
+import { VodLoading } from "@/components/watch/VodLoading";
+import { ChannelView } from "@/components/watch/ChannelView";
 import { StructuredData } from "@/components/structured-data";
 import {
   buildChannelDescription,
@@ -12,7 +12,9 @@ import {
   loadChannelPage,
   normalizeChannelName,
 } from "@/lib/channel-page";
+import { DEFAULT_VIEW, viewSlice } from "@/lib/catalog/slices";
 import { isDebugEnabled } from "@/lib/debug";
+import { seedCatalog } from "@/lib/twitch/catalogs";
 import { buildMetadata, getBaseUrl, siteConfig } from "@/lib/seo";
 
 type ChannelPageProps = {
@@ -87,41 +89,50 @@ export default async function ChannelPage({ params }: ChannelPageProps) {
   const login = normalizeChannelName(channelName);
   const debugEnabled = isDebugEnabled();
 
-  // Only a real miss is a 404. A Twitch outage renders the player without the
-  // server block instead of telling crawlers the page is gone.
   if (!isValidChannelName(login)) notFound();
 
   const result = await loadChannelPage(login);
   if (result.status === "missing") notFound();
 
+  // Only a real miss is a 404. During a Twitch outage the browser asks again
+  // itself, instead of crawlers being told the page is gone.
+  if (result.status === "error") {
+    return (
+      <>
+        {debugEnabled && <DebugVideoScript />}
+        <Suspense fallback={<VodLoading />}>
+          <WatchPage />
+        </Suspense>
+      </>
+    );
+  }
+
+  const { channel } = result;
+  // Started here and streamed into the page, so the header never waits for the videos.
+  const videos = seedCatalog(viewSlice({ kind: "channel", anchor: channel.login }, DEFAULT_VIEW));
+
   return (
     <>
       {debugEnabled && <DebugVideoScript />}
-      <Suspense fallback={<VodLoading />}>
-        <VodApp />
-      </Suspense>
-      {result.status === "ok" ? (
-        <>
-          <StructuredData
-            data={{
-              "@context": "https://schema.org",
-              "@type": "ProfilePage",
-              name: `${siteConfig.name}: ${result.channel.displayName}`,
-              url: new URL(`/${result.channel.login}`, getBaseUrl()).toString(),
-              mainEntity: {
-                "@type": "Person",
-                name: result.channel.displayName,
-                alternateName: `@${result.channel.login}`,
-                description: result.channel.description || undefined,
-                ...(result.channel.profileImageURL
-                  ? { image: result.channel.profileImageURL }
-                  : {}),
-              },
-            }}
-          />
-          <ChannelContent channel={result.channel} />
-        </>
-      ) : null}
+      <StructuredData
+        data={{
+          "@context": "https://schema.org",
+          "@type": "ProfilePage",
+          name: `${siteConfig.name}: ${channel.displayName}`,
+          url: new URL(`/${channel.login}`, getBaseUrl()).toString(),
+          mainEntity: {
+            "@type": "Person",
+            name: channel.displayName,
+            alternateName: `@${channel.login}`,
+            description: channel.description || undefined,
+            ...(channel.profileImageURL ? { image: channel.profileImageURL } : {}),
+          },
+        }}
+      />
+      <main className="workspace-canvas twitch-main relative">
+        {/* Live state is cached for crawlers' sake; a copy older than a moment is rechecked in the browser. */}
+        <ChannelView key={channel.login} channel={channel} revalidate={result.age > 30_000} videos={videos} />
+      </main>
     </>
   );
 }

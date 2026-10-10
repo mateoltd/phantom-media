@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { FEATURED_CHANNELS } from "../lib/featured-channels.ts";
+import { FEATURED_CHANNELS } from "../lib/discovery/featured.ts";
 import { isValidChannelName } from "../lib/channel-page.ts";
 
 /**

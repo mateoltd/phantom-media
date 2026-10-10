@@ -1,16 +1,21 @@
 # Phantom Twitch
 
-**[Watch on notwitch.tv](https://notwitch.tv)** — a free, open-source, ad-free
+**[Watch on notwitch.tv](https://notwitch.tv)**: a free, open-source, ad-free
 Twitch player for live streams and VODs. Search a channel or paste a Twitch
-video link; no account, extension, or installation is required.
+video or clip link; no account, extension, or installation is required.
 
 ## Features
 
 - Ad-free live streams and VOD playback.
 - Subscriber-only Twitch VODs when their source playlists are available, without a Twitch login.
 - Live rewind and seeking through the current broadcast’s archive while the channel is still live, when an archive is available.
-- Quality selection, playback speed, keyboard shortcuts, picture-in-picture, and VOD downloads.
-- Live chat and synchronized VOD chat replay.
+- Quality selection, playback speed, keyboard shortcuts and picture-in-picture.
+- Native clip playback and continuous MP4 downloads; audio-only archive listening.
+- Bounded TS/MP4 downloads with cancellation; growing archives export a captured window.
+- Live chat and offset-based VOD replay with badges, colors and emotes.
+- Official chapters, historical storyboard browsing and on-demand sampled chat search/reactions.
+- Channel/category video and clip libraries, one bounded request per selected view.
+- Extension catalog and bounded public static-asset collection, without panel execution.
 - Browser-local history, resume positions, and playback preferences.
 - No app analytics, tracking cookies, or Twitch account requirement.
 
@@ -34,6 +39,12 @@ pnpm --filter @phantom/twitch dev
 
 The app runs on the default Next.js development port. See the root README for
 workspace checks and design package boundaries.
+
+Modules now follow their owners: upstream queries in `lib/twitch/`, resolution
+in `lib/playback/`, and matching watch/player/chat/download/history/discovery
+component directories. See [architecture](docs/architecture.md),
+[implementation/validation record](docs/refactor.md), [upstream source policy](docs/source-policy.md) and
+[fixture provenance](test/fixtures/research/README.md).
 
 For a Cloudflare Worker deployment, build with the canonical URL and provide
 the custom domain to Wrangler:
@@ -70,3 +81,18 @@ chat as separate sources. Replay follows pauses and seeks, fetches overlapping
 timestamp windows on demand, and deduplicates messages by ID. Live chat uses a
 read-only Twitch IRC connection with reconnect and keepalive handling; it does
 not send chat messages. Chat availability depends on the source video/channel.
+
+Catalogs and replay expose partial coverage: Twitch cursors are unavailable, so a
+view is one page reached by sort, type, period or language, and crowded replay seconds can contain gaps.
+Muted windows use silent fallback; no missing-audio recovery is claimed.
+Video adaptation excludes audio renditions; audio-only listening uses its own media
+playlist. Audio downloads retain the actual TS container; MP3/M4A conversion and ASR are
+not included. Blob-only browsers are limited to 256 MB per download; direct file
+saving supports larger transfers.
+
+Use the category icon in the header for [category browsing](/categories).
+Extensions open in an attached navbar panel with local search and extension
+details. Extension exports include collected
+files as base64 JSON plus coverage/errors; package size/depth limits may exclude
+files. PubSub, animated hover previews, activity lights and unpinned operation
+families remain outside this release.

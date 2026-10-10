@@ -1,6 +1,8 @@
+import { errorResponse } from "@/lib/errors";
+import { readLiveManifest } from "@/lib/media/manifest";
 import { NextRequest } from "next/server";
-import { rewriteLiveMasterPlaylist } from "@/lib/playlist";
-import { fetchLivePlaybackUrl } from "@/lib/twitch";
+import { rewriteLiveMasterPlaylist } from "@/lib/media/hls";
+import { getPlaybackLocation } from "@/lib/twitch/playback";
 
 function normalizeChannel(value: string | null): string {
   return (value ?? "").trim().replace(/^@/, "").toLowerCase();
@@ -14,14 +16,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const playlistUrl = await fetchLivePlaybackUrl(channel);
-    const upstream = await fetch(playlistUrl, { cache: "no-store" });
-
-    if (!upstream.ok) {
-      return new Response("Live stream unavailable", { status: upstream.status });
-    }
-
-    const playlist = rewriteLiveMasterPlaylist(await upstream.text(), playlistUrl);
+    const playlistUrl = (await getPlaybackLocation("live", channel, request.signal)).url;
+    const manifest = await readLiveManifest(playlistUrl, request.signal);
+    const playlist = rewriteLiveMasterPlaylist(manifest.text, manifest.url);
 
     return new Response(playlist, {
       headers: {
@@ -29,7 +26,7 @@ export async function GET(request: NextRequest) {
         "Cache-Control": "no-store",
       },
     });
-  } catch {
-    return new Response("Live stream unavailable", { status: 404 });
+  } catch (error) {
+    return errorResponse(error);
   }
 }

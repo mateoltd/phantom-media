@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
-import { afterEach, mock, test } from "node:test";
-import { DiscoveryUpstreamError, fetchMoreChannelDiscovery, fetchChannelDiscovery } from "../lib/twitch.ts";
-import { buildDiscoveryProfile, rankDiscovery, discoveryHeading, historyPreview, recentChannelLogins } from "../lib/discovery.ts";
+import { afterEach, beforeEach, mock, test } from "node:test";
+import { directoryPage } from "../lib/twitch/discovery.ts";
+import { UpstreamError } from "../lib/errors.ts";
+import { fetchMoreChannelDiscovery, fetchChannelDiscovery } from "../lib/discovery/load.ts";
+import { buildDiscoveryProfile, rankDiscovery, historyPreview, recentChannelLogins } from "../lib/discovery/ranking.ts";
+import { createDiscoveryContinuation, readDiscoveryContinuation, DiscoveryContinuationError } from "../lib/discovery/continuation.ts";
 
-afterEach(() => mock.restoreAll());
+let clockStep = 0;
+const origin = Date.now();
+beforeEach(() => mock.method(Date, "now", () => origin + clockStep * 600000));
+afterEach(() => { mock.restoreAll(); clockStep++; });
 
 const channel = (login) => ({ id: login, login, displayName: login, stream: null });
 
@@ -52,13 +58,12 @@ test("offline team suggestions retain their truthful connection reason", () => {
   const [result] = rankDiscovery([{ channel: channel("teammate"), source: "team", seed: "alpha" }], profile);
   assert.equal(result.stream, null);
   assert.equal(result.recommendation.reason, "On the same Twitch team as alpha");
-  assert.equal(discoveryHeading("SIMILAR_SECTION", "alpha"), "Suggested for alpha");
 });
 
 test("API combines live directory, verified team and offline archive candidates without false viewer claims", async () => {
   const calls = [];
   mock.method(globalThis, "fetch", async (_url, init) => {
-    const { query, variables } = JSON.parse(init.body); calls.push({ query, variables });
+    const { query, variables = {} } = JSON.parse(init.body); calls.push({ query, variables });
     let data;
     if (query.includes("query RecentChannels")) data = { users: [live("integration", "Chess", "ES")] };
     else if (query.includes("query DiscoveryDirectory")) data = { streams: connection([live("discovery", "Music", "ES")]) };
@@ -73,7 +78,7 @@ test("API combines live directory, verified team and offline archive candidates 
   assert.ok(all.some((item) => item.login === "archiveowner"));
   assert.ok(!all.some((item) => item.login === "unrelated"));
   assert.equal(new Set(all.map((item) => item.login)).size, all.length);
-  assert.deepEqual(calls.find((call) => call.query.includes("query DiscoveryDirectory")).variables.languages, ["ES"]);
+  assert.equal(calls.find((call) => call.query.includes("query DiscoveryDirectory")).variables.languages, undefined);
   assert.ok(calls.every((call) => !call.query.includes("first: 60")));
   const count = calls.length;
   await fetchChannelDiscovery(["integration"]);
@@ -122,40 +127,34 @@ test("a broad category does not crowd verified channel connections out of the fi
   assert.ok(first.filter((item) => item.stream.game.name === "Just Chatting").length <= 2);
 });
 
-test("continuations use a single cursor lookup, coalesce concurrent callers, deduplicate and stop at the end", async () => {
+test("raw upstream cursors and malformed app plans are rejected without a request", async () => {
+  let calls = 0;
+  mock.method(globalThis, "fetch", async () => { calls += 1; throw new Error("must not request Twitch"); });
+  for (const cursor of ["upstream-page-two", "plan_unknown"]) {
+    await assert.rejects(fetchMoreChannelDiscovery(cursor, ["DE"]),
+      (error) => error instanceof DiscoveryContinuationError);
+  }
+  assert.equal(calls, 0);
+});
+
+test("initial directory requests coalesce and contain no upstream cursor", async () => {
   let calls = 0;
   mock.method(globalThis, "fetch", async (_url, init) => {
     calls += 1;
-    const { query, variables } = JSON.parse(init.body);
-    assert.ok(query.includes("first: 30, after: $after"));
-    assert.equal(variables.after, "page-two-test");
-    assert.deepEqual(variables.languages, ["DE"]);
-    return Response.json({ data: { streams: { edges: [
-      { cursor: "end", node: { broadcaster: live("german", "Chess", "DE") } },
-      { cursor: "end", node: { broadcaster: live("german", "Chess", "DE") } },
-    ], pageInfo: { hasNextPage: false } } } });
+    const { query, variables = {} } = JSON.parse(init.body);
+    assert.ok(!query.includes("after"));
+    assert.ok(!("after" in variables));
+    return Response.json({ data: { streams: connection([live("german", "Chess", "DE")]) } });
   });
-  const pages = await Promise.all([fetchMoreChannelDiscovery("page-two-test", ["DE"]), fetchMoreChannelDiscovery("page-two-test", ["DE"])]);
+  const pages = await Promise.all([directoryPage(["DE"]), directoryPage(["DE"])]);
   assert.equal(calls, 1);
-  assert.equal(pages[0].channels.length, 1);
-  assert.equal(pages[0].next, undefined);
-  assert.match(pages[0].channels[0].recommendation.reason, /German/);
+  assert.deepEqual(pages[0], pages[1]);
 });
 
-test("continuations carry the final Twitch cursor forward and reject a nonadvancing cursor", async () => {
-  mock.method(globalThis, "fetch", async (_url, init) => {
-    const { variables } = JSON.parse(init.body);
-    return Response.json({ data: { streams: { edges: [{ cursor: "cursor-next", node: { broadcaster: live("nextchannel") } }], pageInfo: { hasNextPage: true } } } });
-  });
-  const page = await fetchMoreChannelDiscovery("cursor-first", ["IT"]);
-  assert.deepEqual(page.next, { cursor: "cursor-next", languages: ["IT"] });
-  assert.equal((await fetchMoreChannelDiscovery("cursor-next", ["IT"])).next, undefined);
-});
-
-test("a failed continuation returns a retryable upstream error without retrying Twitch", async () => {
+test("a failed initial directory lookup does not retry Twitch", async () => {
   let calls = 0;
   mock.method(globalThis, "fetch", async () => { calls += 1; return new Response(null, { status: 503 }); });
-  await assert.rejects(fetchMoreChannelDiscovery("failed-page", ["PT"]), (error) => error instanceof DiscoveryUpstreamError && error.status === 502 && error.retryAfter === 15);
+  await assert.rejects(directoryPage(["PT"]), (error) => error instanceof UpstreamError && error.status === 502 && error.retryAfter === 15);
   assert.equal(calls, 1);
 });
 
@@ -173,7 +172,8 @@ test("source plans expand an unused recent category with one query and end witho
   const initial = await fetchChannelDiscovery(["expansionseed"], [{ channel: "expansionseed", vodId: "987654", timestamp: Date.now() }]);
   assert.match(initial.next.cursor, /^plan_/);
   const previous = requests;
-  const page = await fetchMoreChannelDiscovery(initial.next.cursor, initial.next.languages);
+  const otherIsolate = await import(`../lib/discovery/load.ts?isolate=${clockStep}`);
+  const page = await otherIsolate.fetchMoreChannelDiscovery(initial.next.cursor, initial.next.languages);
   assert.equal(requests, previous + 1);
   assert.equal(page.channels[0].login, "newmusic");
   assert.equal(page.next, undefined);
@@ -181,31 +181,63 @@ test("source plans expand an unused recent category with one query and end witho
   assert.equal(requests, previous + 1, "repeating the same source uses the shared cache");
 });
 
+test("portable category plans preserve Unicode, bounded axes and expiry across continuation", () => {
+  const initial = createDiscoveryContinuation(["Pokémon", "将棋", "Minecraft"], ["ja"]);
+  const plan = readDiscoveryContinuation(initial.cursor, ["JA"]);
+  assert.deepEqual(plan.games, ["Pokémon", "将棋", "Minecraft"]);
+  const next = createDiscoveryContinuation(plan.games.slice(1), plan.languages, plan.expires);
+  assert.deepEqual(readDiscoveryContinuation(next.cursor, ["JA"]).games, ["将棋", "Minecraft"]);
+  assert.equal(readDiscoveryContinuation(next.cursor, ["JA"]).expires, plan.expires);
+  assert.throws(() => readDiscoveryContinuation(initial.cursor, ["EN"]), DiscoveryContinuationError);
+  const now = Date.now();
+  mock.method(Date, "now", () => now + 10 * 60_000);
+  assert.throws(() => readDiscoveryContinuation(initial.cursor, ["JA"]), DiscoveryContinuationError);
+});
+
+test("untrusted app continuations cannot enlarge the plan or send invalid game inputs", async () => {
+  let calls = 0;
+  mock.method(globalThis, "fetch", async () => { calls++; throw new Error("must not request Twitch"); });
+  const encode = value => "plan_" + Buffer.from(JSON.stringify(value)).toString("base64url");
+  const valid = { games: ["Chess"], languages: ["EN"], expires: Date.now() + 60_000 };
+  for (const value of [
+    { ...valid, games: Array(7).fill("Chess") },
+    { ...valid, games: ["x".repeat(101)] },
+    { ...valid, games: ["Chess\nquery"] },
+    { ...valid, languages: ["en"] },
+    { ...valid, expires: Date.now() + 11 * 60_000 },
+    { ...valid, games: [] },
+  ]) await assert.rejects(fetchMoreChannelDiscovery(encode(value), ["EN"]), DiscoveryContinuationError);
+  assert.equal(calls, 0);
+  const long = createDiscoveryContinuation(Array.from({ length: 6 }, (_, index) => "将".repeat(99) + index), []);
+  assert.ok(long.cursor.length <= 2048);
+  assert.ok(readDiscoveryContinuation(long.cursor, []).games.length <= 6);
+});
+
 test("integrity restrictions are terminal rather than automatically retried", async () => {
   let calls = 0;
   mock.method(globalThis, "fetch", async () => { calls += 1; return Response.json({ errors: [{ message: "failed integrity check", extensions: { code: "IntegrityCheckFailed" } }] }); });
-  await assert.rejects(fetchMoreChannelDiscovery("integrity-test", ["KO"]), (error) => error.status === 403 && error.retryAfter === 0);
+  await assert.rejects(directoryPage(["KO"]), (error) => error.status === 403 && error.retryAfter === 0);
   assert.equal(calls, 1);
 });
 
-test("429 cooldown prevents repeated scroll calls from sending more Twitch requests", async () => {
+test("429 cooldown prevents repeated directory calls from sending more Twitch requests", async () => {
   let calls = 0;
-  const now = Date.now();
+  const now = Date.now() + 301000;
   mock.method(Date, "now", () => now);
   mock.method(globalThis, "fetch", async () => { calls += 1; return new Response(null, { status: 429, headers: { "Retry-After": "45" } }); });
-  await assert.rejects(fetchMoreChannelDiscovery("limited-page", ["FR"]), (error) => error.status === 429 && error.retryAfter === 45);
-  await assert.rejects(fetchMoreChannelDiscovery("another-page", ["FR"]), (error) => error.status === 429);
+  await assert.rejects(directoryPage(["FR"]), (error) => error.status === 429 && error.retryAfter === 45);
+  await assert.rejects(directoryPage(["FR"]), (error) => error.status === 429);
   assert.equal(calls, 1);
   mock.method(Date, "now", () => now + 46000);
   mock.method(globalThis, "fetch", async () => { calls += 1; return Response.json({ data: { streams: { edges: [], pageInfo: { hasNextPage: false } } } }); });
-  assert.deepEqual(await fetchMoreChannelDiscovery("after-cooldown", ["FR"]), { channels: [] });
+  assert.deepEqual(await directoryPage(["FR"]), { streams: { edges: [], pageInfo: { hasNextPage: false } } });
   assert.equal(calls, 2);
 });
 
 
 test("initial discovery prioritizes 429 when every discovery source fails", async () => {
   // Advance beyond the cooldown exercised by the previous test.
-  const now = Date.now() + 120000;
+  const now = Date.now() + 600000;
   mock.method(Date, "now", () => now);
   mock.method(globalThis, "fetch", async (_url, init) => {
     const { query } = JSON.parse(init.body);
@@ -213,5 +245,5 @@ test("initial discovery prioritizes 429 when every discovery source fails", asyn
     if (query.includes("query DiscoveryDirectory")) return new Response(null, { status: 429, headers: { "Retry-After": "45" } });
     return new Response(null, { status: 503 });
   });
-  await assert.rejects(fetchChannelDiscovery(["initiallimited"]), (error) => error instanceof DiscoveryUpstreamError && error.status === 429 && error.retryAfter === 45);
+  await assert.rejects(fetchChannelDiscovery(["initiallimited"]), (error) => error instanceof UpstreamError && error.status === 429 && error.retryAfter === 45);
 });

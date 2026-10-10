@@ -1,12 +1,16 @@
-import { cacheGet, cacheSet } from "./cache.ts";
+import { UpstreamError } from "./errors.ts";
+import { ResourceCache } from "./cache.ts";
 import { isReservedChannelName } from "./seo.ts";
-import { fetchChannel } from "./twitch.ts";
-import type { TwitchChannelData } from "./twitch.ts";
+import { fetchChannelBasics } from "./twitch/channels.ts";
+import type { TwitchChannelData } from "./contracts.ts";
 
 const CHANNEL_NAME_PATTERN = /^[a-z0-9_]{3,25}$/;
 
+const channels = new ResourceCache<{ channel: TwitchChannelData; observedAt: number }>();
+
 export type ChannelPageResult =
-  | { status: "ok"; channel: TwitchChannelData }
+  /** `age` is how long ago Twitch was asked, in milliseconds. Live state older than a moment is worth rechecking. */
+  | { status: "ok"; channel: TwitchChannelData; age: number }
   /** The channel does not exist, or the path is not a channel at all. */
   | { status: "missing" }
   /** Twitch was unreachable. The channel may well exist. */
@@ -31,21 +35,15 @@ export async function loadChannelPage(login: string): Promise<ChannelPageResult>
   if (!isValidChannelName(login)) return { status: "missing" };
 
   const key = `channel-page:${login}`;
-  const cached = cacheGet<TwitchChannelData>(key);
-
-  if (cached) return { status: "ok", channel: cached };
-
   try {
-    const channel = await fetchChannel(login);
-    cacheSet(key, channel, channel.stream ? 60_000 : 6 * 60_000);
+    const { channel, observedAt } = await channels.load(key, async () => ({ channel: await fetchChannelBasics(login), observedAt: Date.now() }),
+      value => value.channel.stream ? 60_000 : 6 * 60_000);
 
-    return { status: "ok", channel };
+    return { status: "ok", channel, age: Date.now() - observedAt };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-
     // Only a genuine miss is a 404. Everything else must not be reported as
     // "gone" or a transient Twitch outage would prune real pages.
-    if (message.includes("not found")) return { status: "missing" };
+    if (error instanceof UpstreamError && error.kind === "not-found") return { status: "missing" };
 
     return { status: "error" };
   }

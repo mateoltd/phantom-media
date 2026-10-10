@@ -11,8 +11,18 @@ import type { Timeline } from "./use-timeline";
 import type { Display } from "./use-display";
 import { SPEEDS } from "./use-controls";
 import type { Controls } from "./use-controls";
+import { useStoryboardPreview } from "@/components/previews/use-storyboard-preview";
+
+export interface SourceSelection {
+  options: readonly { value: string; label: string }[];
+  value: string;
+  onChange: (value: string) => void;
+}
 
 interface ChromeProps {
+  audioOnly: boolean;
+  onAudioOnlyChange?: (enabled: boolean) => void;
+  sourceSelection?: SourceSelection;
   videoRef: RefObject<HTMLVideoElement | null>;
   title: string;
   isLive: boolean;
@@ -20,6 +30,7 @@ interface ChromeProps {
   onChatToggle?: () => void;
   segments: readonly PlaybackSegment[];
   segmentAppearances?: SegmentAppearances;
+  storyboardUrl?: string;
   media: MediaState;
   hls: HlsState;
   timeline: Timeline;
@@ -29,18 +40,19 @@ interface ChromeProps {
 
 const FILLED_ICON = { weight: "fill" as const };
 
-export function Chrome({ videoRef, title, isLive, chatOpen, onChatToggle, segments, segmentAppearances,
+export function Chrome({ videoRef, title, isLive, chatOpen, onChatToggle, segments, segmentAppearances, storyboardUrl, audioOnly, onAudioOnlyChange, sourceSelection,
   media, hls, timeline, display, controls }: ChromeProps) {
   const { playing, muted, volume, loading, currentTime, duration, speed, toggleMute, changeVolume } = media;
   const { levels, currentLevel } = hls;
   const { hasTimeline, useDvrTimeline, liveLag } = timeline;
   const { isFullscreen, pipSupported, togglePip } = display;
   const { togglePlay, toggleFullscreen, seekWithFeedback, showControls, changeSpeed,
-    settingsOpen, setSettingsOpen, sleepTimerOpen, changeSleepTimerOpen } = controls;
+    menu, changeMenu } = controls;
   const sleepTimer = useSleepTimer(videoRef);
+  const { preview, onPreview } = useStoryboardPreview(storyboardUrl);
   const changeQuality = (level: number) => {
     hls.changeQuality(level);
-    setSettingsOpen(false);
+    changeMenu(null);
   };
   const seekToLive = () => {
     timeline.seekToLive();
@@ -48,7 +60,15 @@ export function Chrome({ videoRef, title, isLive, chatOpen, onChatToggle, segmen
   };
 
   const settingsSections: SettingsSection[] = [
-    ...(levels.length > 0 ? [{
+    ...(onAudioOnlyChange ? [{
+      id: "mode", title: "Playback", value: audioOnly ? "audio" : "video",
+      options: [{ value: "video", label: "Video" }, { value: "audio", label: "Audio only" }],
+      onChange: (value: string) => { onAudioOnlyChange(value === "audio"); changeMenu(null); },
+    }] : []),
+    ...(!audioOnly && sourceSelection ? [{
+      id: "quality", title: "Quality", options: sourceSelection.options, value: sourceSelection.value,
+      onChange: (value: string) => { sourceSelection.onChange(value); changeMenu(null); },
+    }] : !audioOnly && levels.length > 0 ? [{
       id: "quality",
       title: "Quality",
       options: [
@@ -91,6 +111,8 @@ export function Chrome({ videoRef, title, isLive, chatOpen, onChatToggle, segmen
             subscribe={timeline.subscribe}
             onSeek={timeline.seek}
             onScrubbingChange={(scrubbing) => { if (scrubbing) showControls(); }}
+            preview={preview}
+            onPreview={onPreview}
           />
         ) : undefined}
         timecode={
@@ -107,27 +129,27 @@ export function Chrome({ videoRef, title, isLive, chatOpen, onChatToggle, segmen
             )}
             <StageControl
               label={sleepTimer.minutes === null ? "Sleep timer" : `Sleep timer, ${sleepTimer.minutesLeft} minutes left`}
-              onClick={controls.openSleepTimer}
-              expanded={sleepTimerOpen}
+              onClick={() => changeMenu(menu === "sleep" ? null : "sleep")}
+              expanded={menu === "sleep"}
               className={`stage-sleep-trigger ${sleepTimer.minutes !== null ? "stage-sleep-trigger-active" : ""}`}
             >
               <Timer {...FILLED_ICON} size={22} />
             </StageControl>
-            {onChatToggle && !isFullscreen && <StageControl label={chatOpen ? "Hide chat" : "Show chat"} onClick={onChatToggle} expanded={chatOpen}>
+            {onChatToggle && !isFullscreen && <StageControl label={chatOpen ? "Hide chat" : "Show chat"} onClick={onChatToggle} expanded={chatOpen} className="stage-chat-trigger">
               <ChatCircle {...FILLED_ICON} size={22} />
             </StageControl>}
             <StageSettings
               sections={settingsSections}
-              open={settingsOpen}
-              onOpenChange={setSettingsOpen}
+              open={menu === "settings"}
+              onOpenChange={open => changeMenu(open ? "settings" : null)}
               actions={pipSupported ? [{ label: "Picture in picture", icon: <Monitor {...FILLED_ICON} size={20} />, onClick: togglePip }] : []}
             />
           </>
         }
       />
       <SleepTimerPicker
-        open={sleepTimerOpen}
-        onOpenChange={changeSleepTimerOpen}
+        open={menu === "sleep"}
+        onOpenChange={open => changeMenu(open ? "sleep" : null)}
         minutes={sleepTimer.minutes}
         minutesLeft={sleepTimer.minutesLeft}
         onChange={sleepTimer.setMinutes}

@@ -1,0 +1,97 @@
+{
+  "capturedAt": "2026-10-10T15:47:04.067Z",
+  "endpoint": "https://gql.twitch.tv/gql",
+  "operationName": "SearchTray_SearchSuggestions",
+  "sha256Hash": "2749d8bc89a2ddd37518e23742a4287becd3064c40465d8b57317cabd0efe096",
+  "variables": {
+    "queryFragment": "rubius",
+    "withOfflineChannelContent": true,
+    "includeIsDJ": false
+  },
+  "response_redacted": {
+    "data": {
+      "searchSuggestions": {
+        "edges": [
+          {
+            "node": {
+              "text": "Cine_Rubius_2017",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "cine_rubius_2017",
+                "isLive": true,
+                "isVerified": false,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/e4d292f4-201d-4967-9600-e2499448f47f-profile_image-50x50.png"
+              }
+            }
+          },
+          {
+            "node": {
+              "text": "Rubius",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "rubius",
+                "isLive": false,
+                "isVerified": true,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/a2592e98-5ba6-4c9a-9d9e-cf036d6f64c2-profile_image-50x50.jpg"
+              }
+            }
+          },
+          {
+            "node": {
+              "text": "rubius__a",
+              "content": null
+            }
+          },
+          {
+            "node": {
+              "text": "auronplay",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "auronplay",
+                "isLive": false,
+                "isVerified": true,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/f1ea7d5a-ab2c-4e91-bba5-3ce211adfc3b-profile_image-50x50.png"
+              }
+            }
+          },
+          {
+            "node": {
+              "text": "rubiusrobles1m",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "rubiusrobles1m",
+                "isLive": false,
+                "isVerified": false,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/59711ddf-1c61-4f27-b1ed-88c7815c150a-profile_image-50x50.jpeg"
+              }
+            }
+          },
+          {
+            "node": {
+              "text": "rubiusdcm",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "rubiusdcm",
+                "isLive": false,
+                "isVerified": false,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/d07b241d-8401-47d0-9d8e-3245a64b2590-profile_image-50x50.png"
+              }
+            }
+          },
+          {
+            "node": {
+              "text": "rubius_016",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "rubius_016",
+                "isLive": false,
+                "isVerified": false,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/c7de8c8d-28b8-4a5c-8302-3646799226c4-profile_image-50x50.png"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

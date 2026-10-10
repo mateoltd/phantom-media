@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, mock, test } from "node:test";
-import { GET, POST } from "../app/api/channel/discovery/route.ts";
-import { discoveryRequestBody, discoveryRequestKey, discoveryResponse } from "../lib/discovery-request.ts";
+import { POST } from "../app/api/channel/discovery/route.ts";
+import { discoveryRequestBody, discoveryRequestKey, discoveryResponse } from "../lib/discovery/request.ts";
 
 afterEach(() => mock.restoreAll());
 
@@ -65,15 +65,6 @@ test("30 maximum-length titles exceeding the former aggregate limit are accepted
   assert.equal((await POST(request(body))).status, 200);
 });
 
-test("legacy GET ignores truncated and oversized advisory history", async () => {
-  mockDiscovery();
-  for (const history of ['[{"channel":"legacyseed","title":"A ', "x".repeat(16_001)]) {
-    const response = await GET(new Request(`https://example.com/api/channel/discovery?channels=legacyseed&history=${encodeURIComponent(history)}`));
-    assert.equal(response.status, 200);
-    assert.equal((await response.json()).sections[0].channels[0].login, "livechannel");
-  }
-});
-
 test("invalid channels or request envelopes return distinct terminal validation reasons without upstream calls", async () => {
   mock.method(globalThis, "fetch", () => { assert.fail("validation failures must not call Twitch"); });
   for (const channels of [null, "example", ["bad!"], [123], ["one", "two", "three", "four", "five", "six", "seven"]]) {
@@ -86,6 +77,13 @@ test("invalid channels or request envelopes return distinct terminal validation 
     assert.equal(response.status, 400);
     assert.match((await response.json()).error, /^Invalid discovery request/);
   }
+});
+
+test("oversized discovery bodies are rejected before parsing or upstream requests", async () => {
+  mock.method(globalThis, "fetch", () => { assert.fail("oversized bodies must not call Twitch"); });
+  const response = await POST(request({ channels: ["example"], history: "x".repeat(128 * 1024) }));
+  assert.equal(response.status, 413);
+  assert.deepEqual(await response.json(), { error: "Discovery request too large" });
 });
 
 test("4xx validation failures are terminal and preserve known reasons without a retry cooldown", async () => {

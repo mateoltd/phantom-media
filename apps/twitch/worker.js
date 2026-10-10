@@ -1,5 +1,5 @@
 import nextWorker from "./.open-next/worker.js";
-import { proxyMedia } from "./lib/media-proxy.ts";
+import { proxyMedia } from "./lib/media/proxy.ts";
 
 export * from "./.open-next/worker.js";
 
@@ -9,7 +9,7 @@ export * from "./.open-next/worker.js";
 const worker = {
   ...nextWorker,
   fetch(request, env, ctx) {
-    if (request.method === "GET" && new URL(request.url).pathname === "/api/proxy") {
+    if (["GET", "HEAD"].includes(request.method) && new URL(request.url).pathname === "/api/proxy") {
       return proxyMedia(request);
     }
     return nextWorker.fetch(request, env, ctx);

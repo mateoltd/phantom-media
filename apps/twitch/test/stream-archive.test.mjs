@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { archiveFolder, archiveHosts, archiveStartCandidates } from "../lib/stream-archive.ts";
+import { archiveFolder, archiveHosts, archiveStartCandidates } from "../lib/playback/archive.ts";
 
 test("archive folders match the names Twitch gives recordings", () => {
   assert.equal(archiveFolder("zackrawrr", "317518201335", 1790270830), "0a08539290023a42e6db_zackrawrr_317518201335_1790270830");

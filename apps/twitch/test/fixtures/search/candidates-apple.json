@@ -1,0 +1,774 @@
+{
+  "capturedAt": "2026-10-10T15:26:49.252Z",
+  "endpoint": "https://gql.twitch.tv/gql",
+  "request": {
+    "query": "query SearchCandidates($query:String!){searchFor(userQuery:$query,platform:\"web\",options:{targets:[{index:CHANNEL,limit:40}]}){channels{edges{item{... on User{id login displayName profileImageURL(width:150) followers{totalCount} roles{isPartner} stream{title viewersCount game{name}}}}}}}}",
+    "variables": {
+      "query": "apple"
+    }
+  },
+  "response": {
+    "data": {
+      "searchFor": {
+        "channels": {
+          "edges": [
+            {
+              "item": {
+                "id": "160073619",
+                "login": "apples",
+                "displayName": "Apples",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/8aebbb2f-1926-4f11-a274-e456412dfcd4-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 13811
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "177270193",
+                "login": "appleshampoo",
+                "displayName": "APPLESHAMPOO",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/a3e6c117-c1b5-4eab-b930-f120c6bff930-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 38060
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "800692761",
+                "login": "frogamertwitch",
+                "displayName": "frogamertwitch",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/f5c78d02-96d8-4308-ad77-0950aadbaeb7-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 115
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "THE CATBOY MAID STREAM IS HERE! Makeup with Apple :)",
+                  "viewersCount": 5,
+                  "game": {
+                    "name": "Just Chatting"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "796996627",
+                "login": "apple_thesims",
+                "displayName": "apple_thesims",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/af910d0e-4a29-41b8-955b-40f0cc93beb9-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 1548
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "598492421",
+                "login": "applejackeroni",
+                "displayName": "applejackeroni",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/b22685bf-dd9e-4537-b5e1-3c10b646cfe1-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 7372
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "1141872353",
+                "login": "applewith223s",
+                "displayName": "applewith223s",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/82ec93e8-9457-4ae6-a93b-133f1d1c7e25-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 100318
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "55534524",
+                "login": "appleedii",
+                "displayName": "AppleeDii",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/d3ffd2fe-7946-43ac-8125-13bff93a3eb9-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 8001
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "639704102",
+                "login": "applesql",
+                "displayName": "appleSQL",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/9d883567-76f9-46fc-af61-e8827ad94bbf-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 1832
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "893729408",
+                "login": "apple6983768",
+                "displayName": "apple6983768",
+                "profileImageURL": "https://static-cdn.jtvnw.net/user-default-pictures-uv/13e5fa74-defa-11e9-809c-784f43822e80-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 0
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "10/10 睡前再蒐集一下!!沉浸式玩電動",
+                  "viewersCount": 0,
+                  "game": {
+                    "name": "DREDGE"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "272780399",
+                "login": "supasoldierv2",
+                "displayName": "SupaSoldierv2",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/ceb04b09-978f-45b6-a899-4a3e0a69d191-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 3414
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "🟢GOOD MORNING CINNAMON APPLES!",
+                  "viewersCount": 13,
+                  "game": {
+                    "name": "Just Chatting"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1354526457",
+                "login": "apple_cado",
+                "displayName": "apple_cado",
+                "profileImageURL": "https://static-cdn.jtvnw.net/user-default-pictures-uv/ebb84563-db81-4b9c-8940-64ed33ccfc7b-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 14
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "test",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Just Chatting"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "138498363",
+                "login": "apply",
+                "displayName": "Apply",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/88fbc3a9-1af8-40c3-a41e-bda3d4017268-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 137187
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "1025345709",
+                "login": "sweetappleplay",
+                "displayName": "sweetappleplay",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/87d33875-9ee4-42d5-aee5-7e933cabe361-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 161
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "повтор стрима /Смотрим фильмы и мультики    |!тг | !fetta | !dalink |",
+                  "viewersCount": 3,
+                  "game": {
+                    "name": "Just Chatting"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "91968134",
+                "login": "meapineapple",
+                "displayName": "meapineapple",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/426cd858-7936-4da4-827f-2f482ea7b600-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 402
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Long way to the lich",
+                  "viewersCount": 2,
+                  "game": {
+                    "name": "Barony"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "56819452",
+                "login": "ntapple",
+                "displayName": "NTapple",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/aae35348-8598-4521-a965-ec8e347dd38d-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 42
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "ALTTPR Enemizer Tournament 2026: Swiss Round 1 vs @akuheish | normaler Enemizer ohne Zusatzsttings | Es geht rein ins Enemizer Turnier.",
+                  "viewersCount": 2,
+                  "game": {
+                    "name": "The Legend of Zelda: A Link to the Past"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1556837865",
+                "login": "pineapple8056",
+                "displayName": "pineapple8056",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/45e8cd70-2e27-4819-b600-460c31c0b633-profile_image-150x150.jpeg",
+                "followers": {
+                  "totalCount": 1
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Fortnite with veiwers",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Fortnite"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "123637705",
+                "login": "pineapplevt",
+                "displayName": "PINEAPPLEvt",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/762b353e-7037-45a6-91b2-32403563444f-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 3693
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Коопимся в Гартик и Джекич | SGG, день 7 потом? | !с !заказ !архив",
+                  "viewersCount": 32,
+                  "game": {
+                    "name": "Gartic Phone"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "123665913",
+                "login": "enormousapplepie",
+                "displayName": "EnormousApplePie",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/94f2016d-f940-4e7b-af5c-f01d04ed4cc8-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 265
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Civ 5 NQ FFA | Tourney game #5",
+                  "viewersCount": 11,
+                  "game": {
+                    "name": "Sid Meier's Civilization V"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "80131197",
+                "login": "appsle",
+                "displayName": "Appsle",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/717a9efe-b20c-48e5-99cc-b7d0c0c7838f-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 47
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "901654997",
+                "login": "apple_325",
+                "displayName": "apple_325",
+                "profileImageURL": "https://static-cdn.jtvnw.net/user-default-pictures-uv/de130ab0-def7-11e9-b668-784f43822e80-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 2
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "472040190",
+                "login": "realapplew",
+                "displayName": "realAppleW",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/4c8f825c-fd9f-4123-9c5c-870d347b36f8-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 1048
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "valorant grind for radiant!!! | !discord !rank",
+                  "viewersCount": 12,
+                  "game": {
+                    "name": "VALORANT"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "757658940",
+                "login": "applexelppa",
+                "displayName": "AppleXelppa",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/3176cce6-efe3-4e36-b8e0-7c3b336fa138-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 3813
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "#1801 - :3 Low Energy from work~",
+                  "viewersCount": 13,
+                  "game": {
+                    "name": "MapleStory"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1399165584",
+                "login": "applefish12121",
+                "displayName": "applefish12121",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/cf375bf2-372a-49cf-b375-b70ba638a7d1-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 4
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "",
+                  "viewersCount": 0,
+                  "game": null
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "699913529",
+                "login": "apple111122222",
+                "displayName": "魷魚絲條",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/e30a330b-cca0-499d-b7d3-fcca6f160683-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 1
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "fc6",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Counter-Strike"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "473497290",
+                "login": "apple_thc",
+                "displayName": "Apple_THC",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/e0a17436-51e7-47fa-b2d1-f022a7757082-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 753
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "10 de octubre | TGC CARD SHOP SIMULATOR | !youtube !discord !redes !funcommands",
+                  "viewersCount": 0,
+                  "game": {
+                    "name": "TCG Card Shop Simulator"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "44055888",
+                "login": "applezki",
+                "displayName": "applezki",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/4d84038c-feca-4c44-8a39-899b7da5b97d-profile_image-150x150.jpeg",
+                "followers": {
+                  "totalCount": 40
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "108263880",
+                "login": "forfunapple",
+                "displayName": "ForfunApple",
+                "profileImageURL": "https://static-cdn.jtvnw.net/user-default-pictures-uv/998f01ae-def8-11e9-b95c-784f43822e80-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 83
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Терпение и труд всё перетрут",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "League of Legends"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1400771994",
+                "login": "minesgreenapple",
+                "displayName": "minesgreenapple",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/23f1c1d2-3fcc-490f-b94f-cd8f375f22ae-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 3
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "病弱中学1年生女子のＡＲＫ",
+                  "viewersCount": 2,
+                  "game": {
+                    "name": "ARK: Survival Evolved"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1381000755",
+                "login": "123applesauce123",
+                "displayName": "123APPLESAUCE123",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/72d883c8-8a9e-4535-94a3-3b0b4eb9def7-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 44
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Donut SMP Live | gambling | Base rating",
+                  "viewersCount": 8,
+                  "game": {
+                    "name": "Minecraft"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "107332432",
+                "login": "appie",
+                "displayName": "Appie",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/614582f8-31d1-4fed-afe5-e47267d63de3-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 5579
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "465762138",
+                "login": "realzapple",
+                "displayName": "realZapple",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/a5305fad-7b78-463c-8f6f-d2bd7ea61063-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 33
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Noble solos MA QUAL?#16:50 start",
+                  "viewersCount": 3,
+                  "game": {
+                    "name": "Fortnite"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "153012135",
+                "login": "apple502320215",
+                "displayName": "朵拉電競用品",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/1ff5196f-fb14-43a3-bfb2-2d3a32882fdc-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 34
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "來一起玩ㄚ",
+                  "viewersCount": 3,
+                  "game": {
+                    "name": "Overwatch"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1165911662",
+                "login": "studentchad",
+                "displayName": "studentchad",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/4ac4352c-d303-48df-b908-71358b884f70-profile_image-150x150.jpeg",
+                "followers": {
+                  "totalCount": 14
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Discover, learn and apply",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Grand Theft Auto V"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1541439772",
+                "login": "applee_721",
+                "displayName": "AppleE_721",
+                "profileImageURL": "https://static-cdn.jtvnw.net/user-default-pictures-uv/294c98b5-e34d-42cd-a8f0-140b72fba9b0-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 3
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "1443905579",
+                "login": "apples_shokunin_",
+                "displayName": "apples_shokunin_",
+                "profileImageURL": "https://static-cdn.jtvnw.net/user-default-pictures-uv/ebe4cd89-b4f4-4cd9-adac-2f30151b4209-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 67
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "NOT ENDING STREAM TILL I BEAT CHAINED TOGETHER (ROBLOX)",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "ROBLOX"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "840851809",
+                "login": "poison_xx_apple",
+                "displayName": "poison_xx_apple",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/fc9a2364-bafd-4d92-95dc-450d7d6386d6-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 3
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "apex ps5 そろらんく だいやまで",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Apex Legends"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "170398923",
+                "login": "applezzi",
+                "displayName": "Applezzi",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/4e975165-09bf-4bb7-b2d8-0d34d9efbd2b-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 5516
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "1350370266",
+                "login": "apple_819",
+                "displayName": "小蘋果派",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/33e8f795-f3d4-4e14-9044-446eca242744-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 282
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "10/10 雙十快樂 台一月女 #從不缺席",
+                  "viewersCount": 17,
+                  "game": {
+                    "name": "League of Legends"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "70999900",
+                "login": "nanayapple",
+                "displayName": "NanayApple",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/8f189fe4-4116-4bc4-9d4c-f8d1c8b7c6b4-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 804
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "🔴Dailies / Weeklies / Outlast | Stream #421 | ❤️FIRST: @KisaragiMaya❤️",
+                  "viewersCount": 11,
+                  "game": {
+                    "name": "The Outlast Trials"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "444166044",
+                "login": "pineapplekye_",
+                "displayName": "PineappleKye_",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/219e46fa-9f4d-4b73-bbbf-49f3354b9a7d-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 1687
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "GG FRICKEN EZ!! CREATOR CODE: PINEAPPLEKYE!!",
+                  "viewersCount": 3,
+                  "game": {
+                    "name": "Fortnite"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

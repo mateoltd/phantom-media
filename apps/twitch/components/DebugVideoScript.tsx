@@ -4,7 +4,11 @@ const DEBUG_SCRIPT = `
 (() => {
   const prefix = "[phantom-debug]";
   const watchedVideoElements = new WeakSet();
-  const monitoredRequests = ["/api/vod/resolve", "/api/vod/master.m3u8", "/api/vod/media.m3u8", "/api/channel/resolve", "/api/channel/search", "/api/live/master.m3u8", "/api/live/media.m3u8"];
+  const monitoredRequests = ["/api/vod/resolve", "/api/vod/master.m3u8", "/api/vod/media.m3u8", "/api/clip/resolve", "/api/channel/resolve", "/api/channel/search", "/api/live/master.m3u8", "/api/live/media.m3u8"];
+  const safeUrl = (input) => {
+    try { const url = new URL(input, location.href); return url.protocol === "blob:" ? "blob:" : url.origin + url.pathname; }
+    catch { return null; }
+  };
 
   const log = (message, details) => {
     if (details !== undefined) {
@@ -35,7 +39,7 @@ const DEBUG_SCRIPT = `
     errorCode: video.error ? video.error.code : null,
     errorMessage: video.error ? video.error.message : null,
     bufferedEnd: formatBufferedEnd(video),
-    src: video.currentSrc || video.src || null,
+    src: safeUrl(video.currentSrc || video.src),
   });
 
   const watchVideo = (video) => {
@@ -64,7 +68,7 @@ const DEBUG_SCRIPT = `
       const response = await originalFetch(...args);
       if (isRelevantUrl(input) && !response.ok) {
         log("fetch:error", {
-          url: input,
+          url: safeUrl(input),
           status: response.status,
           durationMs: Math.round(performance.now() - startedAt),
         });
@@ -73,7 +77,7 @@ const DEBUG_SCRIPT = `
     } catch (error) {
       if (isRelevantUrl(input)) {
         log("fetch:exception", {
-          url: input,
+          url: safeUrl(input),
           durationMs: Math.round(performance.now() - startedAt),
           error: error instanceof Error ? error.message : String(error),
         });
@@ -86,7 +90,7 @@ const DEBUG_SCRIPT = `
   observer.observe(document.documentElement, { childList: true, subtree: true });
 
   scan();
-  log("probe-ready", { href: window.location.href });
+  log("probe-ready", { href: safeUrl(window.location.href) });
 })();
 `;
 

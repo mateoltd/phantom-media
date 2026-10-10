@@ -1,0 +1,97 @@
+{
+  "capturedAt": "2026-10-10T15:47:04.290Z",
+  "endpoint": "https://gql.twitch.tv/gql",
+  "operationName": "SearchTray_SearchSuggestions",
+  "sha256Hash": "2749d8bc89a2ddd37518e23742a4287becd3064c40465d8b57317cabd0efe096",
+  "variables": {
+    "queryFragment": "illo",
+    "withOfflineChannelContent": true,
+    "includeIsDJ": false
+  },
+  "response_redacted": {
+    "data": {
+      "searchSuggestions": {
+        "edges": [
+          {
+            "node": {
+              "text": "IlloJuan",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "illojuan",
+                "isLive": true,
+                "isVerified": true,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/593b5641-c626-4ba4-ba49-11cb33f6c3e8-profile_image-50x50.png"
+              }
+            }
+          },
+          {
+            "node": {
+              "text": "elxokas",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "elxokas",
+                "isLive": true,
+                "isVerified": true,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/198c0fe9-cf41-4ef1-ad55-405c1e599f25-profile_image-50x50.png"
+              }
+            }
+          },
+          {
+            "node": {
+              "text": "alexelcapo",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "alexelcapo",
+                "isLive": true,
+                "isVerified": true,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/78528288-6216-4e21-872b-7f415b602a9a-profile_image-50x50.png"
+              }
+            }
+          },
+          {
+            "node": {
+              "text": "iLuTVLIVE",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "ilutvlive",
+                "isLive": true,
+                "isVerified": true,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/ilutvlive-profile_image-9cfffa9af0e524e5-50x50.png"
+              }
+            }
+          },
+          {
+            "node": {
+              "text": "illojuanan",
+              "content": null
+            }
+          },
+          {
+            "node": {
+              "text": "CineIlloJuan",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "cineillojuan",
+                "isLive": false,
+                "isVerified": true,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/3317591e-41cf-43a2-be4c-4d925380037f-profile_image-50x50.png"
+              }
+            }
+          },
+          {
+            "node": {
+              "text": "auronplay",
+              "content": {
+                "__typename": "SearchSuggestionChannel",
+                "login": "auronplay",
+                "isLive": false,
+                "isVerified": true,
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/f1ea7d5a-ab2c-4e91-bba5-3ce211adfc3b-profile_image-50x50.png"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

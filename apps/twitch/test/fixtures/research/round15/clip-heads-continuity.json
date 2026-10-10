@@ -1,0 +1,32 @@
+{
+  "clipSlug": "FixtureClip",
+  "qualities": {
+    "1080": {
+      "status": 200,
+      "cl": "23381059",
+      "ct": "binary/octet-stream"
+    },
+    "720": {
+      "status": 200,
+      "cl": "7469820",
+      "ct": "binary/octet-stream"
+    },
+    "480": {
+      "status": 200,
+      "cl": "2753427",
+      "ct": "binary/octet-stream"
+    },
+    "360": {
+      "status": 200,
+      "cl": "2318884",
+      "ct": "binary/octet-stream"
+    }
+  },
+  "continuity": {
+    "samePath": true,
+    "sigRotated": true,
+    "cl1": "23381059",
+    "cl2": "23381059"
+  },
+  "patRequiredParams": "params { platform playerBackend playerType } mandatory; clip_uri not a field (round-6 receipt was videoQualities-based)"
+}

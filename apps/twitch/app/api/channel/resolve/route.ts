@@ -1,5 +1,6 @@
+import { errorResponse } from "@/lib/errors";
 import { NextRequest, NextResponse } from "next/server";
-import { fetchChannel } from "@/lib/twitch";
+import { fetchChannelBasics } from "@/lib/twitch/channels";
 
 function normalizeChannel(value: string | null): string {
   return (value ?? "").trim().replace(/^@/, "").toLowerCase();
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = await fetchChannel(channel);
+    const data = await fetchChannelBasics(channel);
     return NextResponse.json(data, {
       headers: {
         "Cache-Control": data.stream
@@ -24,11 +25,5 @@ export async function GET(request: NextRequest) {
           : "public, max-age=120, s-maxage=300",
       },
     });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    if (message.includes("not found")) {
-      return NextResponse.json({ error: message }, { status: 404 });
-    }
-    return NextResponse.json({ error: message }, { status: 502 });
-  }
+  } catch (error) { return errorResponse(error); }
 }

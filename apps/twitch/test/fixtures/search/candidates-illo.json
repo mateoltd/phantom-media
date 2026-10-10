@@ -1,0 +1,838 @@
+{
+  "capturedAt": "2026-10-10T15:26:49.710Z",
+  "endpoint": "https://gql.twitch.tv/gql",
+  "request": {
+    "query": "query SearchCandidates($query:String!){searchFor(userQuery:$query,platform:\"web\",options:{targets:[{index:CHANNEL,limit:40}]}){channels{edges{item{... on User{id login displayName profileImageURL(width:150) followers{totalCount} roles{isPartner} stream{title viewersCount game{name}}}}}}}}",
+    "variables": {
+      "query": "illo"
+    }
+  },
+  "response": {
+    "data": {
+      "searchFor": {
+        "channels": {
+          "edges": [
+            {
+              "item": {
+                "id": "90075649",
+                "login": "illojuan",
+                "displayName": "IlloJuan",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/593b5641-c626-4ba4-ba49-11cb33f6c3e8-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 4677249
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": {
+                  "title": "DÍA 5 🔥 NOS VAMOS AL C҉A҉S҉I҉N҉O DESIERTO A  A҉P҉O҉S҉T҉A҉R EXPLORAR 🐪 - Grand Theft Auto: San Andreas 2026 #5",
+                  "viewersCount": 237,
+                  "game": {
+                    "name": "Just Chatting"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "767075829",
+                "login": "illosch",
+                "displayName": "illosch",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/b70cbf65-8640-4970-9950-2598619919c9-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 43
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Elysium Hunter |  ! DROPS ON! 3x3 FERTIG | !dc",
+                  "viewersCount": 10,
+                  "game": {
+                    "name": "Arena Breakout: Infinite"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1110808352",
+                "login": "cineillojuan",
+                "displayName": "CineIlloJuan",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/3317591e-41cf-43a2-be4c-4d925380037f-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 236696
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": {
+                  "title": "CINEILLOJUAN 🎬 24 HORAS DE CONTENIDO A LA CARTA ⌛ SINVERGONCERÍO EXTREMO 🔥",
+                  "viewersCount": 770,
+                  "game": {
+                    "name": "Always On"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1555905928",
+                "login": "rodilloroto",
+                "displayName": "rodilloroto",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/97861831-ab57-4d9c-b770-d38ae72cd784-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 127
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "🔥 ¡APUESTAS SALVAJES! 🔴 Reventando las tragaperras al límite ➡️ ¡Pilla tu bono exclusivo y fórrate! 💸🎰",
+                  "viewersCount": 1128,
+                  "game": {
+                    "name": "Slots"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1370977512",
+                "login": "illohugo333",
+                "displayName": "illohugo333",
+                "profileImageURL": "https://static-cdn.jtvnw.net/user-default-pictures-uv/dbdc9198-def8-11e9-8681-784f43822e80-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 6
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Un valorant",
+                  "viewersCount": 0,
+                  "game": {
+                    "name": "VALORANT"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "149608173",
+                "login": "ilxlo_",
+                "displayName": "iLxlo_",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/72ab44e9-d587-4cf8-abb4-3378a584fefc-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 283
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "MI PRIMERA PROMO!! !FAREVER #ad | !cofres !discord | FOLLOW = 2 COFRES | SUB = 6 COFRES",
+                  "viewersCount": 20,
+                  "game": {
+                    "name": "Farever"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "812126449",
+                "login": "illonaw",
+                "displayName": "illonaw",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/9c597e36-4bea-4933-9f4d-3e5378c876c5-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 130
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "[FR][Vtube] Grind to Silver ! | Soyez sympa avec moi! !rs",
+                  "viewersCount": 7,
+                  "game": {
+                    "name": "VALORANT"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1539099902",
+                "login": "llpillo",
+                "displayName": "llpillo",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/d7fc36da-25cb-4f34-8da8-6a9c886dff2f-profile_image-150x150.jpeg",
+                "followers": {
+                  "totalCount": 4
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Fortnite",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Fortnite"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "54499655",
+                "login": "illovt",
+                "displayName": "illoVT",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/12810b0f-2ab8-4cce-9019-9a4a006bd1d2-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 1405
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "464272906",
+                "login": "crezzillo",
+                "displayName": "crezzillo",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/c26817d7-c480-4820-9a0f-114cc29b06fa-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 4
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "RIVALS A TOPE",
+                  "viewersCount": 4,
+                  "game": {
+                    "name": "EA Sports FC 27"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1327155195",
+                "login": "illon_133mhz",
+                "displayName": "Illon_133mhz",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/86d845fe-f109-4614-8f5e-74710a531de1-profile_image-150x150.jpeg",
+                "followers": {
+                  "totalCount": 20
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Нет покоя грешникам ⚜️",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Kingdom Come: Deliverance"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "996916945",
+                "login": "danillooq",
+                "displayName": "danillooq",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/63cbe26c-4828-4cbc-830b-9a2140223792-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 10
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Iores",
+                  "viewersCount": 2,
+                  "game": {
+                    "name": "EA Sports FC 27"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "58248022",
+                "login": "illogicoma",
+                "displayName": "illogicoma",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/9101b34c-0bc4-44ff-be5e-2eff3019e95a-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 354
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Illogicoma :// Withering Realms 👻 I want that chain and i'm prepared to fight for it",
+                  "viewersCount": 3,
+                  "game": {
+                    "name": "Withering Realms"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "93626730",
+                "login": "il3lo",
+                "displayName": "Il3LO",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/6273f1e7-7875-4cfc-b172-316e59f05499-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 258
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "463886939",
+                "login": "willoow__",
+                "displayName": "Willoow__",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/376433da-e775-4dc9-a768-ad40822aef5e-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 12
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "En route vers D3 et ascendant",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "VALORANT"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1049616599",
+                "login": "b4murillo",
+                "displayName": "B4MuRiLLo",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/984b88ee-6073-4c3b-8270-b122aafc5ba4-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 920
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "!RUBINOT INFERNUM 3 ( RUXANDO MONK ) GUILD XUPISCO!",
+                  "viewersCount": 6,
+                  "game": {
+                    "name": "Tibia"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "136407068",
+                "login": "elmiillor2",
+                "displayName": "ElmiilloR2",
+                "profileImageURL": "https://static-cdn.jtvnw.net/user-default-pictures-uv/75305d54-c7cc-40d1-bb9c-91fbe85943c7-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 45838
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "SLOTS waiting room |  EL PAPA HA MUERTO y maricarmen",
+                  "viewersCount": 664,
+                  "game": {
+                    "name": "League of Legends"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "812492000",
+                "login": "ciablotv",
+                "displayName": "CiabloTV",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/b13d7e3e-b7f9-4533-ae9f-a70f7f6c88be-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 35
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "KINDA SICK BUT ILL BE IGHTT",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Just Chatting"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1105275822",
+                "login": "sqilloww",
+                "displayName": "sqilloww",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/680fe377-df45-48fa-bc0f-fb45fcda7259-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 2026
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "ЖЕНЩИИИНААА 2К, пати с фолловерами",
+                  "viewersCount": 24,
+                  "game": {
+                    "name": "Dota 2"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "453511233",
+                "login": "elpakillo",
+                "displayName": "ElPakillo",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/209baa8a-7be8-49ec-b47c-1eb15b56a0af-profile_image-150x150.jpeg",
+                "followers": {
+                  "totalCount": 13263
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "👿 Rankeds en recarga Road to unreal👿!jugar !ventajas",
+                  "viewersCount": 4,
+                  "game": {
+                    "name": "Fortnite"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1333712587",
+                "login": "la_sorciere_du_papillon",
+                "displayName": "la_sorciere_du_papillon",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/4cdfce46-fb49-486d-b741-122842956b05-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 8
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Petit live aventure",
+                  "viewersCount": 6,
+                  "game": {
+                    "name": "Disney Dreamlight Valley"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "160451576",
+                "login": "billon2525",
+                "displayName": "billon2525",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/06eb5306-7acc-4c5b-9c7e-af86d60aa465-profile_image-150x150.jpg",
+                "followers": {
+                  "totalCount": 2065
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": {
+                  "title": "いばらの道 2日目",
+                  "viewersCount": 22,
+                  "game": {
+                    "name": "DRAGON QUEST VII Reimagined"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "549872401",
+                "login": "ill_doghe",
+                "displayName": "イルドッヂ",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/e1c4c916-1890-478f-99a1-48b500d2aa53-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 1780
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "おはようございます~応援して貰えたらうれしいです！【目標】パートナー",
+                  "viewersCount": 22,
+                  "game": {
+                    "name": "Just Chatting"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1547473597",
+                "login": "igrillo_man",
+                "displayName": "igrillo_man",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/ad9755ca-d263-49f8-b955-04f771c60438-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 11
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Прямая трансляция igrillo_man",
+                  "viewersCount": 1,
+                  "game": null
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1543474062",
+                "login": "srpalillo_",
+                "displayName": "srpalillo_",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/c8b4d992-baf7-476f-ab98-5b5ff409fc43-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 2
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "FUT CHAMPIONS EA FC 27",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "EA Sports FC 27"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1389536548",
+                "login": "clovertillovertv",
+                "displayName": "clovertillovertv",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/7fbacfcf-fcb4-42c9-9a11-77e6d85b419a-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 1497
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "AB X DEEN LOCKED-IN-ATHON DAY 73 OF 90 🔥  🔥 |WATCH PARTY 📺 | GET ME TO 10K FOLLOWERS |  NO ADS | REACTION",
+                  "viewersCount": 2,
+                  "game": {
+                    "name": "Just Chatting"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "725792832",
+                "login": "iasdhatillo",
+                "displayName": "IASDHatillo",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/c101f983-53dd-4400-a462-89021266dc26-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 18
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "📌Servicio de Adoración - “Nadie administra solo” - Sábado 10 de octubre del 2026",
+                  "viewersCount": 0,
+                  "game": null
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "175219234",
+                "login": "rkilloz",
+                "displayName": "RKilloZ",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/8feb0bf8-974b-475b-8765-e0f2ed5102af-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 13
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Bienvenue dans la mafia ! | Let's play | Mafia : Définitive Edition | FR",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Mafia: Definitive Edition"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1520346613",
+                "login": "willolaz",
+                "displayName": "willolaz",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/b57c82bb-b3f9-4cb8-a753-ca21b85dc0d8-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 22
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Formando un ejercito ven y unete te espero😊",
+                  "viewersCount": 3,
+                  "game": {
+                    "name": "EA Sports FC 26"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "820806511",
+                "login": "difus_owl",
+                "displayName": "difus_owl",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/0129b080-8bd2-4219-b0d6-67c2564da55c-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 47
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "This may be our final goodbye! but ill see you soon in the new world!",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Minecraft"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "89097829",
+                "login": "willowgreed",
+                "displayName": "WillowGreed",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/4cdd8b4f-d4c1-4b6f-9bdb-496ec4724bad-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 338
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "HoH SCH Solo 61+ | Iron Hero 2/21 | Time to Lose",
+                  "viewersCount": 19,
+                  "game": {
+                    "name": "FINAL FANTASY XIV ONLINE"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "426913107",
+                "login": "xkillogicx",
+                "displayName": "xKILLOGICx",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/1eeebcfb-ff26-41f0-8b7f-1c753b0573f1-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 1391
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "[18+ Stream]SATURDAY BONUS POINTS- BREAST CANCER AWARENESS MONTH - FEED THE FISH",
+                  "viewersCount": 58,
+                  "game": {
+                    "name": "Marbles on Stream"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "211289329",
+                "login": "lillowko",
+                "displayName": "lillowko",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/550572af-060a-49f5-87c1-eb0b8f12cc50-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 8
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "No Money, Just Mayhem 🔥Coal 272 k To get Goldbar!",
+                  "viewersCount": 2,
+                  "game": {
+                    "name": "WARDOGS"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "660138548",
+                "login": "camilloz",
+                "displayName": "Camilloz",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/e2830b01-8913-4acc-bc68-1001cf915774-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 157
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "REMATCH!! 🟢 30M = BADGES 🟢 FREE BADGE 🟢 FULL GAMEPLAY 🟢",
+                  "viewersCount": 2,
+                  "game": {
+                    "name": "REMATCH"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1345703573",
+                "login": "danillov1",
+                "displayName": "danillov1",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/41c55ced-752b-4ec2-91b2-fea43eef00ba-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 147
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Живите дружно",
+                  "viewersCount": 4,
+                  "game": {
+                    "name": "Dota 2"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "231717516",
+                "login": "kotzillo",
+                "displayName": "kotzillo",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/26bc3609-9496-4a4a-b190-61010178044b-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 203
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Я проснулся. Где кушоц? оО",
+                  "viewersCount": 3,
+                  "game": {
+                    "name": "Hunt: Showdown 1896"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "193318841",
+                "login": "wongdillon",
+                "displayName": "wongdillon",
+                "profileImageURL": "https://static-cdn.jtvnw.net/user-default-pictures-uv/215b7342-def9-11e9-9a66-784f43822e80-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 7
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "hello",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Apex Legends"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "103581569",
+                "login": "juuaniillo_",
+                "displayName": "Juuaniillo_",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/fdf1878a-95c7-40f8-bb97-f9024ada8056-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 324
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "HEMOS VUELTO AL TARKOV - MEJOR MES DEL AÑO! 😏",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Escape from Tarkov"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "242348296",
+                "login": "illottt",
+                "displayName": "illottt",
+                "profileImageURL": "https://static-cdn.jtvnw.net/user-default-pictures-uv/dbdc9198-def8-11e9-8681-784f43822e80-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 2
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "133265774",
+                "login": "mr_gillou",
+                "displayName": "Mr_GilloU",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/0ca0ec12-abe9-453c-9c9f-002a658c54b8-profile_image-150x150.jpeg",
+                "followers": {
+                  "totalCount": 2699
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "🇫🇷 S1E2 | Péninsule de Kola 🇷🇺 | 58% Ouverture du Garage",
+                  "viewersCount": 11,
+                  "game": {
+                    "name": "SnowRunner"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

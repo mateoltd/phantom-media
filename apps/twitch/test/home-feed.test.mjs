@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isCurrentBroadcast, uniqueChannels } from "../lib/home-feed.ts";
+import { isCurrentBroadcast, uniqueChannels } from "../lib/discovery/feed.ts";
 
 test("only the archive belonging to the current broadcast is marked live", () => {
   const channel = { stream: { archiveVideo: { id: "ongoing" } } };

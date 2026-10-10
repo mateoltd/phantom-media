@@ -1,0 +1,102 @@
+{
+  "captured": "2026-10-09",
+  "origin": "User-authorized research receipts; no investigation code consumed",
+  "files": [
+    {
+      "file": "persisted-quartet-fixture.json",
+      "source": "round15/persisted-quartet-fixture.json",
+      "sourceSha256": "7040258ccfc4fff33170f05fda40d22c48f88a2851a581c13c28bb37d1fed382",
+      "transform": "Redacted text, channel identities, request IDs and media URLs; badge IDs and public badge asset URLs retained."
+    },
+    {
+      "file": "badge-receipt.json",
+      "source": "round15/badge-receipt.json",
+      "sourceSha256": "66062c193e193e4dc033feb84afcfaf6d7b80cff9f4368bde754d7ef6a1e198a",
+      "transform": "Redacted text, channel identities, request IDs and media URLs; badge IDs and public badge asset URLs retained."
+    },
+    {
+      "file": "growth-ttl.json",
+      "source": "round15/growth-ttl.json",
+      "sourceSha256": "abfa45660140c9884cde0c0044ae45fde387196a8c48c51bf5418d821a99a877",
+      "transform": "Redacted text, channel identities, request IDs and media URLs; badge IDs and public badge asset URLs retained."
+    },
+    {
+      "file": "ttl-static.json",
+      "source": "round15/ttl-static.json",
+      "sourceSha256": "203d53fb548b793a87b01fa714c1fa84ac5f6c8703048a2e630c441e4fae9761",
+      "transform": "Redacted text, channel identities, request IDs and media URLs; badge IDs and public badge asset URLs retained."
+    },
+    {
+      "file": "growing-fetch1.json",
+      "source": "round15/growing-fetch1.json",
+      "sourceSha256": "c0e1c02924af315624d5720fe8d07ff541e078f78cefd9a3beb9bdda0dd98ba2",
+      "transform": "Redacted text, channel identities, request IDs and media URLs; badge IDs and public badge asset URLs retained."
+    },
+    {
+      "file": "formula-highlight-sweep.json",
+      "source": "round15/formula-highlight-sweep.json",
+      "sourceSha256": "5df6eee3e032811349950de34adaa2b4798397fb33b6e4237444a3ba876e0c92",
+      "transform": "Redacted text, channel identities, request IDs and media URLs; badge IDs and public badge asset URLs retained."
+    },
+    {
+      "file": "formula-upload-sweep.json",
+      "source": "round15/formula-upload-sweep.json",
+      "sourceSha256": "22e2b657cd6be0c5a06be3f5de707247c89c5042886cfef23adc6832c141a458",
+      "transform": "Redacted text, channel identities, request IDs and media URLs; badge IDs and public badge asset URLs retained."
+    },
+    {
+      "file": "mute-IN-WINDOW.json",
+      "source": "round15/mute-IN-WINDOW.json",
+      "sourceSha256": "892d5cff44176bdc6f2b60ecdff769da8af86ebc67fa465ccce8b5169f04ab0c",
+      "transform": "Redacted text, channel identities, request IDs and media URLs; badge IDs and public badge asset URLs retained."
+    },
+    {
+      "file": "mute-OUTSIDE+250s.json",
+      "source": "round15/mute-OUTSIDE+250s.json",
+      "sourceSha256": "bc2ff6d3df29c8c8d858cf4823e11ac17c9998fd9bfb69ce8ae5e3173891438b",
+      "transform": "Redacted text, channel identities, request IDs and media URLs; badge IDs and public badge asset URLs retained."
+    },
+    {
+      "file": "mute-op-empty-vars-error.json",
+      "source": "round15/mute-op-empty-vars-error.json",
+      "sourceSha256": "904ae47c00cdf132052232b1c23d28c04e57642a941cc5da257c8df2074469f9",
+      "transform": "Redacted text, channel identities, request IDs and media URLs; badge IDs and public badge asset URLs retained."
+    },
+    {
+      "file": "clip-heads-continuity.json",
+      "source": "round15/clip-heads-continuity.json",
+      "sourceSha256": "79afa76e979f40252afa087f0e4fcec403408de3895326ad658f75febcbc93b2",
+      "transform": "Redacted text, channel identities, request IDs and media URLs; badge IDs and public badge asset URLs retained."
+    },
+    {
+      "file": "snapshots.json",
+      "source": "round15/snapshots.json",
+      "sourceSha256": "4f695577b6cfe2481b888d5a1e76bc3da8fd08b499b18e4be3aae8a17ade4871",
+      "transform": "Redacted text, channel identities, request IDs and media URLs; badge IDs and public badge asset URLs retained."
+    },
+    {
+      "file": "alignment.json",
+      "source": "round15/alignment.json",
+      "sourceSha256": "d755987c36ce4b8c8a41ef8ce09644c1d95b9ebce6e862da107f047dd311d323",
+      "transform": "Redacted text, channel identities, request IDs and media URLs; badge IDs and public badge asset URLs retained."
+    },
+    {
+      "file": "audio-decode.json",
+      "source": "round15/audio-decode.json",
+      "sourceSha256": "0477a45e9c042f4347e971caec8f303ca68a2666e4199de3d020434df60dd70c",
+      "transform": "Redacted text, channel identities, request IDs and media URLs; badge IDs and public badge asset URLs retained."
+    },
+    {
+      "file": "pubsub-message-capture.json",
+      "source": "round15/pubsub-message-capture.json",
+      "sourceSha256": "930779a98e796abe6104c9fb8b882fa485b4cfc48abb7ba1fbeee75a6f9af4ea",
+      "transform": "Redacted text, channel identities, request IDs and media URLs; badge IDs and public badge asset URLs retained."
+    },
+    {
+      "file": "../round13/fanout-matrix.json",
+      "source": "round13/fanout-matrix.json",
+      "sourceSha256": "86bcaf8b2ff1632768ea8505d47467587f552f9943b6b686a6add7f5631ef3f8",
+      "transform": "Numeric string identities pseudonymized consistently; axis names and overlaps retained."
+    }
+  ]
+}

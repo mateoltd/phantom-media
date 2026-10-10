@@ -1,4 +1,4 @@
-import { WatchHistory } from "@/components/WatchHistory";
+import { WatchHistory } from "@/components/history/WatchHistory";
 import { buildMetadata } from "@/lib/seo";
 
 export const metadata = buildMetadata({

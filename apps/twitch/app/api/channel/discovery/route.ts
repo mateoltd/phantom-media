@@ -1,9 +1,12 @@
-import { DiscoveryUpstreamError, fetchChannelDiscovery } from "../../../../lib/twitch.ts";
-import { parseDiscoveryHistory, type DiscoveryHistory } from "../../../../lib/discovery.ts";
+import { UpstreamError } from "../../../../lib/errors.ts";
+import { readLimitedText } from "../../../../lib/media/read.ts";
+import { fetchChannelDiscovery } from "../../../../lib/discovery/load.ts";
+import { parseDiscoveryHistory, type DiscoveryHistory } from "../../../../lib/discovery/ranking.ts";
 
 export async function POST(request: Request) {
   let body: unknown;
-  try { body = await request.json(); } catch {
+  try { body = JSON.parse(await readLimitedText(new Response(request.body), 128 * 1024, request.signal)); } catch (error) {
+    if (error instanceof UpstreamError && error.kind === "cap") return Response.json({ error: "Discovery request too large" }, { status: 413 });
     return Response.json({ error: "Invalid discovery request JSON" }, { status: 400 });
   }
   if (!body || typeof body !== "object" || Array.isArray(body)) {
@@ -11,18 +14,6 @@ export async function POST(request: Request) {
   }
   const { channels, history } = body as { channels?: unknown; history?: unknown };
   return discover(channels === undefined ? [] : channels, parseDiscoveryHistory(history));
-}
-
-/** Older clients can still load a feed even if their URL history was truncated. */
-export async function GET(request: Request) {
-  const params = new URL(request.url).searchParams;
-  const value = params.get("channels") ?? "";
-  let history: unknown;
-  const raw = params.get("history");
-  if (raw && raw.length <= 16_000) {
-    try { history = JSON.parse(raw); } catch { /* History is only a recommendation hint. */ }
-  }
-  return discover(value ? value.split(",") : [], parseDiscoveryHistory(history));
 }
 
 async function discover(channels: unknown, history: DiscoveryHistory[]) {
@@ -36,7 +27,7 @@ async function discover(channels: unknown, history: DiscoveryHistory[]) {
     const data = await fetchChannelDiscovery(selected, history);
     return Response.json(data, { headers: { "Cache-Control": "private, max-age=30" } });
   } catch (error) {
-    const upstream = error instanceof DiscoveryUpstreamError ? error : new DiscoveryUpstreamError(502, 15);
+    const upstream = error instanceof UpstreamError ? error : new UpstreamError("transport", 15);
     return Response.json({ error: upstream.message }, {
       status: upstream.status,
       headers: { ...(upstream.retryAfter ? { "Retry-After": String(upstream.retryAfter) } : {}), "Cache-Control": "no-store" },

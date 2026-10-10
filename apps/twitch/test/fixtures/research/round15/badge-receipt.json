@@ -1,0 +1,1196 @@
+[
+  {
+    "id": "1000000007",
+    "contentOffsetSeconds": 36,
+    "createdAt": "2026-10-08T16:05:01.583Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000008",
+    "contentOffsetSeconds": 41,
+    "createdAt": "2026-10-08T16:05:06.544Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#FF0000",
+      "userBadges": [
+        {
+          "id": "ZXdjLTIwMjYtZGlhbW9uZDsxOw==",
+          "version": "1",
+          "title": "EWC 2026 (Diamond)",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/cb874239-c790-4f58-93c2-319254d61d18/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000009",
+    "contentOffsetSeconds": 63,
+    "createdAt": "2026-10-08T16:05:28.17Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#FF0000",
+      "userBadges": [
+        {
+          "id": "ZXdjLTIwMjYtZGlhbW9uZDsxOw==",
+          "version": "1",
+          "title": "EWC 2026 (Diamond)",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/cb874239-c790-4f58-93c2-319254d61d18/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000010",
+    "contentOffsetSeconds": 77,
+    "createdAt": "2026-10-08T16:05:41.898Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#8A2BE2",
+      "userBadges": [
+        {
+          "id": "cGljaHU7MTs=",
+          "version": "1",
+          "title": "Pichu",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/20f214cf-36b0-4b42-8992-3b769bcb0461/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000011",
+    "contentOffsetSeconds": 79,
+    "createdAt": "2026-10-08T16:05:44.306Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000012",
+    "contentOffsetSeconds": 79,
+    "createdAt": "2026-10-08T16:05:44.514Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [
+        {
+          "id": "Ozs=",
+          "version": "",
+          "title": "",
+          "imageURL": ""
+        },
+        {
+          "id": "cHJlbWl1bTsxOw==",
+          "version": "1",
+          "title": "Prime Gaming",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/bbbe0db0-a598-423e-86d0-f9fb98ca1933/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000013",
+    "contentOffsetSeconds": 83,
+    "createdAt": "2026-10-08T16:05:48.625Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#8A2BE2",
+      "userBadges": [
+        {
+          "id": "cGljaHU7MTs=",
+          "version": "1",
+          "title": "Pichu",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/20f214cf-36b0-4b42-8992-3b769bcb0461/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000014",
+    "contentOffsetSeconds": 86,
+    "createdAt": "2026-10-08T16:05:51.605Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000015",
+    "contentOffsetSeconds": 92,
+    "createdAt": "2026-10-08T16:05:57.183Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#8A2BE2",
+      "userBadges": [
+        {
+          "id": "cGljaHU7MTs=",
+          "version": "1",
+          "title": "Pichu",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/20f214cf-36b0-4b42-8992-3b769bcb0461/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000016",
+    "contentOffsetSeconds": 94,
+    "createdAt": "2026-10-08T16:05:58.784Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000017",
+    "contentOffsetSeconds": 94,
+    "createdAt": "2026-10-08T16:05:59.073Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000018",
+    "contentOffsetSeconds": 101,
+    "createdAt": "2026-10-08T16:06:06.298Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000019",
+    "contentOffsetSeconds": 103,
+    "createdAt": "2026-10-08T16:06:07.803Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000020",
+    "contentOffsetSeconds": 103,
+    "createdAt": "2026-10-08T16:06:08.471Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#FF0000",
+      "userBadges": [
+        {
+          "id": "ZXdjLTIwMjYtZGlhbW9uZDsxOw==",
+          "version": "1",
+          "title": "EWC 2026 (Diamond)",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/cb874239-c790-4f58-93c2-319254d61d18/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000021",
+    "contentOffsetSeconds": 104,
+    "createdAt": "2026-10-08T16:06:08.963Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#DAA520",
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000022",
+    "contentOffsetSeconds": 111,
+    "createdAt": "2026-10-08T16:06:16.409Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#1E90FF",
+      "userBadges": [
+        {
+          "id": "dHdpdGNoLXJlY2FwLTIwMjM7MTs=",
+          "version": "1",
+          "title": "Twitch Recap 2023",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/4d9e9812-ba9b-48a6-8690-13f3f338ee65/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000023",
+    "contentOffsetSeconds": 131,
+    "createdAt": "2026-10-08T16:06:36.41Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#FF0000",
+      "userBadges": [
+        {
+          "id": "ZXdjLTIwMjYtZGlhbW9uZDsxOw==",
+          "version": "1",
+          "title": "EWC 2026 (Diamond)",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/cb874239-c790-4f58-93c2-319254d61d18/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000024",
+    "contentOffsetSeconds": 138,
+    "createdAt": "2026-10-08T16:06:43.018Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [
+        {
+          "id": "c3Vic2NyaWJlcjswOw==",
+          "version": "0",
+          "title": "Subscriber",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/5d9f2208-5dd8-11e7-8513-2ff4adfae661/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000025",
+    "contentOffsetSeconds": 140,
+    "createdAt": "2026-10-08T16:06:45.513Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#FFFF00",
+      "userBadges": [
+        {
+          "id": "Ozs=",
+          "version": "",
+          "title": "",
+          "imageURL": ""
+        },
+        {
+          "id": "Ymxvc3NvbS1iYWRnZTsxOw==",
+          "version": "1",
+          "title": "Blossom Badge Level 1",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/c255cb27-7e04-4be1-9dee-434e85523638/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000026",
+    "contentOffsetSeconds": 145,
+    "createdAt": "2026-10-08T16:06:50.426Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#DAA520",
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000027",
+    "contentOffsetSeconds": 145,
+    "createdAt": "2026-10-08T16:06:50.697Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#0000FF",
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000028",
+    "contentOffsetSeconds": 150,
+    "createdAt": "2026-10-08T16:06:54.925Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000029",
+    "contentOffsetSeconds": 152,
+    "createdAt": "2026-10-08T16:06:57.393Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#5F9EA0",
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000030",
+    "contentOffsetSeconds": 155,
+    "createdAt": "2026-10-08T16:07:00.602Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000031",
+    "contentOffsetSeconds": 157,
+    "createdAt": "2026-10-08T16:07:01.865Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#DAA520",
+      "userBadges": [
+        {
+          "id": "bm9fYXVkaW87MTs=",
+          "version": "1",
+          "title": "Watching without audio",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/aef2cd08-f29b-45a1-8c12-d44d7fd5e6f0/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000032",
+    "contentOffsetSeconds": 159,
+    "createdAt": "2026-10-08T16:07:04.018Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#8A2BE2",
+      "userBadges": [
+        {
+          "id": "ZXdjLTIwMjYtZ29sZDsxOw==",
+          "version": "1",
+          "title": "EWC 2026 (Gold)",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/aa891ef7-b24b-49ff-ae08-13819621fc4b/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000033",
+    "contentOffsetSeconds": 164,
+    "createdAt": "2026-10-08T16:07:09.348Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [
+        {
+          "id": "cHJlbWl1bTsxOw==",
+          "version": "1",
+          "title": "Prime Gaming",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/bbbe0db0-a598-423e-86d0-f9fb98ca1933/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000034",
+    "contentOffsetSeconds": 167,
+    "createdAt": "2026-10-08T16:07:12.591Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#DAA520",
+      "userBadges": [
+        {
+          "id": "bm9fYXVkaW87MTs=",
+          "version": "1",
+          "title": "Watching without audio",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/aef2cd08-f29b-45a1-8c12-d44d7fd5e6f0/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000035",
+    "contentOffsetSeconds": 171,
+    "createdAt": "2026-10-08T16:07:16.196Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000036",
+    "contentOffsetSeconds": 171,
+    "createdAt": "2026-10-08T16:07:16.632Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000037",
+    "contentOffsetSeconds": 172,
+    "createdAt": "2026-10-08T16:07:17.263Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#DAA520",
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000038",
+    "contentOffsetSeconds": 176,
+    "createdAt": "2026-10-08T16:07:20.825Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [
+        {
+          "id": "c3Vic2NyaWJlcjswOw==",
+          "version": "0",
+          "title": "Subscriber",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/5d9f2208-5dd8-11e7-8513-2ff4adfae661/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000039",
+    "contentOffsetSeconds": 176,
+    "createdAt": "2026-10-08T16:07:20.997Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000040",
+    "contentOffsetSeconds": 177,
+    "createdAt": "2026-10-08T16:07:21.883Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [
+        {
+          "id": "bGEtdmVsYWRhLXZpOzE7",
+          "version": "1",
+          "title": "La Velada VI",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/e767e17a-252a-4047-9365-910f4f05a883/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000041",
+    "contentOffsetSeconds": 179,
+    "createdAt": "2026-10-08T16:07:24.437Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#5F9EA0",
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000042",
+    "contentOffsetSeconds": 180,
+    "createdAt": "2026-10-08T16:07:25.551Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#FF0000",
+      "userBadges": [
+        {
+          "id": "ZXdjLTIwMjYtZGlhbW9uZDsxOw==",
+          "version": "1",
+          "title": "EWC 2026 (Diamond)",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/cb874239-c790-4f58-93c2-319254d61d18/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000043",
+    "contentOffsetSeconds": 185,
+    "createdAt": "2026-10-08T16:07:30.378Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000044",
+    "contentOffsetSeconds": 187,
+    "createdAt": "2026-10-08T16:07:31.941Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#FF0000",
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000045",
+    "contentOffsetSeconds": 190,
+    "createdAt": "2026-10-08T16:07:35.041Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [
+        {
+          "id": "c3Vic2NyaWJlcjswOw==",
+          "version": "0",
+          "title": "Subscriber",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/5d9f2208-5dd8-11e7-8513-2ff4adfae661/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000046",
+    "contentOffsetSeconds": 191,
+    "createdAt": "2026-10-08T16:07:36.098Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [
+        {
+          "id": "bGEtdmVsYWRhLXZpOzE7",
+          "version": "1",
+          "title": "La Velada VI",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/e767e17a-252a-4047-9365-910f4f05a883/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000047",
+    "contentOffsetSeconds": 192,
+    "createdAt": "2026-10-08T16:07:36.731Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#9ACD32",
+      "userBadges": [
+        {
+          "id": "c3Vic2NyaWJlcjszOw==",
+          "version": "3",
+          "title": "3-Month Subscriber",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/e8984705-d091-4e54-8241-e53b30a84b0e/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000048",
+    "contentOffsetSeconds": 194,
+    "createdAt": "2026-10-08T16:07:39.216Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000049",
+    "contentOffsetSeconds": 199,
+    "createdAt": "2026-10-08T16:07:44.476Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000050",
+    "contentOffsetSeconds": 202,
+    "createdAt": "2026-10-08T16:07:47.381Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#DAA520",
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000051",
+    "contentOffsetSeconds": 204,
+    "createdAt": "2026-10-08T16:07:49.183Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [
+        {
+          "id": "c3Vic2NyaWJlcjswOw==",
+          "version": "0",
+          "title": "Subscriber",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/5d9f2208-5dd8-11e7-8513-2ff4adfae661/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000052",
+    "contentOffsetSeconds": 205,
+    "createdAt": "2026-10-08T16:07:50.061Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000053",
+    "contentOffsetSeconds": 208,
+    "createdAt": "2026-10-08T16:07:53.394Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [
+        {
+          "id": "c3Vic2NyaWJlcjswOw==",
+          "version": "0",
+          "title": "Subscriber",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/5d9f2208-5dd8-11e7-8513-2ff4adfae661/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000054",
+    "contentOffsetSeconds": 209,
+    "createdAt": "2026-10-08T16:07:54.501Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#8A2BE2",
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000055",
+    "contentOffsetSeconds": 226,
+    "createdAt": "2026-10-08T16:08:11.056Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000056",
+    "contentOffsetSeconds": 229,
+    "createdAt": "2026-10-08T16:08:14.565Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000057",
+    "contentOffsetSeconds": 229,
+    "createdAt": "2026-10-08T16:08:14.629Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000058",
+    "contentOffsetSeconds": 231,
+    "createdAt": "2026-10-08T16:08:16.179Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#DAA520",
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        },
+        {
+          "text": "[redacted]",
+          "emote": {
+            "id": "1000000059"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000060",
+    "contentOffsetSeconds": 235,
+    "createdAt": "2026-10-08T16:08:20.079Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000061",
+    "contentOffsetSeconds": 237,
+    "createdAt": "2026-10-08T16:08:21.953Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [
+        {
+          "id": "c3Vic2NyaWJlcjswOw==",
+          "version": "0",
+          "title": "Subscriber",
+          "imageURL": "https://static-cdn.jtvnw.net/badges/v1/5d9f2208-5dd8-11e7-8513-2ff4adfae661/1"
+        }
+      ],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000062",
+    "contentOffsetSeconds": 241,
+    "createdAt": "2026-10-08T16:08:26.05Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": null,
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "1000000063",
+    "contentOffsetSeconds": 241,
+    "createdAt": "2026-10-08T16:08:26.661Z",
+    "commenter": {
+      "login": "fixture-channel"
+    },
+    "message": {
+      "userColor": "#FF7F50",
+      "userBadges": [],
+      "fragments": [
+        {
+          "text": "[redacted]",
+          "emote": null
+        }
+      ]
+    }
+  }
+]

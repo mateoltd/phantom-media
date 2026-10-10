@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { FEATURED_CHANNELS } from "@/lib/featured-channels";
+import { FEATURED_CHANNELS } from "@/lib/discovery/featured";
 import { getBaseUrl } from "@/lib/seo";
 
 export default function sitemap(): MetadataRoute.Sitemap {

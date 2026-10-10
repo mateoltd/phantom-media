@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, mock, test } from "node:test";
-import { createReplayChatSession } from "../lib/replay-chat.ts";
+import { createReplayChatSession } from "../lib/chat/replay-session.ts";
 
 afterEach(() => mock.restoreAll());
 

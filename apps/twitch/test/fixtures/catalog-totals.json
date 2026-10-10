@@ -1,0 +1,168 @@
+{
+  "capturedAt": "2026-10-09T17:32:52.162413+00:00",
+  "source": "independent bounded known-channel capture",
+  "requests": [
+    {
+      "query": "query ChannelVideos($anchor:String!, $first:Int!) { user(login:$anchor) { videos(first:$first, sort:TIME, type:ARCHIVE) { totalCount edges { node { id title } } } } }",
+      "variables": {
+        "anchor": "rickyedit",
+        "first": 100
+      }
+    },
+    {
+      "query": "query ChannelVideos($anchor:String!, $first:Int!) { user(login:$anchor) { videos(first:$first, sort:TIME, type:HIGHLIGHT) { totalCount edges { node { id title } } } } }",
+      "variables": {
+        "anchor": "rickyedit",
+        "first": 100
+      }
+    }
+  ],
+  "responses": [
+    {
+      "data": {
+        "user": {
+          "videos": {
+            "totalCount": 18,
+            "edges": [
+              {
+                "node": {
+                  "id": "2895227665",
+                  "title": "ricky vs 3 chicas"
+                }
+              },
+              {
+                "node": {
+                  "id": "2893413655",
+                  "title": "reaccionando a mi cita con los gemelos."
+                }
+              },
+              {
+                "node": {
+                  "id": "2891857515",
+                  "title": "borja escalona la ha vuelto a liar."
+                }
+              },
+              {
+                "node": {
+                  "id": "2889944256",
+                  "title": "maricarmen."
+                }
+              },
+              {
+                "node": {
+                  "id": "2881986279",
+                  "title": "en serio alguien ve a este t\u00edo de manera no ir\u00f3nica"
+                }
+              },
+              {
+                "node": {
+                  "id": "2880319852",
+                  "title": "keroro ha ido a las citas de los gemelos."
+                }
+              },
+              {
+                "node": {
+                  "id": "2878478495",
+                  "title": "hey"
+                }
+              },
+              {
+                "node": {
+                  "id": "2876668243",
+                  "title": "y a veces se me olvida"
+                }
+              },
+              {
+                "node": {
+                  "id": "2874121788",
+                  "title": "damn"
+                }
+              },
+              {
+                "node": {
+                  "id": "2871477074",
+                  "title": "3 videitos y me piro"
+                }
+              },
+              {
+                "node": {
+                  "id": "2869656807",
+                  "title": "intentando reaccionar a la conferencia de apple"
+                }
+              },
+              {
+                "node": {
+                  "id": "2857071288",
+                  "title": "batalla de aura en discord."
+                }
+              },
+              {
+                "node": {
+                  "id": "2856125311",
+                  "title": "MamiDeTres me ha respondido."
+                }
+              },
+              {
+                "node": {
+                  "id": "2855170962",
+                  "title": "hablemos de las batallas de aura."
+                }
+              },
+              {
+                "node": {
+                  "id": "2851490399",
+                  "title": "la gran ca\u00edda de los influencers."
+                }
+              },
+              {
+                "node": {
+                  "id": "2844171604",
+                  "title": "reaccionando a first dates."
+                }
+              },
+              {
+                "node": {
+                  "id": "2842449526",
+                  "title": "grabemos."
+                }
+              }
+            ]
+          }
+        }
+      },
+      "extensions": {
+        "durationMilliseconds": 63,
+        "requestID": "01M4GVK4DRXZD2S0ZEPFRYDR1V",
+        "operationName": "ChannelVideos"
+      }
+    },
+    {
+      "data": {
+        "user": {
+          "videos": {
+            "totalCount": 4,
+            "edges": [
+              {
+                "node": {
+                  "id": "1667569838",
+                  "title": "Destacado: cosillas"
+                }
+              },
+              {
+                "node": {
+                  "id": "1664051251",
+                  "title": "Destacado: ministerio"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "extensions": {
+        "durationMilliseconds": 63,
+        "requestID": "01M4GVK4DRXZD2S0ZEPFRYDR1V",
+        "operationName": "ChannelVideos"
+      }
+    }
+  ]
+}

@@ -1,5 +1,6 @@
+import { errorResponse } from "@/lib/errors";
 import { NextRequest, NextResponse } from "next/server";
-import { fetchVodMetadata } from "@/lib/twitch";
+import { fetchVodMetadata } from "@/lib/twitch/videos";
 
 export async function GET(request: NextRequest) {
   const vodId = request.nextUrl.searchParams.get("vodId") ?? "";
@@ -11,8 +12,5 @@ export async function GET(request: NextRequest) {
       previewThumbnailURL: video.previewThumbnailURL,
       broadcastType: video.broadcastType, lengthSeconds: video.lengthSeconds,
     }, { headers: { "Cache-Control": "public, max-age=300, s-maxage=300" } });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Video unavailable";
-    return NextResponse.json({ error: message }, { status: message.includes("not found") ? 404 : 502 });
-  }
+  } catch (error) { return errorResponse(error); }
 }

@@ -65,6 +65,9 @@ export const reservedChannelNames = new Set([
   "sitemap.xml",
   "videos",
   "watch-history",
+  "categories",
+  "extensions",
+  "live-wall",
 ]);
 
 export function isReservedChannelName(value: string): boolean {

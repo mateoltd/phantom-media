@@ -1,6 +1,8 @@
+import { UpstreamError } from "../lib/errors.ts";
 import assert from "node:assert/strict";
 import { afterEach, test, mock } from "node:test";
-import { fetchChannel, fetchVodMetadata } from "../lib/twitch.ts";
+import { fetchChannelBasics } from "../lib/twitch/channels.ts";
+import { fetchVodMetadata } from "../lib/twitch/videos.ts";
 
 afterEach(() => mock.restoreAll());
 
@@ -13,7 +15,7 @@ test("loads all muted intervals in the existing VOD metadata request", async () 
     assert.match(query, /muteInfo\s*\{\s*mutedSegmentConnection\s*\{\s*nodes\s*\{\s*offset\s+duration/);
     assert.match(query, /seekPreviewsURL/);
     return Response.json({ data: { video: {
-      id: "123", owner: { login: "example" },
+      id: "123", owner: { login: "example" }, broadcastType: "ARCHIVE", createdAt: "2026-01-01",
       muteInfo: { mutedSegmentConnection: { nodes: segments } },
     } } });
   });
@@ -26,7 +28,7 @@ test("unavailable mute information does not retry or block valid VOD metadata", 
   for (const path of [["video", "muteInfo"], ["video", "muteInfo", "mutedSegmentConnection"]]) {
     const fetch = mock.method(globalThis, "fetch", async () => Response.json({
       errors: [{ message: "service error", path }],
-      data: { video: { id: "123", owner: { login: "example" }, muteInfo: null } },
+      data: { video: { id: "123", owner: { login: "example" }, broadcastType: "ARCHIVE", createdAt: "2026-01-01", muteInfo: null } },
     }));
     assert.equal((await fetchVodMetadata("123")).id, "123");
     assert.equal(fetch.mock.callCount(), 1);
@@ -42,7 +44,7 @@ test("optional mute errors do not hide errors in required VOD metadata", async (
     ],
     data: { video: null },
   }));
-  await assert.rejects(fetchVodMetadata("123"), /invalid video/);
+  await assert.rejects(fetchVodMetadata("123"), error => error instanceof UpstreamError && error.kind === "schema");
   assert.equal(fetch.mock.callCount(), 1);
 });
 
@@ -68,9 +70,9 @@ test("retries transient GraphQL service errors during a channel fetch", async ()
     });
   });
 
-  const channel = await fetchChannel("example");
+  const channel = await fetchChannelBasics("example");
   assert.equal(channel.login, "example");
-  assert.deepEqual(channel.videos, []);
+  assert.equal(channel.stream, null);
   assert.equal(calls, 2);
 });
 
@@ -103,12 +105,12 @@ test("does not retry a permanent GraphQL error", async () => {
     return Response.json({ errors: [{ message: "invalid query" }] });
   });
 
-  await assert.rejects(fetchChannel("example"), /invalid query/);
+  await assert.rejects(fetchChannelBasics("example"), error => error instanceof UpstreamError && error.kind === "schema");
   assert.equal(calls, 1);
 });
 
 test("chat pagination advances by timestamp and retains deleted commenters", async () => {
-  const { fetchVodComments } = await import("../lib/twitch.ts");
+  const { fetchVodComments } = await import("../lib/twitch/comments.ts");
   let variables;
   mock.method(globalThis, "fetch", async (_url, init) => {
     variables = JSON.parse(init.body).variables;
@@ -122,14 +124,15 @@ test("chat pagination advances by timestamp and retains deleted commenters", asy
   assert.equal(page.nextOffset, 31);
   assert.equal(page.messages[0].user, "Deleted user");
   assert.equal(page.messages[0].text, "hello world");
-  assert.equal(page.messages[0].color, null);
+  assert.match(page.messages[0].color, /^#[0-9a-f]{6}$/i);
+  assert.equal(page.coverage.gapAt, 30);
 });
 
 test("unavailable replay is distinct from a valid empty chat", async () => {
-  const { fetchVodComments } = await import("../lib/twitch.ts");
+  const { fetchVodComments } = await import("../lib/twitch/comments.ts");
   mock.method(globalThis, "fetch", async () => Response.json({ data: { video: { comments: null } } }));
   await assert.rejects(fetchVodComments("123", 0), /unavailable/);
   mock.restoreAll();
   mock.method(globalThis, "fetch", async () => Response.json({ data: { video: { comments: { edges: [], pageInfo: { hasNextPage: false } } } } }));
-  assert.deepEqual(await fetchVodComments("123", 0), { messages: [], nextOffset: null });
+  assert.deepEqual(await fetchVodComments("123", 0), { messages: [], nextOffset: null, coverage: { from: 0, through: 0, partial: true, gapAt: undefined } });
 });

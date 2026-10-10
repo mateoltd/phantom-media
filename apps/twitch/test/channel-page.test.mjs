@@ -92,7 +92,7 @@ test("invalid names short-circuit before any upstream call", async () => {
   assert.equal(called, 0, "must not hit Twitch for a non-channel path");
 });
 
-test("a live channel resolves and tolerates a null video list", async () => {
+test("a live channel resolves without loading a catalog", async () => {
   mockChannelResponse({
     ...CHANNEL,
     stream: { id: "s", title: "Live!", type: "live", viewersCount: 10, createdAt: "" },
@@ -100,7 +100,9 @@ test("a live channel resolves and tolerates a null video list", async () => {
 
   const result = await loadChannelPage("liveone");
   assert.equal(result.status, "ok");
-  assert.equal(result.channel.videos.length, 0);
+  assert.ok(result.channel.stream);
+  // A copy this fresh needs no recheck in the browser.
+  assert.ok(result.age >= 0 && result.age < 30_000);
 });
 
 /**

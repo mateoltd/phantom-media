@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { buildMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Page Not Found",

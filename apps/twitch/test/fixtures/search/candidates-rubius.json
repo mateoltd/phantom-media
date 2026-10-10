@@ -1,0 +1,798 @@
+{
+  "capturedAt": "2026-10-10T15:26:48.804Z",
+  "endpoint": "https://gql.twitch.tv/gql",
+  "request": {
+    "query": "query SearchCandidates($query:String!){searchFor(userQuery:$query,platform:\"web\",options:{targets:[{index:CHANNEL,limit:40}]}){channels{edges{item{... on User{id login displayName profileImageURL(width:150) followers{totalCount} roles{isPartner} stream{title viewersCount game{name}}}}}}}}",
+    "variables": {
+      "query": "rubius"
+    }
+  },
+  "response": {
+    "data": {
+      "searchFor": {
+        "channels": {
+          "edges": [
+            {
+              "item": {
+                "id": "39276140",
+                "login": "rubius",
+                "displayName": "Rubius",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/a2592e98-5ba6-4c9a-9d9e-cf036d6f64c2-profile_image-150x150.jpg",
+                "followers": {
+                  "totalCount": 16589721
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "997529187",
+                "login": "rufusplay1",
+                "displayName": "RufusPlay1",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/07c25aaa-635c-4861-bcc6-3f8572943abd-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 5180
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "🎥 RERUN 🎥 • ❤️✨ Spend the weekend with Lacey.✨❤️ • Stay & Enjoy 💋",
+                  "viewersCount": 17,
+                  "game": {
+                    "name": "Pools, Hot Tubs, and Beaches"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "786351103",
+                "login": "rebustv",
+                "displayName": "RebusTV",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/ccc7c645-8556-4732-8b78-660392d43adf-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 245
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Чота делаю",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Just Chatting"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "603336274",
+                "login": "rubiusarmy_",
+                "displayName": "rubiusarmy_",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/717f92fb-4a8f-457f-a75e-1b50118c7f02-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 15048
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "44743427",
+                "login": "hotarubi_ta",
+                "displayName": "hotarubi_TA",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/0bc35642-268d-4df8-86fb-724e76a1e846-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 3229
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "alttp たまの神トラ",
+                  "viewersCount": 55,
+                  "game": {
+                    "name": "The Legend of Zelda: A Link to the Past"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1524403619",
+                "login": "alfmine11",
+                "displayName": "alfmine11",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/deb02a83-7135-47a9-922d-055855f682e7-profile_image-150x150.jpeg",
+                "followers": {
+                  "totalCount": 5
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Skate truco de el rubius",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "skate."
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "98777380",
+                "login": "diogoteodoro11",
+                "displayName": "DiogoTeodoro11",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/28412627-e22c-4743-813c-f401e6c0b394-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 396
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Apparat | !cmd | NGC by Rubis Gas",
+                  "viewersCount": 5,
+                  "game": {
+                    "name": "iRacing"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1232351491",
+                "login": "s1nn3r1978",
+                "displayName": "s1nn3r1978",
+                "profileImageURL": "https://static-cdn.jtvnw.net/user-default-pictures-uv/ce57700a-def9-11e9-842d-784f43822e80-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 7
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Rufus The Bearded Dragon's Live Cam",
+                  "viewersCount": 1,
+                  "game": null
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1374830406",
+                "login": "cine_rubius_2017",
+                "displayName": "Cine_Rubius_2017",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/e4d292f4-201d-4967-9600-e2499448f47f-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 390
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "❤️ MARATHON MARIO BROS ❤️",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Super Mario Odyssey"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "472905697",
+                "login": "ratobaixada",
+                "displayName": "RatoBaixada",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/16c2475d-3d9a-4461-a1c8-9381f5fbe285-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 7
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "OLDEBRA 7.4 - Novo OT 7.4 lançado hoje! cupom 10% OFF: RatoBaixada -----#Tibia #Otserver #Tibia7.4 - [+18]",
+                  "viewersCount": 7,
+                  "game": {
+                    "name": "Tibia"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "254278150",
+                "login": "rubia",
+                "displayName": "Rubia",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/47137eaf-d8c6-49fe-89bd-fd09abf0d5e3-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 7637
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "27766960",
+                "login": "rubizockt",
+                "displayName": "RubiZockt",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/d30781cf-732a-4b91-8249-874654283e52-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 1129
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "🇩🇪 🇪🇸 🇬🇧 | Bissl Ballern",
+                  "viewersCount": 4,
+                  "game": {
+                    "name": "Fortnite"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "224502550",
+                "login": "davidrubino",
+                "displayName": "DavidRubino",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/b0be06a1-ec12-4bd2-b46c-535bd9735bd1-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 301717
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "119286193",
+                "login": "orubis",
+                "displayName": "Orubis",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/bf8610d3-2c96-481d-aba4-f508b2bcee69-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 1260
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "738492378",
+                "login": "jucatte",
+                "displayName": "JucaTtE",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/70533b96-703d-4bd9-8e19-64e82e568dd1-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 22
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "[+18] !RubinOT - Huntzada Dark Thais",
+                  "viewersCount": 5,
+                  "game": {
+                    "name": "Tibia"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "276008885",
+                "login": "riwiusde",
+                "displayName": "RiwiusDE",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/3a995e0a-6e6e-484b-bff9-5edc1fd81ba6-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 479
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "POLARIS LIVE 🔥 Erstbesuch mit @Nyali__",
+                  "viewersCount": 10,
+                  "game": {
+                    "name": "IRL"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1345211985",
+                "login": "tenth_wonder7",
+                "displayName": "tenth_wonder7",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/d3c7153d-3e64-4051-8ffe-b5ca352d926e-profile_image-150x150.jpeg",
+                "followers": {
+                  "totalCount": 4
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "PS5 Vr2 / INTO THE RADIUS 2 / ВОЗВРАЩЕНИЕ В ПЕЧОРСК",
+                  "viewersCount": 2,
+                  "game": {
+                    "name": "Into the Radius 2"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "168518742",
+                "login": "rubix",
+                "displayName": "RUBIX",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/cfad5768-f308-40b8-a52d-cc224387775b-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 154207
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "584745462",
+                "login": "rubidus_3",
+                "displayName": "rubidus_3",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/623ee9d0-8a3b-4d05-b2b4-d7f828efd043-profile_image-150x150.jpeg",
+                "followers": {
+                  "totalCount": 235
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "727096987",
+                "login": "kitaro_sonraz",
+                "displayName": "KiTaRo_SonRaz",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/f3211329-3e42-4912-9abb-282921cf6c10-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 22
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "noobando.... NWO",
+                  "viewersCount": 0,
+                  "game": {
+                    "name": "Banished"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "526393227",
+                "login": "ruminus_mp3",
+                "displayName": "ruminus_mp3",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/e071472f-4634-4a6e-8c33-c55ddcc00632-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 522
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Я самый нищий на планете | !donate, !tg, !inst",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Counter-Strike"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "436879428",
+                "login": "skulledweb41",
+                "displayName": "SkulledWeb41",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/2222ab22-3683-4625-94a1-2f7a1b35b505-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 84
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Ruins of Lorderan PT - WoW forever Lore prep!",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Warcraft III"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "154411434",
+                "login": "emershow89",
+                "displayName": "emershow89",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/c1dbfd50-6657-4438-af2c-0e3d2d59a909-profile_image-150x150.jpeg",
+                "followers": {
+                  "totalCount": 25
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "[DEUSOLD] Tibia 7.4",
+                  "viewersCount": 2,
+                  "game": {
+                    "name": "Tibia"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "101688688",
+                "login": "gorbatioles",
+                "displayName": "gorbatioles",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/f7267af4-0cb8-4748-92a1-a446939aac1b-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 26
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Rubinot - Tenebrium / MS 1000+",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Tibia"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "503629027",
+                "login": "ruins_de_roda",
+                "displayName": "Ruins_De_Roda",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/b86945fe-c08f-4707-9616-82e3e8ef649c-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 893
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "F1 25 - Quali Baku | discord.gg/WQFXhqwZvu",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "F1 25"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "185530647",
+                "login": "ktsqn",
+                "displayName": "けてさん",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/da323d4a-928d-4cad-970b-4441d5512d9b-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 337
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Rudis Rust（るでぃらす）７日目！",
+                  "viewersCount": 7,
+                  "game": {
+                    "name": "Rust"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "62381676",
+                "login": "lancehardy",
+                "displayName": "LanceHardy",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/43a69194-d08b-4337-bacf-e94c6b810d2d-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 1964
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "some ruins, some 7, and maybe finale?",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Romancing SaGa 2: Revenge of the Seven"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "914231460",
+                "login": "05rubick",
+                "displayName": "05rubick",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/4a6cf6a2-3a53-4c3c-a014-741f49f10e2c-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 31390
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": ")",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "EA Sports FC 27"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "113206860",
+                "login": "rubini",
+                "displayName": "Rubini",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/64db09ba-3279-4f89-91f6-827d26a8df15-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 210097
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "783035727",
+                "login": "rubito10_",
+                "displayName": "rubito10_",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/b0426005-b8e7-4cfb-befc-fa1f0da4fc5a-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 599
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "+18 | Valorant |e o que temos pra hj",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "VALORANT"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "623519508",
+                "login": "kirubie",
+                "displayName": "Kirubie",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/08112dbd-ada2-4b63-b933-8ee2e46280ad-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 6867
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "JE TRY 3-1 LINEAR | GRIND SUR LE BOOST | !boost !discord !sens !clips !playlist",
+                  "viewersCount": 14,
+                  "game": {
+                    "name": "Apex Legends"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "139538221",
+                "login": "rubiks",
+                "displayName": "Rubiks",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/97cb9097-7365-4385-aec5-d457d93e2332-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 61403
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "244428084",
+                "login": "loutresupreme1",
+                "displayName": "loutresupreme1",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/53b288aa-3801-4851-b0fb-07c437fe0377-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 115
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "LET'S PLAY || Des FROUFROUS, des RUBANS et des ROBES magnifiques",
+                  "viewersCount": 4,
+                  "game": {
+                    "name": "Dressmaker (2026)"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "514337225",
+                "login": "jamieofvinland",
+                "displayName": "JamieofVinland",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/6894958b-6daa-4aa5-9680-7cb96fcab808-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 448
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "❤️🦄🏳️‍🌈Calming the Land❤️🦄🏳️‍🌈",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Pokémon Ruby/Sapphire"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "598495509",
+                "login": "akamikarubi",
+                "displayName": "赤見かるび",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/f5ba0ca0-2187-41ea-b7bb-d0457b1dba0e-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 633202
+                },
+                "roles": {
+                  "isPartner": true
+                },
+                "stream": null
+              }
+            },
+            {
+              "item": {
+                "id": "1041714605",
+                "login": "klax98",
+                "displayName": "KLAX98",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/7d090d00-a765-44a5-9241-beac7411a0fc-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 137
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "🔴 POKÉMON RUBY 🔴 | ✨ SHINY TORCHIC & GROUDON CAUGHT! ✨ | AUTHENTIC GBA CARTRIDGE 🎮 | GB EPILOGUE 🔥 | SHINY PLAYTHROUGH 🏆",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Pokémon Ruby/Sapphire"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1032479188",
+                "login": "kauzaruckus",
+                "displayName": "KauzaRuckus",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/d2dcf400-cfe2-4195-85ce-923d782c0771-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 1056
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "FOUND EVERY SPRITE FINALLY!!! \"NOW WE PLAY THE GAME\" FORTNITE FORTNITEMARES",
+                  "viewersCount": 2,
+                  "game": {
+                    "name": "Fortnite"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "400570048",
+                "login": "pez71",
+                "displayName": "Pez71",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/03ceba45-9d74-463c-9452-ab26dc5eefd7-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 97
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "Zero Company Then Wardogs — A Scotsman  Ruins Two Universes in One Stream",
+                  "viewersCount": 6,
+                  "game": {
+                    "name": "WARDOGS"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "927262965",
+                "login": "sighmonstreams",
+                "displayName": "sighmonstreams",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/8e57959f-6f38-40d9-9bfc-f16562620ac0-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 69
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "battlecupperday",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "Dota 2"
+                  }
+                }
+              }
+            },
+            {
+              "item": {
+                "id": "1071030763",
+                "login": "c3runtus",
+                "displayName": "C3runtus",
+                "profileImageURL": "https://static-cdn.jtvnw.net/jtv_user_pictures/0d59130a-d2ee-486f-ba00-4bdd2532a098-profile_image-150x150.png",
+                "followers": {
+                  "totalCount": 167
+                },
+                "roles": {
+                  "isPartner": false
+                },
+                "stream": {
+                  "title": "LA NASCITA DI UN IMPERO - RIMWORLD - LA RUN DEFINITIVA?",
+                  "viewersCount": 1,
+                  "game": {
+                    "name": "RimWorld"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

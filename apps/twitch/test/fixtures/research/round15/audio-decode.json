@@ -1,0 +1,13 @@
+{
+  "audioBytes": 7288,
+  "adtsChain": 558,
+  "profile": 2,
+  "sampleRate": 48000,
+  "channels": 2,
+  "estSeconds": 11.9,
+  "sig": {
+    "pesPackets": 558,
+    "pesStreamId": "0xC0",
+    "pid": 256
+  }
+}

@@ -12,8 +12,7 @@ export function useControls(videoRef: RefObject<HTMLVideoElement | null>, media:
   const controlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [controlsVisible, setControlsVisible] = useState(true);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [sleepTimerOpen, setSleepTimerOpen] = useState(false);
+  const [menu, setMenu] = useState<"settings" | "sleep" | null>(null);
   const { changeVolume, toggleMute, seekBy: seekMediaBy, changeSpeed: changeMediaSpeed, speed } = media;
   const { togglePip, toggleFullscreen: toggleNativeFullscreen } = display;
   const showControls = useCallback(() => {
@@ -26,9 +25,9 @@ export function useControls(videoRef: RefObject<HTMLVideoElement | null>, media:
     }, 2600);
   }, [videoRef]);
 
-  const changeSleepTimerOpen = useCallback((open: boolean) => {
-    setSleepTimerOpen(open);
-    if (!open) showControls();
+  const changeMenu = useCallback((next: "settings" | "sleep" | null) => {
+    setMenu(next);
+    showControls();
   }, [showControls]);
 
   const seekBy = useCallback((delta: number) => {
@@ -39,12 +38,12 @@ export function useControls(videoRef: RefObject<HTMLVideoElement | null>, media:
 
   const toggleFullscreen = useCallback(() => {
     toggleNativeFullscreen();
-    setSettingsOpen(false);
+    setMenu(null);
     showControls();
   }, [toggleNativeFullscreen, showControls]);
   const changeSpeed = useCallback((rate: number) => {
     changeMediaSpeed(rate);
-    setSettingsOpen(false);
+    setMenu(null);
   }, [changeMediaSpeed]);
 
   const onVideoClick = useCallback(() => {
@@ -140,12 +139,6 @@ export function useControls(videoRef: RefObject<HTMLVideoElement | null>, media:
     if (controlsTimer.current) clearTimeout(controlsTimer.current);
     setControlsVisible(false);
   }, [videoRef]);
-  const openSleepTimer = useCallback(() => {
-    setSettingsOpen(false);
-    setSleepTimerOpen(true);
-    showControls();
-  }, [showControls]);
-
   useEffect(() => {
     const video = videoRef.current;
     const reveal = () => setControlsVisible(true);
@@ -160,10 +153,9 @@ export function useControls(videoRef: RefObject<HTMLVideoElement | null>, media:
   }, [videoRef]);
 
   return {
-    idle: media.playing && !controlsVisible && !sleepTimerOpen && !settingsOpen,
+    idle: media.playing && !controlsVisible && menu === null,
     feedback, togglePlay, seekWithFeedback, toggleFullscreen, changeSpeed,
-    onVideoClick, showControls, hideControls, settingsOpen, setSettingsOpen,
-    sleepTimerOpen, changeSleepTimerOpen, openSleepTimer,
+    onVideoClick, showControls, hideControls, menu, changeMenu,
   };
 }
 

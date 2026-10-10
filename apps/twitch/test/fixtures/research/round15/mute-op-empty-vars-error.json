@@ -1,0 +1,17 @@
+{
+  "errors": [
+    {
+      "message": "must provide an id",
+      "path": [
+        "video"
+      ]
+    }
+  ],
+  "data": {
+    "video": null
+  },
+  "extensions": {
+    "durationMilliseconds": 4,
+    "operationName": "VideoPlayer_MutedSegmentsAlertOverlay"
+  }
+}

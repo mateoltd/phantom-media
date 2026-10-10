@@ -1,0 +1,66 @@
+{
+  "sweep": {
+    "320x180": {
+      "status": 200,
+      "dims": [
+        320,
+        180
+      ],
+      "ct": "image/jpeg"
+    },
+    "640x360": {
+      "status": 200,
+      "dims": [
+        640,
+        360
+      ],
+      "ct": "image/jpeg"
+    },
+    "1280x720": {
+      "status": 200,
+      "dims": [
+        1280,
+        720
+      ],
+      "ct": "image/jpeg"
+    },
+    "1920x1080": {
+      "status": 200,
+      "dims": [
+        1920,
+        1080
+      ],
+      "ct": "image/jpeg"
+    }
+  },
+  "freshness_seq": [
+    {
+      "t": 1791555067,
+      "status": 200,
+      "md5": "7b4619aedfd2bbdf39d4dbafccdd10a1",
+      "etag": "\"404355e69be4dc85\"",
+      "lm": null
+    },
+    {
+      "t": 1791555087,
+      "status": 200,
+      "md5": "0991d705ae34943f2b9341d873f64de1",
+      "etag": "\"3b2ae115a47494d3\"",
+      "lm": null
+    },
+    {
+      "t": 1791555107,
+      "status": 200,
+      "md5": "0991d705ae34943f2b9341d873f64de1",
+      "etag": "\"3b2ae115a47494d3\"",
+      "lm": null
+    }
+  ],
+  "distinct_md5": 2,
+  "offline": {
+    "status": 200,
+    "md5": "72c84d9c82a64c455789992602e112af",
+    "cl": "41324",
+    "ct_class": "image/jpeg"
+  }
+}
