@@ -46,7 +46,10 @@ an opposite concept or parody alone does not establish freedom to use a mark.
 The primary fill is warm white (`#f4f2eb`) on ink (`#101113`). For light surfaces,
 use ink for the entire mark and retain the transparent eye cutouts. The navbar
 lockup’s eyes slowly narrow to thin, visible lines and quickly reopen on a
-12-second cycle; reduced-motion preferences keep the resting expression.
+12-second cycle. Hovering or keyboard-focusing the home link widens the eyes and
+holds them awake until hover and keyboard focus end. Reduced-motion
+preferences keep the expression still. The navbar uses an inline `StillLogo`
+with the same geometry as the public lockup so the eyes can respond to the link.
 Initial channel, video, and clip loading uses a page-wide screen centered below
 the navbar. Loading states use a gently breathing mark with visible resting eyes and a
 staggered trail of rising Zs. This loop indicates ongoing activity, not a completion

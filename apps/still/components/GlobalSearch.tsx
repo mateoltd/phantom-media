@@ -1,13 +1,13 @@
 "use client";
 
 import { ViewTransition } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SquaresFour } from "@phosphor-icons/react/ssr";
 import { MediaHeader } from "@phantom/ui";
 import { StillSearch } from "./discovery/StillSearch";
 import { HistoryMenu } from "./history/HistoryMenu";
+import { StillLogo } from "./StillLogo";
 
 export function GlobalSearch() {
   const pathname = usePathname();
@@ -19,7 +19,7 @@ export function GlobalSearch() {
     floating={false}
     contentAligned
     brand={<Link href="/" aria-label="Still home" className="still-brand">
-      <Image src="/still-logo.svg" width={169} height={64} alt="" aria-hidden="true" className="still-brand-logo" preload />
+      <StillLogo />
     </Link>}
     // The home page has its own search, which docks here on scroll, so the header copy stays out of the way.
     // Everywhere else this field is the same element as that one: it arrives from the hero and returns to it.
