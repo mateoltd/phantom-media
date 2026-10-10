@@ -44,7 +44,10 @@ an opposite concept or parody alone does not establish freedom to use a mark.
 - `public/still-social.svg`: editable 1200 × 630 social card, exported as `og.png`.
 
 The primary fill is warm white (`#f4f2eb`) on ink (`#101113`). For light surfaces,
-use ink for the entire mark and retain the transparent eye cutouts. Do not add
-motion, shadows, speech tails, or gradients. Keep clear space of at least 8 units
-on the 64-unit mark grid. The header uses the lockup at 38px high, within a 44px
+use ink for the entire mark and retain the transparent eye cutouts. The navbar
+lockup’s eyes slowly narrow to thin, visible lines and quickly reopen on a
+12-second cycle; reduced-motion preferences keep the resting expression.
+Keep the rest of the mark still, without
+shadows, speech tails, or gradients. Keep clear space of at least 8 units on the
+64-unit mark grid. The header uses the lockup at 38px high, within a 44px
 home-link target; the symbol also works at 16px for a favicon.
