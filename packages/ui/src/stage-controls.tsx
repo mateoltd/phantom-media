@@ -1,9 +1,7 @@
 "use client";
 
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import {
-  ArrowClockwise,
-  ArrowCounterClockwise,
   ArrowsIn,
   ArrowsOut,
   Pause,
@@ -14,15 +12,19 @@ import {
 } from "@phosphor-icons/react/ssr";
 
 import { PLAYER_SEEK_SECONDS, type StageFeedback } from "./use-stage-playback";
+import { SeekTenIcon } from "./seek-ten-icon";
 
 const FILLED_ICON = { weight: "fill" as const };
 
-function SeekTenIcon({ direction }: { direction: "back" | "forward" }) {
-  const Arrow = direction === "back" ? ArrowCounterClockwise : ArrowClockwise;
+/** Use the toolbar's icons and the app's shared icon transition. */
+function PlaybackGlyph({ playing, waiting = false, size = 24 }: { playing: boolean; waiting?: boolean; size?: number }) {
   return (
-    <span className="relative inline-flex size-[30px] items-center justify-center" aria-hidden="true">
-      <Arrow {...FILLED_ICON} size={30} className="shrink-0" />
-      <span className="absolute pt-0.5 text-[8px] font-bold leading-none">{PLAYER_SEEK_SECONDS}</span>
+    <span className="stage-playback-glyph" data-waiting={waiting} aria-hidden="true">
+      <span className="stage-playback-symbols t-icon-swap" data-state={playing ? "b" : "a"}>
+        <Play {...FILLED_ICON} size={size} className="t-icon" data-icon="a" />
+        <Pause {...FILLED_ICON} size={size} className="t-icon" data-icon="b" />
+      </span>
+      <span className="stage-spinner stage-playback-waiting" />
     </span>
   );
 }
@@ -72,54 +74,22 @@ export function StageTransport({
   onSeekBack?: () => void;
   onSeekForward?: () => void;
 }) {
-  const notchRef = useRef<HTMLDivElement>(null);
-  const labelRef = useRef<HTMLSpanElement>(null);
+  const [dismissedFeedback, setDismissedFeedback] = useState<number | null>(null);
+  const activeFeedback = feedback && feedback.id !== dismissedFeedback ? feedback : null;
 
   useEffect(() => {
-    const notch = notchRef.current;
-    const label = labelRef.current;
-    if (!notch || !label || !feedback) return;
-
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const duration = reducedMotion ? 0 : parseFloat(
-      getComputedStyle(label).getPropertyValue("--text-swap-dur"),
-    );
-    let swapTimer: number | undefined;
-    const reveal = () => {
-      label.textContent = feedback.text;
-      label.classList.remove("is-exit");
-      label.classList.add("is-enter-start");
-      void label.offsetHeight;
-      label.classList.remove("is-enter-start");
-      notch.dataset.state = "b";
-    };
-
-    if (notch.dataset.state === "b" && label.textContent === feedback.text) {
-      // Holding a seek key extends the feedback without repeatedly hiding it.
-      label.classList.remove("is-exit");
-    } else if (notch.dataset.state === "b" && !reducedMotion && !label.classList.contains("is-exit")) {
-      label.classList.add("is-exit");
-      swapTimer = window.setTimeout(reveal, duration);
-    } else {
-      reveal();
-    }
-    const holdTimer = window.setTimeout(() => {
-      notch.dataset.state = "a";
-    }, 1100);
-    return () => {
-      window.clearTimeout(swapTimer);
-      window.clearTimeout(holdTimer);
-    };
+    if (!feedback) return;
+    const timer = window.setTimeout(() => setDismissedFeedback(feedback.id), feedback.action ? 700 : 1400);
+    return () => window.clearTimeout(timer);
   }, [feedback]);
 
   return (
-    <div className="stage-transport">
-      <div ref={notchRef} className="stage-transport-controls t-icon-swap" data-state="a">
+    <div className="stage-transport" data-feedback={activeFeedback ? "true" : undefined} data-playing={playing} data-waiting={waiting}>
+      <div className="stage-transport-controls" role="group" aria-label="Playback controls">
+        <span className="stage-transport-surface" aria-hidden="true" />
         {onSeekBack && (
-          <StageControl label={`Back ${PLAYER_SEEK_SECONDS} seconds`} onClick={onSeekBack}>
-            <span className="t-icon" data-icon="a" aria-hidden="true">
-              <SeekTenIcon direction="back" />
-            </span>
+          <StageControl label={`Back ${PLAYER_SEEK_SECONDS} seconds`} className="stage-transport-back" onClick={onSeekBack}>
+            <SeekTenIcon direction="back" feedbackId={activeFeedback?.action === "seek-back" ? activeFeedback.id : undefined} />
           </StageControl>
         )}
         <StageControl
@@ -127,21 +97,18 @@ export function StageTransport({
           className="stage-transport-play"
           onClick={onTogglePlay}
         >
-          <span className="t-icon" data-icon="a" aria-hidden="true">
-            {waiting ? <span className="stage-spinner size-8" /> : playing ? <Pause {...FILLED_ICON} size={40} className="shrink-0" /> : <Play {...FILLED_ICON} size={40} className="shrink-0" />}
-          </span>
+          <PlaybackGlyph playing={playing} waiting={waiting} />
         </StageControl>
         {onSeekForward && (
-          <StageControl label={`Forward ${PLAYER_SEEK_SECONDS} seconds`} onClick={onSeekForward}>
-            <span className="t-icon" data-icon="a" aria-hidden="true">
-              <SeekTenIcon direction="forward" />
-            </span>
+          <StageControl label={`Forward ${PLAYER_SEEK_SECONDS} seconds`} className="stage-transport-forward" onClick={onSeekForward}>
+            <SeekTenIcon direction="forward" feedbackId={activeFeedback?.action === "seek-forward" ? activeFeedback.id : undefined} />
           </StageControl>
         )}
-        <div className="stage-transport-feedback t-icon" data-icon="b">
-          <span ref={labelRef} className="t-text-swap" role="status" aria-live="polite" aria-atomic="true" />
-        </div>
+        {activeFeedback && !activeFeedback.action && (
+          <span key={activeFeedback.id} className="stage-transport-notice" aria-hidden="true">{activeFeedback.text}</span>
+        )}
       </div>
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{activeFeedback?.text}</span>
     </div>
   );
 }
@@ -186,7 +153,7 @@ export function StageChrome({
           {ready ? (
             <>
               <StageControl label={playing ? "Pause" : "Play"} onClick={onTogglePlay} className="stage-toolbar-play">
-                {playing ? <Pause {...FILLED_ICON} size={22} /> : <Play {...FILLED_ICON} size={22} />}
+                <PlaybackGlyph playing={playing} size={22} />
               </StageControl>
               {leftExtra}
               <div className="stage-volume-group">

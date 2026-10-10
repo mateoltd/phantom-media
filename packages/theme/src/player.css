@@ -34,40 +34,6 @@
   .t-icon-swap .t-icon { transition: none !important; }
 }
 
-:root {
-  --text-swap-dur: 150ms;
-  --text-swap-translate-y: 4px;
-  --text-swap-blur: 2px;
-  --text-swap-ease: ease-in-out;
-}
-
-.t-text-swap {
-  display: inline-block;
-  transform: translateY(0);
-  filter: blur(0);
-  opacity: 1;
-  transition:
-    transform var(--text-swap-dur) var(--text-swap-ease),
-    filter    var(--text-swap-dur) var(--text-swap-ease),
-    opacity   var(--text-swap-dur) var(--text-swap-ease);
-  will-change: transform, filter, opacity;
-}
-.t-text-swap.is-exit {
-  transform: translateY(calc(var(--text-swap-translate-y) * -1));
-  filter: blur(var(--text-swap-blur));
-  opacity: 0;
-}
-.t-text-swap.is-enter-start {
-  transform: translateY(var(--text-swap-translate-y));
-  filter: blur(var(--text-swap-blur));
-  opacity: 0;
-  transition: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .t-text-swap { transition: none !important; }
-}
-
 /* Cinema canvas and a separate, quiet control layer. */
 .motion-presence { display: contents; }
 .motion-presence[data-closing="true"] :is(.stage-sheet, .stage-panel) {
@@ -146,7 +112,7 @@
   padding: 1.8rem clamp(1rem, 2.5vw, 2.5rem) 4rem;
   background: linear-gradient(#000b, transparent);
   pointer-events: none;
-  transition: opacity 0.2s;
+  transition: opacity 240ms ease 40ms, translate 400ms cubic-bezier(0.16, 1, 0.3, 1) 40ms;
 }
 .stage-top button,
 .stage-top a {
@@ -185,16 +151,17 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+/* The transport is a single, fixed-size surface. Its parts reveal from the
+   center, then fold back together when the viewer returns to the picture. */
 .stage-transport {
+  --transport-ease: var(--panel-ease, cubic-bezier(0.22, 1, 0.36, 1));
+  --transport-surface: #17191c;
   position: absolute;
+  z-index: 2;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2.4rem;
+  display: grid;
+  place-items: center;
   pointer-events: none;
-  padding-bottom: 2rem;
-  transition: opacity 0.2s;
 }
 .stage-control {
   display: inline-flex;
@@ -208,9 +175,7 @@
   border-radius: 50%;
   background: transparent;
   color: #c4c7cb;
-  transition:
-    color 0.15s,
-    opacity 0.15s;
+  transition: color 180ms, background-color 180ms;
 }
 .stage-control > svg,
 .stage-play > svg {
@@ -220,66 +185,102 @@
   max-height: 100%;
 }
 .stage-control:hover,
-.stage-control-selected {
-  color: #fff;
-}
-.stage-control-selected {
-  background: #ffffff0a;
-}
-.stage-control:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
+.stage-control-selected { color: #fff; }
+.stage-control-selected { background: #ffffff0a; }
+.stage-control:disabled { opacity: 0.35; cursor: not-allowed; }
 .stage-transport-controls {
-  --icon-swap-start-scale: 0.92;
+  position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.45rem 0.9rem;
+  gap: 0;
+  padding: var(--space-1);
   border-radius: 999px;
-  background: #11131685;
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
+}
+.stage-transport-surface {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--transport-surface);
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 260ms ease, transform 440ms var(--transport-ease);
 }
 .stage-transport .stage-control {
-  width: 52px;
-  height: 60px;
-  color: #fff;
+  position: relative;
   pointer-events: auto;
+  opacity: 1;
+  transition: opacity 220ms ease 60ms, color 180ms ease;
 }
-.stage-transport .stage-control:hover {
-  background: #ffffff10;
+.stage-transport .stage-transport-play { transition-delay: 0ms; }
+.stage-playback-glyph {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
 }
-.stage-transport-controls[data-state="b"] .stage-control:hover {
-  background: transparent;
+.stage-playback-symbols {
+  --icon-swap-start-scale: 0.72;
+  --icon-swap-dur: 300ms;
+  --icon-swap-ease: var(--transport-ease, cubic-bezier(0.22, 1, 0.36, 1));
+  opacity: 1;
+  scale: 1;
+  transition: opacity 180ms ease, scale 300ms var(--icon-swap-ease);
 }
-.stage-transport .stage-transport-play {
-  width: 64px;
-  height: 64px;
-}
-.stage-transport-feedback {
+.stage-playback-glyph .stage-playback-waiting {
   position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding-inline: 1rem;
-  pointer-events: none;
-  font-size: 15px;
+  width: 22px;
+  height: 22px;
+  opacity: 0;
+  scale: 0.8;
+  animation-play-state: paused;
+  transition: opacity 180ms ease, scale 300ms var(--transport-ease, ease);
+}
+.stage-playback-glyph[data-waiting="true"] .stage-playback-symbols { opacity: 0; scale: 0.8; }
+.stage-playback-glyph[data-waiting="true"] .stage-playback-waiting { opacity: 1; scale: 1; animation-play-state: running; }
+.stage-seek-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  translate: 0 0;
+  transition: translate 400ms var(--transport-ease) 40ms;
+}
+.stage-seek-icon > svg { grid-area: 1 / 1; }
+.stage-seek-icon[data-seeking="true"] { color: #fff; }
+.stage-transport-notice {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  max-width: min(280px, 80cqw);
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--transport-surface);
+  color: var(--color-stage-text);
+  font-size: 12px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
-  text-align: center;
-}
-.stage-transport-feedback .t-text-swap {
-  overflow: hidden;
   white-space: nowrap;
+  overflow: hidden;
   text-overflow: ellipsis;
+  translate: -50% 0;
+  pointer-events: none;
+  animation: stage-notice 1400ms both;
 }
-.stage-transport-controls .stage-control > .t-icon {
-  display: inline-flex;
+@keyframes stage-notice {
+  0% { opacity: 0; transform: translateY(4px) scale(0.96); }
+  16%, 80% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-3px); }
 }
-.stage-idle .stage-transport:has([data-state="b"]) {
-  opacity: 1;
+/* CSS starting styles also choreograph the first mount, without delaying input. */
+@starting-style {
+  .stage-transport-surface { opacity: 0; transform: scale(0.78, 0.9); }
+  .stage-transport .stage-control { opacity: 0; }
+  .stage-transport .stage-transport-back .stage-seek-icon { translate: 10px 0; }
+  .stage-transport .stage-transport-forward .stage-seek-icon { translate: -10px 0; }
 }
 .stage-chrome {
   position: absolute;
@@ -287,7 +288,7 @@
   inset: auto 0 0;
   padding: 5rem clamp(1rem, 2.5vw, 2.5rem) 1.4rem;
   background: linear-gradient(transparent, #0009 35%, #000e);
-  transition: opacity 0.2s;
+  transition: opacity 220ms ease 70ms, translate 400ms cubic-bezier(0.16, 1, 0.3, 1) 70ms;
   pointer-events: none;
 }
 .stage-chrome > * {
@@ -366,28 +367,35 @@
   border-radius: 50%;
   background: #fff;
 }
-.stage-idle {
-  cursor: none;
-}
+/* Picture-first choreography: chrome leaves first, transport settles last.
+   Paused, buffering, feedback and keyboard focus all keep the controls visible. */
+.stage-idle { cursor: none; }
 .stage-idle .stage-chrome,
-.stage-idle .stage-top,
-.stage-idle .stage-transport {
+.stage-idle .stage-top {
   opacity: 0;
   pointer-events: none;
+  transition-delay: 0ms;
 }
-.stage-idle .stage-transport .stage-control,
-.stage-idle .stage-chrome > * {
+.stage-idle .stage-chrome { translate: 0 6px; }
+.stage-idle .stage-top { translate: 0 -4px; }
+.stage-idle .stage-chrome > * { pointer-events: none; }
+:is(.stage-idle:not(:has(:focus-visible)), html[data-focus-navigation="pointer"] .stage-idle) .stage-transport[data-playing="true"][data-waiting="false"]:not([data-feedback="true"]) .stage-transport-surface {
+  opacity: 0;
+  transform: scale(0.86, 0.94);
+  transition-duration: 220ms, 280ms;
+  transition-delay: 60ms;
+}
+:is(.stage-idle:not(:has(:focus-visible)), html[data-focus-navigation="pointer"] .stage-idle) .stage-transport[data-playing="true"][data-waiting="false"]:not([data-feedback="true"]) .stage-control {
+  opacity: 0;
   pointer-events: none;
+  transition-delay: 0ms;
+  transition-duration: 160ms, 150ms;
 }
+:is(.stage-idle:not(:has(:focus-visible)), html[data-focus-navigation="pointer"] .stage-idle) .stage-transport[data-playing="true"][data-waiting="false"]:not([data-feedback="true"]) .stage-transport-back .stage-seek-icon { translate: 10px 0; transition-delay: 0ms; }
+:is(.stage-idle:not(:has(:focus-visible)), html[data-focus-navigation="pointer"] .stage-idle) .stage-transport[data-playing="true"][data-waiting="false"]:not([data-feedback="true"]) .stage-transport-forward .stage-seek-icon { translate: -10px 0; transition-delay: 0ms; }
 :where(html:not([data-focus-navigation="pointer"])) .stage-idle:has(:focus-visible) .stage-chrome,
-:where(html:not([data-focus-navigation="pointer"])) .stage-idle:has(:focus-visible) .stage-top,
-:where(html:not([data-focus-navigation="pointer"])) .stage-idle:has(:focus-visible) .stage-transport {
-  opacity: 1;
-}
-:where(html:not([data-focus-navigation="pointer"])) .stage-idle:has(:focus-visible) .stage-transport .stage-control,
-:where(html:not([data-focus-navigation="pointer"])) .stage-idle:has(:focus-visible) .stage-chrome > * {
-  pointer-events: auto;
-}
+:where(html:not([data-focus-navigation="pointer"])) .stage-idle:has(:focus-visible) .stage-top { opacity: 1; translate: 0 0; }
+:where(html:not([data-focus-navigation="pointer"])) .stage-idle:has(:focus-visible) .stage-chrome > * { pointer-events: auto; }
 
 /* Timeline: a thin white track, with a larger invisible touch target. */
 .scrub {
@@ -929,26 +937,6 @@
   .stage-top p + p {
     font-size: 11px;
   }
-  .stage-transport-controls {
-    gap: 0.7rem;
-    padding: 0.2rem 0.7rem;
-  }
-  .stage-transport {
-    gap: 1.8rem;
-    padding-bottom: 1rem;
-  }
-  .stage-transport .stage-control {
-    width: 44px;
-    height: 52px;
-  }
-  .stage-transport .stage-transport-play {
-    width: 60px;
-    height: 60px;
-  }
-  .stage-transport-play svg {
-    width: 36px;
-    height: 36px;
-  }
   .stage-chrome {
     padding: 3rem 0.75rem 0.6rem;
   }
@@ -1103,5 +1091,13 @@
   }
   .stage-duration {
     display: inline;
+  }
+}
+
+/* Honor the same motion preference for every layer, including delayed reveals. */
+@media (prefers-reduced-motion: reduce) {
+  .stage-transport *, .stage-top, .stage-chrome {
+    animation: none !important;
+    transition: none !important;
   }
 }
