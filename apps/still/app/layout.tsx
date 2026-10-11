@@ -4,6 +4,7 @@ import { JetBrains_Mono, Sora } from "next/font/google";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { HISTORY_HINT } from "@/lib/history-hint";
 import { getBaseUrl, siteConfig } from "@/lib/seo";
+import { WELCOME_HINT } from "@/lib/welcome";
 import "./globals.css";
 
 const sora = Sora({
@@ -71,7 +72,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    // HISTORY_HINT marks <html> before React starts, so its attributes are not React's to check.
+    // HISTORY_HINT and WELCOME_HINT mark <html> before React starts, so its attributes are not React's to check.
     <html
       lang="en"
       className={`${sora.variable} ${jetbrainsMono.variable} font-sans`}
@@ -79,6 +80,7 @@ export default function RootLayout({
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: HISTORY_HINT }} />
+        <script dangerouslySetInnerHTML={{ __html: WELCOME_HINT }} />
       </head>
       <body className="font-sans antialiased">
         <TabFocus />

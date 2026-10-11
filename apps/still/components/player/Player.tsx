@@ -13,6 +13,7 @@ import { useDisplay } from "./use-display";
 import { useControls } from "./use-controls";
 import { useCaptions } from "./use-captions";
 import { ConnectionWarning } from "./ConnectionWarning";
+import { PlayerStage } from "./PlayerStage";
 
 interface PlayerProps {
   src: string;
@@ -55,31 +56,23 @@ export function Player({ src, delivery = "hls", audioOnly = false, onAudioOnlyCh
   const controls = useControls(videoRef, media, display, captions.toggle);
 
   return (
-    <div className="stage-frame still-stage-frame">
-      <div ref={containerRef} className={`stage w-full ${controls.idle ? "stage-idle" : ""}`}
-        tabIndex={0} role="region" aria-label={`${title} player`}
-        onMouseMove={controls.showControls} onTouchStart={controls.showControls}
-        onMouseLeave={controls.hideControls}>
+    <PlayerStage ref={containerRef} title={title} subtitle={subtitle} idle={controls.idle} crowded={hls.connectionUnstable}
+      onMouseMove={controls.showControls} onTouchStart={controls.showControls} onMouseLeave={controls.hideControls}
+      picture={<>
         <video ref={videoRef} className="absolute inset-0" playsInline preload="metadata"
           controlsList="nodownload noremoteplayback" disablePictureInPicture={!display.pipSupported}
           onClick={controls.onVideoClick} />
         <div ref={cuesRef} className="stage-cues stage-cues-backdrop" />
-        <div className="stage-top">
-          <div className={`min-w-0 flex-1 ${hls.connectionUnstable ? "pr-12" : ""}`}>
-            <p className="truncate text-lg font-medium text-stage-text">{title}</p>
-            {subtitle && <p className="mt-1 truncate text-[13px] text-stage-muted">{subtitle}</p>}
-          </div>
-        </div>
-        {hls.connectionUnstable && <ConnectionWarning />}
-        {hls.error && <div role="alert" className="absolute inset-x-0 top-1/3 z-10 bg-black/80 p-4 text-center text-white">{hls.error}</div>}
-        <StageTransport playing={media.playing} feedback={controls.feedback} waiting={media.loading}
-          onTogglePlay={controls.togglePlay}
-          onSeekBack={timeline.canSeek ? () => controls.seekWithFeedback(-1) : undefined}
-          onSeekForward={timeline.canSeek ? () => controls.seekWithFeedback(1) : undefined} />
-        <Chrome videoRef={videoRef} title={title} isLive={isLive} chatOpen={chatOpen}
-          onChatToggle={onChatToggle} audioOnly={audioOnly} onAudioOnlyChange={onAudioOnlyChange} sourceSelection={sourceSelection} segments={segments} segmentAppearances={segmentAppearances} storyboardUrl={storyboardUrl}
-          media={media} hls={hls} captions={captions} timeline={timeline} display={display} controls={controls} />
-      </div>
-    </div>
+      </>}>
+      {hls.connectionUnstable && <ConnectionWarning />}
+      {hls.error && <div role="alert" className="absolute inset-x-0 top-1/3 z-10 bg-black/80 p-4 text-center text-white">{hls.error}</div>}
+      <StageTransport playing={media.playing} feedback={controls.feedback} waiting={media.loading}
+        onTogglePlay={controls.togglePlay}
+        onSeekBack={timeline.canSeek ? () => controls.seekWithFeedback(-1) : undefined}
+        onSeekForward={timeline.canSeek ? () => controls.seekWithFeedback(1) : undefined} />
+      <Chrome videoRef={videoRef} title={title} isLive={isLive} chatOpen={chatOpen}
+        onChatToggle={onChatToggle} audioOnly={audioOnly} onAudioOnlyChange={onAudioOnlyChange} sourceSelection={sourceSelection} segments={segments} segmentAppearances={segmentAppearances} storyboardUrl={storyboardUrl}
+        media={media} hls={hls} captions={captions} timeline={timeline} display={display} controls={controls} />
+    </PlayerStage>
   );
 }

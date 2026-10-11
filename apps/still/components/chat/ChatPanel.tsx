@@ -11,17 +11,19 @@ import { useReplayChat } from "./use-replay-chat";
 import { ChatSearch } from "./ChatSearch";
 import { ChatBadge } from "./ChatBadge";
 
-export function ChatPanel({ channel, vodId, time = 0, playbackSeekVersion = 0, idle = false, onSeek, onClose }: {
+export function ChatPanel({ channel, vodId, time = 0, playbackSeekVersion = 0, idle = false, script, onSeek, onClose }: {
   channel: string;
   vodId?: string;
   time?: number;
   playbackSeekVersion?: number;
   /** Holds the panel's frame without connecting to anything. */
   idle?: boolean;
+  /** Messages handed in, in place of a connection: the welcome tour's chat. `replay` heads them as a video's replay. */
+  script?: { messages: ChatMessage[]; replay?: boolean };
   onClose: () => void;
   onSeek?: (time: number) => void;
 }) {
-  const [mode, setMode] = useState<"replay" | "live">(vodId ? "replay" : "live");
+  const [mode, setMode] = useState<"replay" | "live">(vodId || script?.replay ? "replay" : "live");
   const [tool, setTool] = useState<"search" | "reactions" | null>(null);
   const searchTrigger = useRef<HTMLButtonElement>(null);
   const reactionsTrigger = useRef<HTMLButtonElement>(null);
@@ -38,7 +40,7 @@ export function ChatPanel({ channel, vodId, time = 0, playbackSeekVersion = 0, i
         }
       }}>
       <div className="still-chat-heading">
-        {vodId ? <div className="still-chat-modes" aria-label="Chat source">
+        {vodId || script?.replay ? <div className="still-chat-modes" aria-label="Chat source">
           <button type="button" aria-pressed={mode === "replay"} onClick={() => { setMode("replay"); setTool(null); }}>Replay</button>
           <button type="button" aria-pressed={mode === "live"} onClick={() => { setMode("live"); setTool(null); }}>Live chat</button>
         </div> : <h2 className="text-sm font-medium">Live chat</h2>}
@@ -49,7 +51,8 @@ export function ChatPanel({ channel, vodId, time = 0, playbackSeekVersion = 0, i
           </>}
         </div>
       </div>
-      {idle ? <div className="still-chat-content" />
+      {script ? <ChatMessages messages={script.messages} empty="" />
+        : idle ? <div className="still-chat-content" />
         : mode === "replay" && vodId
         ? <ReplayChat key={vodId} vodId={vodId} time={time} playbackSeekVersion={playbackSeekVersion} onSeek={onSeek} tool={tool} />
         : <LiveChat key={channel} channel={channel} />}

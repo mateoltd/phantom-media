@@ -3,7 +3,7 @@
 import { ChatCircle, Monitor, Timer } from "@phosphor-icons/react/ssr";
 import { ScrubBar, SleepTimerPicker, StageChrome, StageControl, StageSettings, useSleepTimer } from "@phantom/ui";
 import type { PlaybackSegment, SegmentAppearances, SettingsSection } from "@phantom/ui";
-import type { RefObject } from "react";
+import type { ComponentProps, ReactNode, RefObject } from "react";
 import { formatTime } from "@/lib/format";
 import type { MediaState } from "./use-media";
 import type { HlsState } from "./use-hls";
@@ -103,70 +103,135 @@ export function Chrome({ videoRef, title, isLive, chatOpen, onChatToggle, segmen
     }] : []),
   ];
 
+  return <PlayerControls
+    ready={hasTimeline || !loading}
+    title={title}
+    playing={playing}
+    muted={muted}
+    volume={volume}
+    fullscreen={isFullscreen}
+    onTogglePlay={togglePlay}
+    onToggleMute={toggleMute}
+    onVolumeChange={changeVolume}
+    onToggleFullscreen={toggleFullscreen}
+    timeline={hasTimeline ? (
+      <ScrubBar
+        segments={segments}
+        segmentAppearances={segmentAppearances}
+        timelineStart={timeline.timelineStart}
+        onSeekStep={seekWithFeedback}
+        subscribe={timeline.subscribe}
+        onSeek={timeline.seek}
+        onScrubbingChange={(scrubbing) => { if (scrubbing) showControls(); }}
+        preview={preview}
+        onPreview={onPreview}
+      />
+    ) : undefined}
+    clock={{ live: isLive, rewindable: useDvrTimeline, lag: liveLag, behind: hls.behindLive, currentTime, duration }}
+    onSeekToLive={seekToLive}
+    sleep={sleepTimer}
+    menu={menu}
+    onMenuChange={changeMenu}
+    chatOpen={chatOpen}
+    onChatToggle={onChatToggle && !isFullscreen ? onChatToggle : undefined}
+    settings={settingsSections}
+    actions={pipSupported ? [{ label: "Picture in picture", icon: <Monitor {...FILLED_ICON} size={20} />, onClick: togglePip }] : []}
+  />;
+}
+
+/** Where playback stands, as the toolbar words it. */
+export interface PlayerClock {
+  live: boolean;
+  /** A live broadcast played from its growing archive, so it has a timeline that ends at the live edge. */
+  rewindable: boolean;
+  lag: number;
+  behind: boolean;
+  currentTime: number;
+  duration: number;
+}
+
+type PlayerMenu = "settings" | "sleep" | null;
+
+/**
+ * The player's toolbar, from plain values. Chrome fills it from a playing video; the welcome tour fills it from a
+ * script, which is why nothing here reaches for the video itself.
+ */
+export function PlayerControls({ ready, title, playing, muted, volume, fullscreen, onTogglePlay, onToggleMute, onVolumeChange, onToggleFullscreen,
+  timeline, clock, onSeekToLive, sleep, menu, onMenuChange, chatOpen, onChatToggle, settings, actions }: {
+  ready: boolean;
+  title: string;
+  playing: boolean;
+  muted: boolean;
+  volume: number;
+  fullscreen: boolean;
+  onTogglePlay: () => void;
+  onToggleMute: () => void;
+  onVolumeChange: (volume: number) => void;
+  onToggleFullscreen: () => void;
+  timeline?: ReactNode;
+  clock: PlayerClock;
+  onSeekToLive: () => void;
+  sleep: Pick<ReturnType<typeof useSleepTimer>, "minutes" | "minutesLeft" | "setMinutes">;
+  menu: PlayerMenu;
+  onMenuChange: (menu: PlayerMenu) => void;
+  chatOpen: boolean;
+  onChatToggle?: () => void;
+  settings: SettingsSection[];
+  actions: ComponentProps<typeof StageSettings>["actions"];
+}) {
   return (
     <>
       <StageChrome
-        ready={hasTimeline || !loading}
+        ready={ready}
         title={title}
         playing={playing}
         muted={muted}
         volume={volume}
-        fullscreen={isFullscreen}
-        onTogglePlay={togglePlay}
-        onToggleMute={toggleMute}
-        onVolumeChange={changeVolume}
-        onToggleFullscreen={toggleFullscreen}
-        timeline={hasTimeline ? (
-          <ScrubBar
-            segments={segments}
-            segmentAppearances={segmentAppearances}
-            timelineStart={timeline.timelineStart}
-            onSeekStep={seekWithFeedback}
-            subscribe={timeline.subscribe}
-            onSeek={timeline.seek}
-            onScrubbingChange={(scrubbing) => { if (scrubbing) showControls(); }}
-            preview={preview}
-            onPreview={onPreview}
-          />
-        ) : undefined}
+        fullscreen={fullscreen}
+        onTogglePlay={onTogglePlay}
+        onToggleMute={onToggleMute}
+        onVolumeChange={onVolumeChange}
+        onToggleFullscreen={onToggleFullscreen}
+        timeline={timeline}
         timecode={
           <p className="stage-timecode">
-            {isLive && !useDvrTimeline
-              ? hls.behindLive ? "Behind live" : "Live"
-              : <><span className="text-stage-text">{useDvrTimeline ? `-${formatTime(liveLag)}` : formatTime(currentTime)}</span><span className="stage-duration"> / {useDvrTimeline ? "Live" : formatTime(duration)}</span></>}
+            {clock.live && !clock.rewindable
+              ? clock.behind ? "Behind live" : "Live"
+              : <><span className="text-stage-text">{clock.rewindable ? `-${formatTime(clock.lag)}` : formatTime(clock.currentTime)}</span><span className="stage-duration"> / {clock.rewindable ? "Live" : formatTime(clock.duration)}</span></>}
           </p>
         }
         rightExtra={
           <>
-            {(useDvrTimeline && liveLag > 3 || isLive && !useDvrTimeline && hls.behindLive) && (
-              <button type="button" onClick={seekToLive} className="stage-control stage-live-trigger min-w-11 text-[12px] font-medium" aria-label="Jump to live">Live</button>
+            {/* A rewindable stream keeps the button's place at the live edge: narrow toolbars wrap around it, and would jump as it came and went. */}
+            {(clock.rewindable || (clock.live && clock.behind)) && (
+              <button type="button" onClick={onSeekToLive} disabled={clock.rewindable && clock.lag <= 3} className="stage-control stage-live-trigger min-w-11 text-[12px] font-medium disabled:invisible" aria-label="Jump to live">Live</button>
             )}
             <StageControl
-              label={sleepTimer.minutes === null ? "Sleep timer" : `Sleep timer, ${sleepTimer.minutesLeft} minutes left`}
-              onClick={() => changeMenu(menu === "sleep" ? null : "sleep")}
+              label={sleep.minutes === null ? "Sleep timer" : `Sleep timer, ${sleep.minutesLeft} minutes left`}
+              onClick={() => onMenuChange(menu === "sleep" ? null : "sleep")}
               expanded={menu === "sleep"}
-              className={`stage-sleep-trigger ${sleepTimer.minutes !== null ? "stage-sleep-trigger-active" : ""}`}
+              className={`stage-sleep-trigger ${sleep.minutes !== null ? "stage-sleep-trigger-active" : ""}`}
             >
               <Timer {...FILLED_ICON} size={22} />
             </StageControl>
-            {onChatToggle && !isFullscreen && <StageControl label={chatOpen ? "Hide chat" : "Show chat"} onClick={onChatToggle} expanded={chatOpen} className="stage-chat-trigger">
+            {onChatToggle && <StageControl label={chatOpen ? "Hide chat" : "Show chat"} onClick={onChatToggle} expanded={chatOpen} className="stage-chat-trigger">
               <ChatCircle {...FILLED_ICON} size={22} />
             </StageControl>}
             <StageSettings
-              sections={settingsSections}
+              sections={settings}
               open={menu === "settings"}
-              onOpenChange={open => changeMenu(open ? "settings" : null)}
-              actions={pipSupported ? [{ label: "Picture in picture", icon: <Monitor {...FILLED_ICON} size={20} />, onClick: togglePip }] : []}
+              onOpenChange={open => onMenuChange(open ? "settings" : null)}
+              actions={actions}
             />
           </>
         }
       />
       <SleepTimerPicker
         open={menu === "sleep"}
-        onOpenChange={open => changeMenu(open ? "sleep" : null)}
-        minutes={sleepTimer.minutes}
-        minutesLeft={sleepTimer.minutesLeft}
-        onChange={sleepTimer.setMinutes}
+        onOpenChange={open => onMenuChange(open ? "sleep" : null)}
+        minutes={sleep.minutes}
+        minutesLeft={sleep.minutesLeft}
+        onChange={sleep.setMinutes}
       />
     </>
   );

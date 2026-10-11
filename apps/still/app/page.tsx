@@ -1,6 +1,7 @@
 import { DebugVideoScript } from "@/components/DebugVideoScript";
 import { HomeView } from "@/components/discovery/HomeView";
 import { HomeContent } from "@/components/discovery/HomeContent";
+import { Welcome } from "@/components/Welcome";
 import { StructuredData } from "@/components/structured-data";
 import { isDebugEnabled } from "@/lib/debug";
 import { buildMetadata, getBaseUrl, siteConfig } from "@/lib/seo";
@@ -48,6 +49,7 @@ export default function Home() {
         }}
       />
       {debugEnabled && <DebugVideoScript />}
+      <Welcome />
       <HomeView />
       <HomeContent />
     </>

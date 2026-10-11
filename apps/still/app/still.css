@@ -997,3 +997,151 @@ html:not([data-home-search="hidden"]) .media-header:has(.still-header-search[dat
 .still-footer > .still-family { margin-bottom: 10px; }
 .still-about-foot > .still-family { flex-basis: 100%; width: fit-content; margin-bottom: 8px; text-decoration: none; }
 .still-about-foot { align-items: center; }
+
+/* The first visit's welcome (see Welcome). The takeover is in the server's HTML and WELCOME_HINT shows it before
+   the first paint. It is motion from start to end, so reduced motion skips straight to the tour. */
+.still-welcome { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  html[data-welcome="intro"] .still-welcome { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; touch-action: none; }
+  /* The header's own face is the mascot's seat: empty until it lands there. */
+  html[data-welcome="intro"] .still-brand-logo > path:first-of-type { visibility: hidden; }
+  .still-welcome-eyes { animation: still-welcome-eyes 3.8s both; }
+  .still-welcome-face { animation: still-welcome-face 3.8s ease-in-out both; }
+  .still-welcome-dream { animation: still-welcome-dream 1.3s linear both; }
+  .still-welcome-dream + .still-welcome-dream { animation-delay: 0.4s; }
+  .still-welcome-greeting { animation: still-welcome-say 0.36s cubic-bezier(0.22, 1, 0.36, 1) 1.7s both; }
+}
+.still-welcome-backdrop { position: absolute; inset: 0; background: var(--color-bg); }
+.still-welcome-stage { position: relative; display: flex; flex-direction: column; align-items: center; gap: clamp(8px, 2svh, 24px); }
+.still-welcome-mascot { width: clamp(144px, 30vmin, 280px); aspect-ratio: 1; }
+.still-welcome-mascot svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.still-welcome-eyes { transform-origin: 0px 32px; }
+.still-welcome-face { transform-origin: 32px 54px; }
+.still-welcome-dream { opacity: 0; }
+/* The greeting is set like the home page's prompt, which takes its place. */
+.still-welcome-greeting { margin: 0; font-size: clamp(2rem, 3vw, 3.5rem); line-height: 1.15; font-weight: 600; letter-spacing: -0.035em; text-align: center; }
+.still-welcome-skip { position: absolute; bottom: max(var(--space-6), env(safe-area-inset-bottom)); left: 50%; translate: -50%; }
+.still-welcome-skip { height: 28px; padding: 0 var(--space-2); border-radius: 8px; font-size: 13px; color: var(--color-text-secondary); transition: background 160ms, color 160ms; }
+.still-welcome-skip:hover { background: var(--color-surface-hover); color: var(--color-text); }
+.still-welcome-skip:focus-visible { outline: 1px solid var(--color-text-tertiary); outline-offset: -2px; }
+/* Asleep, then awake with a small jump, then one blink before leaving for the header. */
+@keyframes still-welcome-eyes {
+  0%, 35% { transform: scaleY(1); animation-timing-function: ease-out; }
+  41%, 68% { transform: scaleY(1.8); }
+  70% { transform: scaleY(0.3); }
+  73%, 100% { transform: scaleY(1.8); }
+}
+@keyframes still-welcome-face {
+  0%, 35% { transform: translateY(1px) rotate(-4deg) scale(1.03, 0.96); }
+  17% { transform: translateY(-1px) rotate(-2deg) scale(0.99, 1.04); }
+  40% { transform: translateY(-6px) scale(0.96, 1.06); }
+  46% { transform: scale(1.05, 0.95); }
+  52%, 100% { transform: none; }
+}
+@keyframes still-welcome-dream {
+  0% { transform: translate(50px, 12px) scale(0.5); opacity: 0; }
+  18% { opacity: 0.85; }
+  65% { opacity: 0.65; }
+  100% { transform: translate(66px, -10px) scale(1.15); opacity: 0; }
+}
+@keyframes still-welcome-say { from { opacity: 0; transform: translateY(8px); } }
+/* The mascot leaves the header to tell the tour (see WelcomeTour): it goes to whatever it is talking about and its
+   speech bubble opens on whichever side has room, so the words are always where the eye already is. Both live in
+   a layer over the header, placed from measurements (--room and --tail come with them). */
+html[data-welcome="talk"] .still-brand-logo > path:first-of-type { visibility: hidden; }
+/* The tour is laid over the page where it stands, so the page does not scroll under it. The gutter is kept (see html). */
+html[data-welcome="talk"] { overflow: hidden; }
+.still-tour-cast { --travel: 0.4s; position: fixed; inset: 0; z-index: 60; overflow: hidden; pointer-events: none; }
+/* It leaves quickly and lands softly. Only transforms move, on their own layers. */
+.still-tour-guide { position: absolute; top: 0; left: 0; width: 72px; aspect-ratio: 1; margin: -36px 0 0 -36px; will-change: translate, scale; transition: translate var(--travel) cubic-bezier(0.4, 0, 0.1, 1), scale var(--travel) cubic-bezier(0.4, 0, 0.1, 1); }
+.still-tour-guide[data-dragging] { transition: none; }
+.still-tour-guide > svg { display: block; width: 100%; height: 100%; transition: translate 0.14s cubic-bezier(0.3, 0, 0.1, 1), scale 0.14s cubic-bezier(0.3, 0, 0.1, 1); }
+/* A press is a dip onto whatever is under it. */
+.still-tour-guide[data-pressed] > svg { translate: 0 5px; scale: 1.06 0.86; }
+.still-tour-eyes { transform-origin: 32px 32px; }
+.still-welcome-bubble { position: absolute; top: 0; left: 0; width: max-content; max-width: var(--room, 22rem); margin: 0; padding: var(--space-3) var(--space-4); border-radius: 14px; background: var(--color-surface-light); color: var(--color-text); font-size: 16px; line-height: 1.45; font-weight: 500; opacity: 0; scale: 0.96; will-change: translate, opacity; transition: opacity 0.1s ease, scale 0.1s ease; }
+.still-welcome-bubble[data-speaking] { opacity: 1; scale: 1; transition: opacity 0.18s ease, scale 0.22s cubic-bezier(0.2, 0.9, 0.3, 1); }
+.still-welcome-bubble[data-gliding] { transition: translate var(--travel) cubic-bezier(0.4, 0, 0.1, 1); }
+.still-welcome-bubble[data-dragging] { transition: none; }
+.still-welcome-bubble::before { content: ""; position: absolute; width: 12px; height: 12px; border-radius: 2px; background: inherit; rotate: 45deg; }
+/* It grows out of its tail. */
+.still-welcome-bubble[data-side="right"] { transform-origin: 0 var(--tail); }
+.still-welcome-bubble[data-side="left"] { transform-origin: 100% var(--tail); }
+.still-welcome-bubble[data-side="below"] { transform-origin: var(--tail) 0; }
+.still-welcome-bubble[data-side="above"] { transform-origin: var(--tail) 100%; }
+.still-welcome-bubble[data-side="right"]::before { top: calc(var(--tail) - 6px); left: -5px; }
+.still-welcome-bubble[data-side="left"]::before { top: calc(var(--tail) - 6px); right: -5px; }
+.still-welcome-bubble[data-side="below"]::before { top: -5px; left: calc(var(--tail) - 6px); }
+.still-welcome-bubble[data-side="above"]::before { bottom: -5px; left: calc(var(--tail) - 6px); }
+.still-welcome-bubble > span { display: block; }
+/* Skip waits in the middle of the header, which every page keeps clear, so it never lies over the demo. */
+.still-tour-cast > .still-welcome-skip { top: calc(var(--media-header-height) / 2); bottom: auto; translate: -50% -50%; padding: 0 var(--space-3); pointer-events: auto; background: var(--color-surface-light); }
+.still-tour-cast > .still-welcome-skip:hover { background: var(--color-surface-hover); }
+/* Where the mascot waits on the picture, on pages wide enough to have no band for it (see still-tour-page). */
+.still-tour-seat { position: absolute; left: clamp(4rem, 7%, 6rem); bottom: 9.5rem; }
+@media (max-width: 640px) {
+  .still-tour-guide { width: 52px; margin: -26px 0 0 -26px; }
+  .still-welcome-bubble { font-size: 15px; }
+}
+/* The tour lies over the home page and under the header. While it searches it is clear: the scripted field stands
+   where the home page's own field is (--search-* are measured from it), which steps aside. Then it is the watch
+   page itself, laid out by the same rules as the real one, so each viewport sees its own. */
+html[data-welcome="talk"] .still-home-prompt, html[data-welcome="talk"]:not([data-tour="leaving"]) .still-home-search { visibility: hidden; }
+/* Under the watch page the home page is not drawn at all. It fades away and back as the pages change over it. */
+html[data-welcome="talk"] .still-home { transition: opacity 0.24s ease; }
+html[data-tour="player"] .still-home { opacity: 0; visibility: hidden; transition: opacity 0.2s ease, visibility 0s 0.2s; }
+.still-tour { position: fixed; inset: 0; z-index: 39; overflow: hidden; transition: opacity 0.26s ease-out; }
+.still-tour[data-fading] { opacity: 0; transition: opacity 0.16s ease-in; }
+.still-tour[data-view="player"] { background: var(--color-bg); }
+.still-tour[data-leaving] { opacity: 0; pointer-events: none; }
+.still-tour-search { position: absolute; top: var(--search-top); left: var(--search-left); width: var(--search-width); }
+.still-tour-page { position: absolute; inset: var(--media-header-height) 0 0; min-height: 0; overflow: hidden; }
+/* A window too short for the page has it slid up under this edge, to whatever the mascot is working (see aim). */
+.still-tour-page > .media-content { transition: translate 0.45s cubic-bezier(0.4, 0, 0.1, 1); }
+@media (max-width: 900px) {
+  /* The band the mascot waits in on smaller pages, in place of its seat on the picture. */
+  .still-tour-page { top: calc(var(--media-header-height) + 7rem); }
+}
+.still-tour-picture { position: absolute; inset: 0; overflow: hidden; background: #050607 center / cover no-repeat; }
+.still-tour-veil { position: absolute; top: 37.5%; left: 37.5%; width: 25%; height: 25%; background: #050607 center / cover no-repeat; filter: blur(6px) brightness(0.5); scale: 4.8; opacity: 0; will-change: opacity; transition: opacity 0.5s ease; }
+.still-tour-veil[data-shown] { opacity: 1; transition: none; }
+/* What Twitch puts over the picture. The ad break is pushed off the top; the lock dissolves with the blur under it. */
+.still-tour-slate { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); color: var(--color-stage-text); font-size: clamp(14px, 2.2cqw, 20px); font-weight: 500; text-align: center; visibility: hidden; }
+.still-tour-slate > p { margin: 0; }
+/* The break is Twitch's, in Twitch's colour, so that nobody takes it for this player's. It is thrown out faster than it came. */
+.still-tour-slate[data-slate="ad"] { background: #2a1552; translate: 0 -100%; transition: translate 0.24s cubic-bezier(0.6, 0, 0.9, 0.3), visibility 0s 0.24s; }
+.still-tour-slate[data-slate="ad"][data-shown] { translate: none; visibility: visible; transition: translate 0.42s cubic-bezier(0.2, 0.9, 0.3, 1); }
+.still-tour-blocked { position: absolute; top: 50%; left: 50%; z-index: 1; margin: 0; padding: var(--space-2) var(--space-4); border-radius: 999px; background: #101113e6; color: var(--color-stage-text); font-size: clamp(13px, 1.8cqw, 16px); font-weight: 500; white-space: nowrap; translate: -50% -50%; opacity: 0; scale: 0.96; transition: opacity 0.3s ease, scale 0.3s ease; }
+.still-tour-blocked[data-shown] { opacity: 1; scale: 1; transition: opacity 0.2s ease 0.18s, scale 0.24s cubic-bezier(0.2, 0.9, 0.3, 1) 0.18s; }
+.still-tour-slate[data-slate="ad"] > span { padding: var(--space-1) var(--space-2); border-radius: 6px; background: #ffffff16; font-size: 12px; font-variant-numeric: tabular-nums; }
+.still-tour-slate[data-slate="lock"] { opacity: 0; transition: opacity 0.3s ease 0.15s, visibility 0s 0.45s; }
+.still-tour-slate[data-slate="lock"][data-shown] { opacity: 1; visibility: visible; transition: none; }
+.still-tour-lock { display: flex; }
+/* The locked video belongs to no channel, so its rail shows a plain plate where a face would be. */
+.still-tour .still-channel-avatar { background: var(--color-surface-light); }
+/* The tile's wide picture stands in for a square portrait, and the catalog's skeleton holds still: it is waiting on nothing. */
+.still-tour .still-channel-portrait { object-fit: cover; }
+.still-tour .react-loading-skeleton::after { animation: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .still-welcome-bubble > span { animation: still-tour-line 0.2s ease both; }
+  .still-tour-eyes { animation: still-tour-blink 4.2s infinite; }
+  .still-tour-slate[data-opening] .still-tour-lock { animation: still-tour-unlock 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .still-tour, .still-tour-page > .media-content, .still-tour-veil, .still-tour-slate, .still-tour-blocked, .still-tour-guide, .still-welcome-bubble { transition: none; }
+}
+@keyframes still-tour-line { from { opacity: 0; } }
+@keyframes still-tour-blink { 0%, 93%, 100% { transform: none; } 96% { transform: scaleY(0.15); } }
+@keyframes still-tour-unlock {
+  0% { rotate: 0deg; }
+  20% { rotate: -14deg; }
+  45% { rotate: 12deg; scale: 1.15; }
+  100% { rotate: 0deg; scale: 1; }
+}
+/* On narrow frames the shared player puts its toolbar under the video, so the picture and what covers it take the video's place. */
+@container (max-width: 480px) {
+  .still-tour-picture { position: relative; inset: auto; grid-area: 1 / 1; width: 100%; aspect-ratio: 16 / 9; }
+  .still-tour-slate { grid-area: 1 / 1 / 2 / 2; overflow: hidden; }
+  .still-tour-blocked { position: relative; top: auto; left: auto; grid-area: 1 / 1; place-self: center; translate: none; }
+  .still-tour .stage-chrome { z-index: 2; }
+}

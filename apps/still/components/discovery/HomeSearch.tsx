@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, ViewTransition } from "react";
 import { StillSearch } from "./StillSearch";
 
-const INPUT_ID = "home-search-input";
+export const HOME_SEARCH_INPUT = "home-search-input";
 
 /**
  * The home page's own search, and the only one on the page. It scrolls with the page until it reaches the header,
@@ -53,7 +53,8 @@ export function HomeSearch() {
     if (prompt) resized.observe(prompt);
     window.addEventListener("scroll", track, { passive: true });
     // Typing is the reason to be here. Touch screens are left alone: focusing would throw a keyboard over the page.
-    if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) document.getElementById(INPUT_ID)?.focus({ preventScroll: true });
+    // A first visit is greeted first (see Welcome), and the field is focused when that ends.
+    if (!page.dataset.welcome && window.matchMedia("(hover: hover) and (pointer: fine)").matches) document.getElementById(HOME_SEARCH_INPUT)?.focus({ preventScroll: true });
     return () => {
       cancelAnimationFrame(frame);
       resized.disconnect();
@@ -64,7 +65,7 @@ export function HomeSearch() {
 
   return <div ref={root} className="still-home-search" role="search" aria-labelledby="home-search-heading" data-docked={docked || undefined}>
     <ViewTransition name="still-search" share="still-search" default="none">
-      <div className="still-home-search-field"><StillSearch inputId={INPUT_ID} size={docked ? "compact" : "default"} /></div>
+      <div className="still-home-search-field"><StillSearch inputId={HOME_SEARCH_INPUT} size={docked ? "compact" : "default"} /></div>
     </ViewTransition>
   </div>;
 }
