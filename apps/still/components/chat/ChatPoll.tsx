@@ -14,14 +14,16 @@ export function ChatPoll({ poll, at }: {
   at: number;
 }) {
   const choicesId = useId();
-  const [collapsed, setCollapsed] = useState(false);
+  // Collapsing applies to the poll it was done on: the next one opens expanded.
+  const [collapsedId, setCollapsedId] = useState<string>();
+  const collapsed = poll !== null && poll.id === collapsedId;
   const ended = poll?.status === "ended";
   const shares = poll ? pollShares(poll) : [];
   const most = poll ? Math.max(...poll.choices.map(choice => choice.votes)) : 0;
   return <>
     <span className="sr-only" role="status">{poll ? `${ended ? "Poll ended" : "Poll"}: ${poll.title}` : ""}</span>
     {poll && <section className="still-chat-poll" aria-label="Poll" data-ended={ended || undefined}>
-      <button type="button" className="still-chat-poll-heading" aria-expanded={!collapsed} aria-controls={choicesId} onClick={() => setCollapsed(value => !value)}>
+      <button type="button" className="still-chat-poll-heading" aria-expanded={!collapsed} aria-controls={choicesId} onClick={() => setCollapsedId(collapsed ? undefined : poll.id)}>
         <span className="still-chat-poll-title">{poll.title}</span>
         <span className="still-chat-poll-state">{ended ? "Ended" : `${formatTime(Math.ceil((poll.endsAt - at) / 1000))} left`}</span>
         <CaretDown size={14} />
