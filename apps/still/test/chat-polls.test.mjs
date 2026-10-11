@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { normalizePoll, parsePollEvent, pollAt, pollShares, readPoll, recordPoll } from '../lib/chat/polls.ts';
-import { createPollSession } from '../lib/chat/poll-session.ts';
+import { channelPolls, createPollSession, watchChannelPolls } from '../lib/chat/poll-session.ts';
 import { fetchChannelPoll } from '../lib/twitch/polls.ts';
 
 const started = Date.parse('2026-10-11T00:05:51.044Z');
@@ -126,11 +126,11 @@ test('server poll query reports no poll, and a missing channel', async t => {
   await assert.rejects(fetchChannelPoll('missing_channel'), { kind: 'not-found' });
 });
 
-function sessionHarness(t, replies) {
+function sessionHarness(t, replies, { clockAhead = 0, open = (onChange) => createPollSession({ channel: 'JankyRondo', onChange }) } = {}) {
   const sockets = [];
   const states = [];
   const requests = [];
-  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: started + 440_000 });
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: started + 440_000 + clockAhead });
   t.mock.method(globalThis, 'fetch', async (url, options) => {
     requests.push({ url, signal: options.signal });
     const reply = replies.shift();
@@ -142,12 +142,14 @@ function sessionHarness(t, replies) {
     send(data) { this.sent.push(JSON.parse(data)); }
     close() { this.closed = true; }
   });
-  const stop = createPollSession({ channel: 'JankyRondo', onChange: state => states.push(state) });
+  const stop = open(state => states.push(state));
   t.after(stop);
-  const stamp = () => new Date(Date.now()).toISOString();
+  // Twitch stamps its messages with its own clock.
+  const stamp = () => new Date(Date.now() - clockAhead).toISOString();
   return {
     sockets, states, requests, stop,
     welcome: (socket = sockets.at(-1)) => socket.onmessage({ data: JSON.stringify({ type: 'welcome', welcome: { keepaliveSec: 15 }, timestamp: stamp() }) }),
+    subscribed: (socket = sockets.at(-1)) => socket.onmessage({ data: JSON.stringify({ type: 'subscribeResponse', subscribeResponse: { result: 'ok' }, timestamp: stamp() }) }),
     notify: (pubsub, socket = sockets.at(-1)) => socket.onmessage({ data: JSON.stringify({ type: 'notification', notification: { type: 'pubsub', pubsub }, timestamp: stamp() }) }),
   };
 }
@@ -218,4 +220,113 @@ test('a failed snapshot is retried before any socket opens', async t => {
   await tick(); await tick();
   assert.equal(h.requests.length, 2);
   assert.equal(h.sockets.length, 1);
+});
+
+test('a fast local clock is corrected once Twitch reports its own', async t => {
+  const ahead = 300_000;
+  const h = sessionHarness(t, [answer(graph())], { clockAhead: ahead });
+  await tick(); await tick();
+  const server = () => Date.now() - ahead;
+  assert.equal(h.states.at(-1).history[0].at, server() + ahead);
+  h.welcome();
+  let state = h.states.at(-1);
+  assert.equal(state.skew, ahead);
+  assert.equal(state.history[0].at, server());
+  assert.equal(pollAt(state.history, Date.now() - state.skew).votes, 71);
+  h.notify(event());
+  state = h.states.at(-1);
+  assert.deepEqual(state.history.map(snapshot => snapshot.at), [server(), server()]);
+  assert.equal(pollAt(state.history, Math.max(Date.now() - state.skew, state.history.at(-1).at)).votes, 72);
+});
+
+test('a poll opened between the snapshot and the subscription is read after subscribing', async t => {
+  const h = sessionHarness(t, [answer(null), answer(graph())]);
+  await tick(); await tick();
+  h.welcome();
+  assert.equal(h.requests.length, 1);
+  h.subscribed();
+  // Not before every cached copy of the snapshot postdates the subscription.
+  t.mock.timers.tick(11_999);
+  await tick();
+  assert.equal(h.requests.length, 1);
+  t.mock.timers.tick(1);
+  await tick(); await tick();
+  assert.equal(h.requests.length, 2);
+  assert.equal(pollAt(h.states.at(-1).history, Date.now()).title, 'WHAT GAME NEXT');
+});
+
+test('a poll closed during the handoff gets its final totals', async t => {
+  const closed = graph({ status: 'COMPLETED', endedAt: '2026-10-11T00:13:15Z', choices: [{ id: 'a6e9b8b2', title: 'TEXAS/OU SOONERS', votes: { total: 60 } }, { id: '3f389ff0', title: 'UCLA/OREGON', votes: { total: 15 } }] });
+  const h = sessionHarness(t, [answer(graph()), answer(closed)]);
+  await tick(); await tick();
+  h.welcome(); h.subscribed();
+  t.mock.timers.tick(12_000);
+  await tick(); await tick();
+  const last = h.states.at(-1).history.at(-1).poll;
+  assert.equal(last.status, 'ended');
+  assert.equal(last.votes, 75);
+});
+
+test('a socket report newer than the snapshot answer is kept', async t => {
+  const live = sessionHarness(t, [answer(null), answer(null)]);
+  await tick(); await tick();
+  live.welcome(); live.subscribed();
+  t.mock.timers.tick(8_000);
+  live.notify(event());
+  t.mock.timers.tick(4_000);
+  await tick(); await tick();
+  assert.equal(live.requests.length, 2);
+  // The empty answer may be older than the report four seconds ago.
+  assert.deepEqual(live.states.at(-1).history.map(snapshot => snapshot.poll.status), ['active']);
+});
+
+test('a refused subscription is retried', async t => {
+  const h = sessionHarness(t, [answer(null), answer(null)]);
+  await tick(); await tick();
+  h.welcome();
+  h.sockets[0].onmessage({ data: JSON.stringify({ type: 'subscribeResponse', subscribeResponse: { result: 'error' } }) });
+  assert.equal(h.sockets[0].closed, true);
+  t.mock.timers.tick(1_000);
+  await tick(); await tick();
+  assert.equal(h.sockets.length, 2);
+});
+
+test('polls seen by one chat view remain for the next, including a retired one', async t => {
+  let notified = 0;
+  let leave;
+  const h = sessionHarness(t, [answer(null), answer(null), answer(null)], { open: () => { leave = watchChannelPolls('Retained_Channel', () => { notified++; }); return () => {}; } });
+  await tick(); await tick();
+  h.welcome(); h.subscribed();
+  const seenAt = Date.now() + 5_000;
+  t.mock.timers.tick(5_000);
+  h.notify(event('POLL_UPDATE', { started_at: new Date(seenAt - 60_000).toISOString() }));
+  t.mock.timers.tick(20_000);
+  h.notify(event('POLL_COMPLETE', { status: 'COMPLETED', started_at: new Date(seenAt - 60_000).toISOString(), ended_at: new Date(Date.now()).toISOString() }));
+  t.mock.timers.tick(5_000);
+  h.notify(event('POLL_ARCHIVE', { status: 'ARCHIVED', started_at: new Date(seenAt - 60_000).toISOString(), ended_at: new Date(Date.now() - 5_000).toISOString() }));
+  assert.ok(notified >= 3);
+  assert.equal(pollAt(channelPolls('retained_channel').history, Date.now()), null);
+
+  // Replay to live chat: the next view subscribes as the first one leaves, and the socket stays.
+  leave();
+  const leaveNext = watchChannelPolls('retained_channel', () => {});
+  t.mock.timers.tick(10_000);
+  assert.equal(h.sockets[0].closed, false);
+  assert.equal(h.sockets.length, 1);
+  // Seeking back to the moment it was on screen brings it back.
+  assert.equal(pollAt(channelPolls('retained_channel').history, seenAt).title, 'WHAT GAME NEXT');
+  assert.equal(pollAt(channelPolls('retained_channel').history, seenAt + 22_000).status, 'ended');
+
+  // Closing the panel disconnects after a pause, and reopening continues the same timeline.
+  leaveNext();
+  t.mock.timers.tick(5_000);
+  assert.equal(h.sockets[0].closed, true);
+  const kept = channelPolls('retained_channel').history.length;
+  const reopen = watchChannelPolls('retained_channel', () => {});
+  await tick(); await tick();
+  assert.equal(h.sockets.length, 2);
+  assert.equal(channelPolls('retained_channel').history.length, kept);
+  assert.equal(pollAt(channelPolls('retained_channel').history, seenAt).votes, 72);
+  reopen();
+  t.mock.timers.tick(5_000);
 });
