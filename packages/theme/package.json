@@ -1,6 +1,6 @@
 {
   "name": "@phantom/theme",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "description": "Phantom design tokens, base layer and CSS primitives shared by every app.",
