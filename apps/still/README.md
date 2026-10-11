@@ -16,6 +16,7 @@ video or clip link; no account, extension, or installation is required.
 - Native clip playback and continuous MP4 downloads; audio-only archive listening.
 - Bounded TS/MP4 downloads with cancellation; growing archives export a captured window.
 - Live chat and offset-based VOD replay with badges, colors and emotes.
+- Channel polls in chat, read-only, with live results and a countdown.
 - Official chapters, historical storyboard browsing and on-demand sampled chat search/reactions.
 - A category directory: the most watched categories with their top streams, typo-tolerant category search, and a page per category listing who is live.
 - Channel/category video and clip libraries, one bounded request per selected view.
@@ -154,6 +155,13 @@ not send chat messages. Chat availability depends on the source video/channel.
 
 Catalogs and replay expose partial coverage: Twitch cursors are unavailable, so a
 view is one page reached by sort, type, period or language, and crowded replay seconds can contain gaps.
+Polls appear above the messages with each choice's share, the time left and the
+final result. They come from Twitch's public poll feed, so viewing needs no
+account and voting is not offered. Twitch keeps no poll history for viewers:
+the replay of a broadcast that is still on air shows the polls seen while the
+page is open, placed at their moment in the recording, and finished recordings
+have none.
+
 Muted windows use silent fallback; no missing-audio recovery is claimed.
 Video adaptation excludes audio renditions; audio-only listening uses its own media
 playlist. Audio downloads retain the actual TS container; MP3/M4A conversion and ASR are
