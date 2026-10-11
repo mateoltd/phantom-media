@@ -62,6 +62,7 @@ export async function getPlaybackLocation(
     supported_codecs: "h264",
     token: token.value,
   });
+  if (type === "live") params.set("fast_bread", "true");
 
   const path =
     type === "live"

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { bufferAhead, createLiveLatencyController, minimumLiveLatency } from "../lib/media/live-latency.ts";
+import { liveReloadUrl, rewriteLiveMasterPlaylist, rewriteLiveMediaPlaylist } from "../lib/media/hls.ts";
 
 const ranges = (...values) => ({ length: values.length, start: i => values[i][0], end: i => values[i][1] });
 const timeline = { live: true, targetDuration: 2, segmentDuration: 2, partTarget: 0, partHoldBack: 0, age: 0, edge: 100 };
@@ -392,4 +393,64 @@ test("a finished broadcast cannot be accelerated or seeked by the live controlle
   f.event("play"); f.tick();
   assert.equal(f.video.currentTime, 70);
   assert.equal(f.video.playbackRate, 1);
+});
+
+test("LL-HLS reload hints reach upstream while signed parameters and destination stay intact", () => {
+  const source = new URL("https://video-edge.ttvnw.net/live.m3u8?sig=signed&token=opaque");
+  const result = liveReloadUrl(source, new URLSearchParams("_HLS_msn=153&_HLS_part=2&_HLS_skip=v2&url=https://example.com&token=bad"));
+  assert.equal(result.origin, source.origin);
+  assert.equal(result.searchParams.get("sig"), "signed");
+  assert.equal(result.searchParams.get("token"), "opaque");
+  assert.equal(result.searchParams.get("_HLS_msn"), "153");
+  assert.equal(result.searchParams.get("_HLS_part"), "2");
+  assert.equal(result.searchParams.get("_HLS_skip"), "v2");
+  assert.equal(source.searchParams.has("_HLS_msn"), false);
+  const invalid = liveReloadUrl(source, new URLSearchParams("_HLS_msn=-1&_HLS_part=Infinity&_HLS_skip=bad"));
+  assert.equal(invalid.href, source.href);
+});
+
+const prefetchPlaylist = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-MEDIA-SEQUENCE:10
+#EXT-X-PROGRAM-DATE-TIME:2026-10-10T12:00:00.000Z
+#EXTINF:2.000,live
+10.ts
+#EXT-X-PROGRAM-DATE-TIME:2026-10-10T12:00:02.000Z
+#EXTINF:2.000,live
+11.ts
+#EXT-X-TWITCH-PREFETCH:12.ts
+#EXT-X-TWITCH-PREFETCH:13.ts
+`;
+const playlistBase = "https://video-edge.ttvnw.net/live/index.m3u8";
+
+test("progressive players receive bounded, dated prefetch segments with stable sequence numbers", () => {
+  const output = rewriteLiveMediaPlaylist(prefetchPlaylist, playlistBase, true);
+  assert.equal((output.match(/#EXTINF/g) || []).length, 4);
+  assert.equal((output.match(/#EXT-X-STILL-PREFETCH:1/g) || []).length, 2);
+  assert.ok(output.includes("#EXT-X-MEDIA-SEQUENCE:10"));
+  assert.ok(output.includes("#EXT-X-PROGRAM-DATE-TIME:2026-10-10T12:00:04.000Z"));
+  assert.ok(output.includes("#EXT-X-PROGRAM-DATE-TIME:2026-10-10T12:00:06.000Z"));
+  assert.ok(output.includes("https://video-edge.ttvnw.net/live/12.ts"));
+  const native = rewriteLiveMediaPlaylist(prefetchPlaylist, playlistBase);
+  assert.equal((native.match(/#EXTINF/g) || []).length, 2);
+  const master = "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1000000\nindex.m3u8\n";
+  assert.ok(rewriteLiveMasterPlaylist(master, playlistBase, true).includes("prefetch=1"));
+  assert.ok(!rewriteLiveMasterPlaylist(master, playlistBase).includes("prefetch=1"));
+  const sparseDates = prefetchPlaylist.replace("#EXT-X-PROGRAM-DATE-TIME:2026-10-10T12:00:02.000Z\n", "");
+  assert.ok(rewriteLiveMediaPlaylist(sparseDates, playlistBase, true).includes("#EXT-X-PROGRAM-DATE-TIME:2026-10-10T12:00:04.000Z"));
+});
+
+test("prefetch cannot bypass ads, end-of-stream, discontinuities, or missing timing", () => {
+  for (const unsafe of [
+    prefetchPlaylist.replace("#EXT-X-TWITCH-PREFETCH:12.ts", "#EXT-X-DISCONTINUITY\n#EXT-X-TWITCH-PREFETCH:12.ts"),
+    prefetchPlaylist.replaceAll(",live", ",Amazon"),
+    prefetchPlaylist.replace(/^#EXT-X-PROGRAM-DATE-TIME:.*\n/gm, ""),
+    prefetchPlaylist + "#EXT-X-ENDLIST\n",
+    prefetchPlaylist.replace("#EXT-X-MEDIA-SEQUENCE:10", '#EXT-X-DATERANGE:ID="stitched-ad-1",CLASS="twitch-stitched-ad",START-DATE="2026-10-10T12:00:04.000Z",DURATION=30\n#EXT-X-MEDIA-SEQUENCE:10'),
+  ]) {
+    assert.ok(!rewriteLiveMediaPlaylist(unsafe, playlistBase, true).includes("#EXT-X-STILL-PREFETCH"));
+  }
+  const duplicate = prefetchPlaylist.replace("#EXT-X-TWITCH-PREFETCH:12.ts", "#EXT-X-TWITCH-PREFETCH:11.ts");
+  const output = rewriteLiveMediaPlaylist(duplicate, playlistBase, true);
+  assert.equal((output.match(/#EXTINF/g) || []).length, 2, "an ambiguous tail cannot change segment sequence identity");
 });

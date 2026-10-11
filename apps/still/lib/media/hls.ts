@@ -44,7 +44,7 @@ export function rewriteMediaPlaylist(
     .join("\n");
 }
 
-export function rewriteLiveMasterPlaylist(text: string, playlistUrl: string): string {
+export function rewriteLiveMasterPlaylist(text: string, playlistUrl: string, prefetch = false): string {
   const lines = text.split("\n");
 
   return lines
@@ -55,17 +55,74 @@ export function rewriteLiveMasterPlaylist(text: string, playlistUrl: string): st
       const params = new URLSearchParams({
         url: new URL(trimmed, playlistUrl).toString(),
       });
+      if (prefetch) params.set("prefetch", "1");
       return `/api/live/media.m3u8?${params.toString()}`;
     })
     .join("\n");
 }
 
-export function rewriteLiveMediaPlaylist(text: string, playlistUrl: string): string {
+/** Preserve hls.js blocking/delta reload hints across the same-origin route. */
+export function liveReloadUrl(playlistUrl: URL, reload: URLSearchParams): URL {
+  const upstream = new URL(playlistUrl);
+  for (const name of ["_HLS_msn", "_HLS_part", "_HLS_skip"]) {
+    const value = reload.get(name);
+    if (value !== null && (name === "_HLS_skip" ? /^(YES|v2)$/.test(value) : /^\d{1,15}$/.test(value))) {
+      upstream.searchParams.set(name, value);
+    }
+  }
+  return upstream;
+}
+
+export function rewriteLiveMediaPlaylist(text: string, playlistUrl: string, prefetch = false): string {
   const filtered = filterTwitchAdSegments(text);
-  return filtered
+  // Predictive URLs must not bypass the ad filter. Opt in only for progressive
+  // players and a clean live tail; native HLS keeps the ordinary segment list.
+  const playable = prefetch && filtered === text ? promoteTwitchPrefetch(filtered) : filtered;
+  return playable
     .split("\n")
     .map((line) => rewritePlaylistLine(line, playlistUrl))
     .join("\n");
+}
+
+function promoteTwitchPrefetch(text: string): string {
+  if (/#EXT-X-ENDLIST|#EXT-X-KEY:.*METHOD=(?!NONE)/.test(text)) return text;
+  const lines = text.split("\n");
+  const durations = [...text.matchAll(/^#EXTINF:([\d.]+)/gm)].map(match => Number(match[1]));
+  const recent = durations.slice(-3).filter(duration => Number.isFinite(duration) && duration > 0);
+  if (!recent.length) return text;
+  const duration = recent.reduce((sum, value) => sum + value, 0) / recent.length;
+  let date: number | null = null;
+  let lastDuration = 0;
+  let unsafeTail = true;
+  let count = 0;
+  const existing = new Set(lines.filter(line => line.trim() && !line.startsWith("#")));
+  return lines.map(line => {
+    if (line.startsWith("#EXT-X-PROGRAM-DATE-TIME:")) {
+      const parsed = Date.parse(line.slice("#EXT-X-PROGRAM-DATE-TIME:".length));
+      date = Number.isFinite(parsed) ? parsed : null;
+    } else if (line.startsWith("#EXTINF:")) {
+      lastDuration = Number(line.match(/^#EXTINF:([\d.]+)/)?.[1]) || 0;
+      unsafeTail = /amazon/i.test(line);
+    } else if (line.startsWith("#EXT-X-DISCONTINUITY") || line.startsWith("#EXT-X-KEY:")) {
+      unsafeTail = true;
+    } else if (line.startsWith("#EXT-X-TWITCH-PREFETCH:")) {
+      const uri = line.slice("#EXT-X-TWITCH-PREFETCH:".length).trim();
+      if (unsafeTail || date === null || count >= 2 || existing.has(uri) || !uri) {
+        unsafeTail = true;
+        return line;
+      }
+      count++;
+      existing.add(uri);
+      const programDate = new Date(date).toISOString();
+      date += duration * 1_000;
+      return `#EXT-X-PROGRAM-DATE-TIME:${programDate}\n#EXT-X-STILL-PREFETCH:1\n#EXTINF:${duration.toFixed(6)},live\n${uri}`;
+    } else if (line.trim() && !line.startsWith("#")) {
+      // A PROGRAM-DATE-TIME may anchor several segments rather than repeat on
+      // each one. Advance through complete media before dating the live tail.
+      date = date !== null && lastDuration > 0 ? date + lastDuration * 1_000 : null;
+    }
+    return line;
+  }).join("\n");
 }
 
 function filterTwitchAdSegments(text: string): string {

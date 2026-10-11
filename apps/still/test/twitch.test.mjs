@@ -3,8 +3,22 @@ import assert from "node:assert/strict";
 import { afterEach, test, mock } from "node:test";
 import { fetchChannelBasics } from "../lib/twitch/channels.ts";
 import { fetchVodMetadata } from "../lib/twitch/videos.ts";
+import { getPlaybackLocation } from "../lib/twitch/playback.ts";
 
 afterEach(() => mock.restoreAll());
+
+test("live requests opt into Twitch's prefetch feed while VOD requests keep archive delivery", async () => {
+  mock.method(globalThis, "fetch", async () => Response.json({ data: {
+    streamPlaybackAccessToken: { value: "{}", signature: "live-fixture" },
+    videoPlaybackAccessToken: { value: "{}", signature: "vod-fixture" },
+  } }));
+  const live = new URL((await getPlaybackLocation("live", "fixturechannel")).url);
+  const vod = new URL((await getPlaybackLocation("vod", "123")).url);
+  assert.equal(live.searchParams.get("fast_bread"), "true");
+  assert.equal(live.searchParams.get("sig"), "live-fixture");
+  assert.equal(vod.searchParams.has("fast_bread"), false);
+  assert.equal(vod.searchParams.get("sig"), "vod-fixture");
+});
 
 test("loads all muted intervals in the existing VOD metadata request", async () => {
   const segments = [{ offset: 16605, duration: 203 }, { offset: 200, duration: 60 }];

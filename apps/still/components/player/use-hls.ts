@@ -6,6 +6,7 @@ import Hls from "hls.js";
 import type { MediaState } from "./use-media";
 import { CONNECTION_ERROR_DETAILS, createConnectionHealth } from "@/lib/media/connection-health";
 import { createLiveLatencyController } from "@/lib/media/live-latency";
+import { LiveAbrController } from "@/lib/media/live-abr";
 
 interface HlsOptions {
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -85,9 +86,13 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
     setConnectionUnstable(false);
     setBehindLive(false);
     const plainLive = isLive && !dvrMode;
+    const progressive = plainLive && typeof fetch !== "undefined" && typeof AbortController !== "undefined" &&
+      typeof ReadableStream !== "undefined" && typeof Request !== "undefined";
     const native = delivery === "file" || !Hls.isSupported();
     let attachedHls: Hls | null = null;
     let segmentDuration = 2;
+    let predictiveTimeline = false;
+    let prefetchDuration = 0;
     const liveController = plainLive ? createLiveLatencyController(video, {
       native,
       timeline: () => {
@@ -95,7 +100,7 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
         return details ? {
           live: details.live, targetDuration: details.targetduration, segmentDuration,
           partTarget: details.partTarget, partHoldBack: details.partHoldBack,
-          age: details.age, edge: details.edge,
+          age: details.age, edge: details.edge, prefetch: predictiveTimeline, prefetchDuration,
         } : null;
       },
       setTargetLatency: seconds => { if (attachedHls) attachedHls.targetLatency = seconds; },
@@ -194,8 +199,10 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
 
     const hls = new Hls({
       enableWorker: true,
+      progressive,
       lowLatencyMode: isLive && !dvrMode,
       ...(plainLive ? {
+        abrController: LiveAbrController,
         liveSyncDurationCount: 1.5,
         // Our controller owns rate/seek decisions and recovers its stall margin.
         maxLiveSyncPlaybackRate: 1,
@@ -220,6 +227,9 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
     attachedHls = hls;
     hlsRef.current = hls;
     let levelsSynced = false;
+    const sourceUrl = new URL(src, window.location.href);
+    let prefetchEnabled = progressive && sourceUrl.origin === window.location.origin && sourceUrl.pathname === "/api/live/master.m3u8";
+    let prefetchFailures = 0;
 
     const syncLevels = (sourceLevels = hls.levels) => {
       const hevcSupported =
@@ -286,6 +296,19 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
     });
 
     hls.on(Hls.Events.ERROR, (_, data) => {
+      if (prefetchEnabled && data.frag?.tagList.some(tag => tag[0] === "EXT-X-STILL-PREFETCH") &&
+          (data.type === Hls.ErrorTypes.NETWORK_ERROR || data.type === Hls.ErrorTypes.MEDIA_ERROR)) {
+        if (++prefetchFailures >= 2 || data.fatal) {
+          // Unsupported/failed predictive delivery gets one automatic retreat
+          // to completed segments, rather than exhausting fatal recovery.
+          prefetchEnabled = false;
+          levelsSynced = false;
+          capturePlayback();
+          liveController?.reset();
+          hls.loadSource(src);
+          return;
+        }
+      }
       if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) liveController?.stall();
       if (data.type === Hls.ErrorTypes.NETWORK_ERROR && CONNECTION_ERROR_DETAILS.has(data.details)) {
         connection.networkError(performance.now(), data.fatal);
@@ -306,6 +329,10 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
     hls.on(Hls.Events.FRAG_LOADED, (_, data) => {
       if (data.frag.type !== "main" && data.frag.type !== "audio") return;
       if (data.frag.sn === "initSegment") return;
+      // Prefetch segments arrive at encoder speed, not connection speed.
+      if (data.frag.tagList.some(tag => tag[0] === "EXT-X-STILL-PREFETCH")) {
+        return;
+      }
       const { start, first, end } = (data.part?.stats ?? data.frag.stats).loading;
       // A low-latency part may wait on the server until it exists; that wait is expected.
       const loadStart = data.part && first > start ? first : start;
@@ -313,18 +340,41 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
       publishConnection();
     });
 
+    hls.on(Hls.Events.FRAG_BUFFERED, (_, data) => {
+      // Download success precedes parsing/append completion. Only playable
+      // predictive media breaks a consecutive failure sequence.
+      if (!data.stats.aborted && data.frag.sn !== "initSegment" &&
+          (data.frag.type === "main" || data.frag.type === "audio") &&
+          data.frag.tagList.some(tag => tag[0] === "EXT-X-STILL-PREFETCH")) {
+        prefetchFailures = 0;
+      }
+    });
+
     // A resume before metadata or after a stale playlist is completed as soon
     // as the live window becomes available, without restarting healthy loading.
     hls.on(Hls.Events.LEVEL_UPDATED, (_, data) => {
       // Use the largest of the recent complete segments, rather than Twitch's
       // conservative TARGETDURATION upper bound or an entire broadcast average.
-      const recent = data.details.fragments.slice(-3).map(fragment => fragment.duration)
+      const recent = data.details.fragments.filter(fragment =>
+        !fragment.tagList.some(tag => tag[0] === "EXT-X-STILL-PREFETCH")
+      ).slice(-3).map(fragment => fragment.duration)
         .filter(duration => Number.isFinite(duration) && duration > 0);
       segmentDuration = recent.length ? Math.max(...recent) : data.details.targetduration;
+      predictiveTimeline = data.details.fragments.some(fragment =>
+        fragment.tagList.some(tag => tag[0] === "EXT-X-STILL-PREFETCH")
+      );
+      prefetchDuration = data.details.fragments.filter(fragment =>
+        fragment.tagList.some(tag => tag[0] === "EXT-X-STILL-PREFETCH")
+      ).reduce((duration, fragment) => duration + fragment.duration, 0);
       liveController?.refresh();
     });
 
-    hls.loadSource(src);
+    if (prefetchEnabled) {
+      sourceUrl.searchParams.set("prefetch", "1");
+      hls.loadSource(sourceUrl.href);
+    } else {
+      hls.loadSource(src);
+    }
     hls.attachMedia(video);
 
     return () => {

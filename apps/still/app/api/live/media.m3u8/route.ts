@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { rewriteLiveMediaPlaylist } from "@/lib/media/hls";
+import { liveReloadUrl, rewriteLiveMediaPlaylist } from "@/lib/media/hls";
 import { mediaDestination } from "@/lib/media/destination";
 import { readLiveManifest } from "@/lib/media/manifest";
 import { errorResponse } from "@/lib/errors";
@@ -26,8 +26,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const manifest = await readLiveManifest(url, request.signal);
-    return new Response(rewriteLiveMediaPlaylist(manifest.text, manifest.url), {
+    const upstream = liveReloadUrl(parsed, request.nextUrl.searchParams);
+    const manifest = await readLiveManifest(upstream.href, request.signal);
+    return new Response(rewriteLiveMediaPlaylist(manifest.text, manifest.url, request.nextUrl.searchParams.get("prefetch") === "1"), {
       headers: {
         "Content-Type": "application/vnd.apple.mpegurl",
         "Cache-Control": "no-store",

@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   try {
     const playlistUrl = (await getPlaybackLocation("live", channel, request.signal)).url;
     const manifest = await readLiveManifest(playlistUrl, request.signal);
-    const playlist = rewriteLiveMasterPlaylist(manifest.text, manifest.url);
+    const playlist = rewriteLiveMasterPlaylist(manifest.text, manifest.url, request.nextUrl.searchParams.get("prefetch") === "1");
 
     return new Response(playlist, {
       headers: {
