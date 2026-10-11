@@ -26,6 +26,8 @@ video or clip link; no account, extension, or installation is required.
 
 ![Still's category directory with artwork and live streams grouped by category](../../docs/screenshots/still/still-categories.webp)
 
+![Still's discovery, live player, and category directory on mobile](../../docs/screenshots/still/still-mobile.webp)
+
 Source media must still be available: Still cannot restore deleted
 videos, and archive-based rewind depends on the channel and Twitch. Media and
 chat use third-party services. Cloudflare observability is currently enabled

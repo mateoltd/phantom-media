@@ -25,11 +25,11 @@ def sora_path():
 
 
 def title(canvas, text, font_path):
-    face = ImageFont.truetype(str(font_path), 112)
+    face = ImageFont.truetype(str(font_path), 82)
     face.set_variation_by_axes([600])
     draw = ImageDraw.Draw(canvas)
     length = draw.textlength(text, font=face)
-    draw.text(((canvas.width - length) / 2, 122), text, fill=TEXT, font=face,
+    draw.text(((canvas.width - length) / 2, 62), text, fill=TEXT, font=face,
               stroke_width=0)
 
 
@@ -47,10 +47,9 @@ def shadow(canvas, box, radius):
     canvas.alpha_composite(layer.filter(ImageFilter.GaussianBlur(55)))
 
 
-def screen(canvas, source, x, y, width, crop_height=None):
+def screen(canvas, source, x, y, width):
     capture = Image.open(ROOT / 'raw' / source).convert('RGB')
-    if crop_height:
-        capture = capture.crop((0, 0, capture.width, crop_height))
+    assert capture.width * 9 == capture.height * 16, 'Desktop captures must retain a 16:9 viewport'
     height = round(capture.height * width / capture.width)
     capture = capture.resize((width, height), Image.Resampling.LANCZOS)
     bezel = 8
@@ -62,8 +61,8 @@ def screen(canvas, source, x, y, width, crop_height=None):
     ImageDraw.Draw(canvas).rounded_rectangle(box, radius=36, outline=BORDER, width=2)
 
 
-def phone(canvas, x, y, width=580):
-    capture = Image.open(ROOT / 'raw/home-mobile.png').convert('RGB')
+def phone(canvas, x, y, width=580, source="home-mobile.png"):
+    capture = Image.open(ROOT / 'raw' / source).convert('RGB')
     height = round(capture.height * width / capture.width)
     capture = capture.resize((width, height), Image.Resampling.LANCZOS)
     # A quiet black device bezel, without fake status bars or browser controls.
@@ -92,21 +91,28 @@ def main():
         face.flavor = None
         face.save(path)
 
-        hero = canvas((3200, 2100))
+        hero = canvas((3200, 1800))
         title(hero, 'Watch on your terms', path)
-        screen(hero, 'player-desktop.png', 192, 375, 2800)
+        screen(hero, 'player-desktop.png', 342, 230, 2500)
         save(hero, 'still-player.webp')
 
-        discovery = canvas((3600, 2200))
+        discovery = canvas((3200, 1800))
         title(discovery, 'Find your next stream', path)
-        screen(discovery, 'home-desktop.png', 144, 520, 2740, crop_height=1430)
-        phone(discovery, 2810, 430, 660)
+        screen(discovery, 'home-desktop.png', 110, 230, 2540)
+        phone(discovery, 2565, 545, 500)
         save(discovery, 'still-discovery.webp')
 
-        categories = canvas((3200, 2380))
+        categories = canvas((3200, 1800))
         title(categories, 'Explore what is live', path)
-        screen(categories, 'categories-desktop.png', 192, 375, 2800)
+        screen(categories, 'categories-desktop.png', 342, 230, 2500)
         save(categories, 'still-categories.webp')
+
+        mobile = canvas((3200, 1800))
+        title(mobile, 'Still wherever you watch', path)
+        for x, source in [(350, 'home-mobile.png'), (1270, 'player-mobile.png'),
+                          (2190, 'categories-mobile.png')]:
+            phone(mobile, x, 230, 600, source)
+        save(mobile, 'still-mobile.webp')
 
 
 if __name__ == '__main__':

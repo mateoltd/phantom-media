@@ -1,32 +1,39 @@
 # Still README artwork
 
-Screens of the real local Still app, captured on 2026-10-11. Stream titles,
-viewer counts, thumbnails and chat reflect the capture time. Twitch and
-broadcaster artwork retain their respective ownership.
+Fresh captures of the local Still app on 2026-10-11. Stream titles, viewer
+counts, thumbnails and chat reflect the capture time. Twitch and broadcaster
+artwork retain their respective ownership.
 
-The compositions use Still's media tokens: `#191b1e` for the canvas,
-`#101113` for frames, `#33363b` for edges, and `#f4f4f8` for text. Headlines
-use the app's actual Sora font at weight 600. There are no eyebrow labels,
-headline punctuation, invented browser controls, or status bars.
+All desktop scenes use a standard **1920 × 1080 (16:9) viewport**, exported at
+2× to **3840 × 2160**. All four finished compositions are **3200 × 1800 (16:9)**.
+The complete desktop viewport is retained and scaled uniformly; the composition
+script rejects desktop sources with a different aspect ratio. Mobile uses a
+390 × 844 viewport captured directly at 2×.
 
 | Source | Route | Saved PNG |
 | --- | --- | --- |
-| `raw/player-desktop.png` | `/ow_esports` | 2880 × 1520 |
-| `raw/home-desktop.png` | `/` | 2880 × 1500 |
-| `raw/home-mobile.png` | `/` | 860 × 1864 |
-| `raw/categories-desktop.png` | `/categories` | 2880 × 1760 |
+| `raw/player-desktop.png` | `/ow_esports` | 3840 × 2160 |
+| `raw/home-desktop.png` | `/` | 3840 × 2160 |
+| `raw/categories-desktop.png` | `/categories` | 3840 × 2160 |
+| `raw/home-mobile.png` | `/` | 780 × 1688 |
+| `raw/player-mobile.png` | `/ow_esports` | 780 × 1688 |
+| `raw/categories-mobile.png` | `/categories` | 780 × 1688 |
 
-Desktop captures freeze the rendered DOM, its actual CSS, loaded Sora font,
-images, and (for playback) the current decoded video frame. T3's HTML renderer
-exports the frozen page at 2× in two adjacent tiles, joined without rescaling.
-Scripts, developer tools and content outside the captured area are omitted.
-This preserves crisp UI text and controls rather than enlarging a smaller
-screenshot. Video and thumbnails keep their upstream source resolution. Mobile
-was captured directly at 2× with the collaborative browser.
+Desktop exports freeze the rendered DOM, current media frame, active CSS media
+queries and viewport units at the actual capture dimensions. T3's HTML renderer
+exports three adjacent 1280 × 2160 tiles, which are joined without rescaling.
+The app's 16px root size, Sora and JetBrains Mono are explicitly preserved so
+conversation theme defaults cannot change the interface's spacing or typography.
+Capture checks verify loaded Sora faces, computed font family, root size, and
+viewport geometry. The home search remains 896px wide and its heading 56px,
+matching the live app at this viewport. The player uses a decoded 1080p frame.
+Scripts, developer controls, and content wholly outside the viewport are omitted.
 
-The finished WebP files add minimal rounded frames and neutral shadows.
-Screens are cropped to complete content rows and downsampled to fit the
-composition. The original captures remain in `raw/`.
+The compositions use Still's media tokens: `#191b1e` for the canvas,
+`#101113` for frames, `#33363b` for edges, and `#f4f4f8` for text. Headlines
+use Sora at weight 600, without eyebrow labels or headline punctuation. Frames
+and neutral shadows sit outside the captured interface. There are no invented
+browser controls or status bars.
 
 To rebuild the compositions, start Still once to populate its Next font cache,
 then install Python's `Pillow` and `fonttools[woff]` packages and run:
@@ -35,6 +42,5 @@ then install Python's `Pillow` and `fonttools[woff]` packages and run:
 python3 docs/screenshots/still/render_mockups.py
 ```
 
-Outputs are `still-player.webp` (3200 × 2100), `still-discovery.webp`
-(3600 × 2200), and `still-categories.webp` (3200 × 2380). Both READMEs use
-relative links to these shared assets.
+Outputs are `still-player.webp`, `still-discovery.webp`, `still-categories.webp`,
+and `still-mobile.webp`. Both READMEs use relative links to these shared assets.
