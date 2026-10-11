@@ -1,21 +1,26 @@
 "use client";
 
 import Image from "next/image";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowsClockwise, ChartBar, MagnifyingGlass } from "@phosphor-icons/react/ssr";
 import { Button, IconButton } from "@phantom/ui";
 import { emoteImage, sanitizeChatColor, type ChatMessage } from "@/lib/chat/messages";
+import { pollAt } from "@/lib/chat/polls";
 import { formatTime } from "@/lib/format";
 import { useLiveChat } from "./use-live-chat";
 import { useReplayChat } from "./use-replay-chat";
 import { ChatSearch } from "./ChatSearch";
 import { ChatBadge } from "./ChatBadge";
+import { ChatPoll } from "./ChatPoll";
+import { useChatPoll, useNow } from "./use-chat-poll";
 
-export function ChatPanel({ channel, vodId, time = 0, playbackSeekVersion = 0, idle = false, onSeek, onClose }: {
+export function ChatPanel({ channel, vodId, time = 0, playbackSeekVersion = 0, recordingStartedAt, idle = false, onSeek, onClose }: {
   channel: string;
   vodId?: string;
   time?: number;
   playbackSeekVersion?: number;
+  /** When the recording began, for a broadcast still on air. Places its live polls on the replay. */
+  recordingStartedAt?: string;
   /** Holds the panel's frame without connecting to anything. */
   idle?: boolean;
   onClose: () => void;
@@ -51,7 +56,7 @@ export function ChatPanel({ channel, vodId, time = 0, playbackSeekVersion = 0, i
       </div>
       {idle ? <div className="still-chat-content" />
         : mode === "replay" && vodId
-        ? <ReplayChat key={vodId} vodId={vodId} time={time} playbackSeekVersion={playbackSeekVersion} onSeek={onSeek} tool={tool} />
+        ? <ReplayChat key={vodId} channel={channel} vodId={vodId} recordingStartedAt={recordingStartedAt} time={time} playbackSeekVersion={playbackSeekVersion} onSeek={onSeek} tool={tool} />
         : <LiveChat key={channel} channel={channel} />}
     </section>
   );
@@ -59,18 +64,33 @@ export function ChatPanel({ channel, vodId, time = 0, playbackSeekVersion = 0, i
 
 function LiveChat({ channel }: { channel: string }) {
   const { messages, status } = useLiveChat(channel);
-  return <ChatMessages messages={messages} empty={status === "Connected" ? "No messages yet. New messages will appear here." : status} />;
+  return <ChatMessages pinned={<LivePoll channel={channel} />} messages={messages} empty={status === "Connected" ? "No messages yet. New messages will appear here." : status} />;
 }
 
-function ReplayChat({ vodId, time, playbackSeekVersion, onSeek, tool }: { vodId: string; time: number; playbackSeekVersion: number; onSeek?: (time: number) => void; tool: "search" | "reactions" | null }) {
+function LivePoll({ channel }: { channel: string }) {
+  const { history, skew } = useChatPoll(channel);
+  const now = useNow(history.length > 0);
+  // The newest report can be stamped a moment ahead of the ticking clock.
+  const at = Math.max(now - skew, history.at(-1)?.at ?? 0);
+  return <ChatPoll poll={pollAt(history, at)} at={at} />;
+}
+
+function ReplayChat({ channel, vodId, recordingStartedAt, time, playbackSeekVersion, onSeek, tool }: { channel: string; vodId: string; recordingStartedAt?: string; time: number; playbackSeekVersion: number; onSeek?: (time: number) => void; tool: "search" | "reactions" | null }) {
   const { messages, status, error, seekVersion, resync } = useReplayChat(vodId, time, playbackSeekVersion);
+  // Twitch keeps no poll history for viewers, so a replay can only show polls seen while the broadcast is on air.
+  const startedAt = recordingStartedAt ? Date.parse(recordingStartedAt) : NaN;
+  const { history } = useChatPoll(channel, Number.isFinite(startedAt));
+  const at = startedAt + time * 1000;
+  const poll = Number.isFinite(startedAt) ? <ChatPoll poll={pollAt(history, at)} at={at} /> : undefined;
   return <>
-    {tool && onSeek ? <ChatSearch vodId={vodId} time={time} onSeek={onSeek} view={tool} /> : <ChatMessages onSeek={onSeek} resetKey={seekVersion} messages={messages} empty={error || (status === "Loading replay…" ? status : "No messages at this point in the video.")} error={error} onRetry={resync} onJumpToLatest={resync} />}
+    {tool && onSeek ? <ChatSearch vodId={vodId} time={time} onSeek={onSeek} view={tool} /> : <ChatMessages pinned={poll} onSeek={onSeek} resetKey={seekVersion} messages={messages} empty={error || (status === "Loading replay…" ? status : "No messages at this point in the video.")} error={error} onRetry={resync} onJumpToLatest={resync} />}
     <div className="still-chat-footer"><span role="status">{status}</span><time className="font-mono">{formatTime(time)}</time></div>
   </>;
 }
 
-function ChatMessages({ messages, empty, error, onRetry, onJumpToLatest, onSeek, resetKey = 0 }: {
+function ChatMessages({ messages, empty, error, onRetry, onJumpToLatest, onSeek, pinned, resetKey = 0 }: {
+  /** Held above the messages, outside their scroll. */
+  pinned?: ReactNode;
   resetKey?: number;
   onSeek?: (time: number) => void;
   messages: ChatMessage[];
@@ -94,9 +114,23 @@ function ChatMessages({ messages, empty, error, onRetry, onJumpToLatest, onSeek,
     const list = listRef.current;
     if (list && followingRef.current) list.scrollTop = list.scrollHeight;
   }, [messages]);
+  // Something pinned above takes its height from the top of the list. Keep the messages where they are.
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list || typeof ResizeObserver === "undefined") return;
+    let height = list.clientHeight;
+    const observer = new ResizeObserver(() => {
+      const next = list.clientHeight;
+      list.scrollTop = followingRef.current ? list.scrollHeight : list.scrollTop + height - next;
+      height = next;
+    });
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, []);
 
   return <div className="still-chat-content">
     <style>{colorRules}</style>
+    {pinned}
     <div ref={listRef} className="still-chat-messages" aria-label="Chat messages" onScroll={() => {
       const list = listRef.current;
       if (!list) return;
