@@ -92,7 +92,9 @@ export function pollAt(history: PollSnapshot[], at: number): ChatPoll | null {
     poll = snapshot.poll;
   }
   if (!poll || poll.status === "archived" || at < poll.startedAt || at > poll.endsAt + POLL_RESULTS_LINGER) return null;
-  return poll.status === "active" && at >= poll.endsAt ? { ...poll, status: "ended" } : poll;
+  // The moment decides whether it reads as running: a poll first sighted after it closed was still open before that.
+  const status = at >= poll.endsAt ? "ended" : "active";
+  return poll.status === status ? poll : { ...poll, status };
 }
 
 /** Whole percentages that add up to 100, with the remainder going to the largest fractions. */

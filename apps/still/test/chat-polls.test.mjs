@@ -92,6 +92,11 @@ test('the timeline answers what was on screen at any moment', () => {
   history = recordPoll(history, { ...closed, status: 'archived' }, started + 620_000);
   assert.equal(pollAt(history, started + 619_999).status, 'ended');
   assert.equal(pollAt(history, started + 620_000), null);
+  // First sighted after it closed: it was still running at any earlier playhead.
+  const late = recordPoll([], closed, started + 610_000);
+  assert.equal(pollAt(late, started + 60_000).status, 'active');
+  assert.equal(pollAt(late, started + 600_099).status, 'active');
+  assert.equal(pollAt(late, started + 600_100).status, 'ended');
   // Seeking back replays the earlier state.
   assert.equal(pollAt(history, started + 450_000).votes, 72);
   const next = { ...first, id: 'next', title: 'Second poll', startedAt: started + 900_000, endsAt: started + 960_000 };
@@ -329,4 +334,28 @@ test('polls seen by one chat view remain for the next, including a retired one',
   assert.equal(pollAt(channelPolls('retained_channel').history, seenAt).votes, 72);
   reopen();
   t.mock.timers.tick(5_000);
+});
+
+test('a failed read after subscribing is retried while the socket stays healthy', async t => {
+  const h = sessionHarness(t, [answer(null), new Response(null, { status: 502 }), new Response(null, { status: 502 }), answer(graph())]);
+  await tick(); await tick();
+  h.welcome(); h.subscribed();
+  const keepalive = () => h.sockets[0].onmessage({ data: JSON.stringify({ type: 'keepalive' }) });
+  t.mock.timers.tick(12_000);
+  await tick(); await tick();
+  assert.equal(h.requests.length, 2);
+  keepalive();
+  t.mock.timers.tick(1_000);
+  await tick(); await tick();
+  assert.equal(h.requests.length, 3);
+  keepalive();
+  t.mock.timers.tick(2_000);
+  await tick(); await tick();
+  assert.equal(h.requests.length, 4);
+  assert.equal(h.sockets.length, 1);
+  assert.equal(pollAt(h.states.at(-1).history, Date.now()).title, 'WHAT GAME NEXT');
+  // A successful read ends the retries.
+  t.mock.timers.tick(30_000);
+  await tick();
+  assert.equal(h.requests.length, 4);
 });

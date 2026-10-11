@@ -123,8 +123,15 @@ export function createPollSession({ channel, initial, onChange }: {
         if (message.subscribeResponse?.result !== "ok") { reconnect(); return; }
         // A poll opened or closed between the first snapshot and this point reached neither.
         // Read again once every cached copy of the snapshot is younger than the subscription.
-        clearTimeout(handoff);
-        handoff = setTimeout(() => void snapshot(), SNAPSHOT_STALENESS + 2000);
+        const refresh = (delay: number, failures = 0) => {
+          clearTimeout(handoff);
+          handoff = setTimeout(async () => {
+            const read = await snapshot();
+            // Keepalives hold a healthy socket open, so nothing else would ask again.
+            if (read === undefined && !stopped && socket === connection) refresh(Math.min(60_000, 1000 * 2 ** failures), failures + 1);
+          }, delay);
+        };
+        refresh(SNAPSHOT_STALENESS + 2000);
       } else if (message.type === "reconnect") reconnect();
       else if (message.type === "notification") {
         const poll = parsePollEvent(message.notification?.pubsub);
