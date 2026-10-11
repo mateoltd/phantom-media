@@ -4,11 +4,14 @@ Still is a free, open-source, ad-free
 Twitch player for live streams and VODs, part of Phantom Media. Search a channel or paste a Twitch
 video or clip link; no account, extension, or installation is required.
 
+![Still playing an Overwatch broadcast alongside live chat](../../docs/screenshots/still/still-player.webp)
+
 ## Features
 
 - Ad-free live streams and VOD playback.
 - Subscriber-only Twitch VODs when their source playlists are available, without a Twitch login.
 - Live rewind and seeking through the current broadcast’s archive while the channel is still live, when an archive is available.
+- Live playback returns to the live edge on resume and automatically recovers excess delay while protecting the playback buffer.
 - Quality selection, playback speed, broadcaster captions, keyboard shortcuts and picture-in-picture.
 - Native clip playback and continuous MP4 downloads; audio-only archive listening.
 - Bounded TS/MP4 downloads with cancellation; growing archives export a captured window.
@@ -18,6 +21,10 @@ video or clip link; no account, extension, or installation is required.
 - Channel/category video and clip libraries, one bounded request per selected view.
 - Browser-local history, resume positions, and playback preferences.
 - No app analytics, tracking cookies, or Twitch account requirement.
+
+![Still's discovery page on desktop and mobile](../../docs/screenshots/still/still-discovery.webp)
+
+![Still's category directory with artwork and live streams grouped by category](../../docs/screenshots/still/still-categories.webp)
 
 Source media must still be available: Still cannot restore deleted
 videos, and archive-based rewind depends on the channel and Twitch. Media and
@@ -29,6 +36,59 @@ viewing does not mean zero infrastructure logging or network anonymity.
 
 UI uses `@phantom/theme/media.css`, `@phantom/theme/player.css`, and
 `@phantom/ui`; the Twitch resolver, transport, and playback engine live here.
+
+### Live latency
+
+Live requests ask Twitch for its `fast_bread` feed. Progressive MSE players
+consume up to two `EXT-X-TWITCH-PREFETCH` segments directly from Twitch as their
+bytes arrive, without waiting for completion or routing video through the app.
+The adapter retains sequence identity and timestamps, excludes ads and unsafe
+tails, and falls back to completed segments if predictive delivery fails.
+Native HLS keeps the completed-segment path. Encoder-paced prefetch is excluded
+from throughput estimates and emergency ABR aborts within its encoding
+allowance. Genuinely slow predictive transfers restore bandwidth sampling and
+in-flight downswitching, so Automatic quality can recover when delivery slows.
+Predictive playback follows the actual contiguous bytes with a 750ms burst
+reserve, reducing it to 600ms after 30 seconds of healthy delivery, and gentle
+catch-up up to 1.03×; it does not mistake advertised future media for a playable
+buffer. Resume uses already encoded bytes with the conservative reserve,
+falling back to the completed playlist edge when those bytes are unavailable.
+Real stalls restore the conservative reserve and increase it automatically;
+a brief 0.97× adjustment rebuilds
+headroom after jitter without seeking backward. Once playing, catch-up follows
+the actual buffer even when encoded bytes lead the last completed segment in
+the playlist, so playlist reload cadence does not add avoidable delay.
+
+Ordinary live playback starts in Automatic quality so ABR can react to measured
+delivery speed. A single latency controller shares the connection monitor's
+one-second sample; it adds no polling loop. A stale paused playlist refreshes
+once on resume. Regular HLS
+targets one and a half recently observed segments behind the estimated live edge
+(at least two seconds), retaining one complete segment in the available window.
+It uses the largest of the last three segments, since Twitch's advertised target
+duration can be much larger than its actual segment cadence.
+LL-HLS uses the server's part hold-back, with at least three parts of safety.
+These are targets relative to available media, not guarantees of broadcaster-to-viewer delay.
+
+Pausing and resuming seeks to the current safe live position, including native
+HLS and resumes before metadata arrives. Small drift is recovered at up to 1.05×
+with adequate contiguous buffer; large drift jumps only to an already buffered
+position. Starvation adds bounded headroom, which decreases after sustained
+healthy playback. Stale playlists, hidden tabs, seeks, and unstable connections
+cannot trigger accelerated catch-up. A behind-live indicator offers a manual
+jump when necessary. Growing archives and VODs keep their paused position and
+never attach this controller.
+
+Live manifests remain uncached, and the media route forwards `_HLS_msn`,
+`_HLS_part`, and `_HLS_skip` for upstream blocking and delta reloads.
+
+#### Results
+
+Local 720p testing on `ow_esports` (2026-10-11):
+
+- **Still:** 1.85–1.94 seconds of measured delay, with no rebuffering after startup.
+- **Twitch:** 2.69–2.95 seconds reported earlier in the same session.
+- **Validation:** 232 tests, typecheck, lint, and webpack production build passed.
 
 From the workspace root:
 

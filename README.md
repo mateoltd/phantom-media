@@ -7,6 +7,8 @@ with no app analytics or tracking cookies.
 
 [Still documentation](apps/still/README.md) and [local setup](#getting-set-up).
 
+![Still playing an Overwatch broadcast with live chat in a minimal dark frame](docs/screenshots/still/still-player.webp)
+
 ## Still: watch on your terms
 
 - **Ad-free Twitch playback:** live streams and past broadcasts without Twitch ad breaks.
@@ -15,6 +17,11 @@ with no app analytics or tracking cookies.
 - **More playback controls:** quality selection, playback speed, broadcaster captions, keyboard shortcuts, picture-in-picture, and VOD downloads.
 - **Live chat and VOD chat replay:** read chat alongside playback, with replay synchronized to pauses and seeks.
 - **Account-free viewing:** no Twitch login, app analytics, or tracking cookies. History, resume positions, and preferences stay in your browser.
+
+![Still's live stream discovery page in desktop and mobile mockups](docs/screenshots/still/still-discovery.webp)
+
+Local testing at 720p measured **1.85–1.94 seconds of live delay**, with no
+rebuffering after startup. [Playback results](apps/still/README.md#results).
 
 Media availability depends on Twitch. Deleted or unavailable source media cannot
 be recovered. Third-party media, chat, and hosting services still process network
