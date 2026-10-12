@@ -1,5 +1,11 @@
 # @phantom/still
 
+## 0.3.2
+
+### Patch Changes
+
+- 0ea0c16: Show channel polls in chat. Live chat pins the running poll above the messages with each choice's share, a countdown and the final result. The replay of a broadcast that is still on air places the polls seen during the session at their moment in the recording.
+
 ## 0.3.1
 
 ### Patch Changes
