@@ -151,6 +151,8 @@ select:focus-visible {
   inset: 0 0 -3rem;
   z-index: -1;
   background: linear-gradient(to bottom, #08090aeb, #08090ab8 45%, #08090a55 75%, transparent);
+  /* Safari draws the page behind the status bar, above the viewport: carry the scrim's top stop up there. */
+  box-shadow: 0 -6rem 0 #08090aeb;
   opacity: 0;
   transition: opacity 180ms ease;
   pointer-events: none;
@@ -179,6 +181,7 @@ select:focus-visible {
   .media-header::before {
     bottom: 0;
     background: #101010;
+    box-shadow: 0 -6rem 0 #101010;
   }
 }
 .media-header-search {
