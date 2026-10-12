@@ -111,7 +111,6 @@ export function createPollSession({ channel, initial, onChange }: {
       const sent = Date.parse(message.timestamp);
       expect(keepalive);
       if (message.type === "welcome") {
-        attempts = 0;
         if (Number.isFinite(sent)) synchronize(sent);
         const seconds = message.welcome?.keepaliveSec;
         if (typeof seconds === "number" && seconds > 0 && seconds <= 120) keepalive = seconds;
@@ -121,6 +120,7 @@ export function createPollSession({ channel, initial, onChange }: {
         }));
       } else if (message.type === "subscribeResponse") {
         if (message.subscribeResponse?.result !== "ok") { reconnect(); return; }
+        attempts = 0;
         // A poll opened or closed between the first snapshot and this point reached neither.
         // Read again once every cached copy of the snapshot is younger than the subscription.
         const refresh = (delay: number, failures = 0) => {

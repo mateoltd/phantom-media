@@ -285,15 +285,36 @@ test('a socket report newer than the snapshot answer is kept', async t => {
   assert.deepEqual(live.states.at(-1).history.map(snapshot => snapshot.poll.status), ['active']);
 });
 
-test('a refused subscription is retried', async t => {
-  const h = sessionHarness(t, [answer(null), answer(null)]);
+test('refused subscriptions back off until a successful subscription resets retries', async t => {
+  const delays = [1_000, 2_000, 4_000, 8_000, 16_000, 32_000, 60_000, 60_000];
+  const h = sessionHarness(t, Array.from({ length: delays.length + 2 }, () => answer(null)));
   await tick(); await tick();
+  for (const [index, delay] of delays.entries()) {
+    h.welcome();
+    const socket = h.sockets.at(-1);
+    socket.onmessage({ data: JSON.stringify({ type: 'subscribeResponse', subscribeResponse: { result: 'error' } }) });
+    assert.equal(socket.closed, true);
+    t.mock.timers.tick(delay - 1);
+    await tick(); await tick();
+    assert.equal(h.requests.length, index + 1, `no snapshot before the ${delay}ms retry`);
+    assert.equal(h.sockets.length, index + 1, `no socket before the ${delay}ms retry`);
+    t.mock.timers.tick(1);
+    await tick(); await tick();
+    assert.equal(h.requests.length, index + 2);
+    assert.equal(h.sockets.length, index + 2);
+  }
+
   h.welcome();
-  h.sockets[0].onmessage({ data: JSON.stringify({ type: 'subscribeResponse', subscribeResponse: { result: 'error' } }) });
-  assert.equal(h.sockets[0].closed, true);
-  t.mock.timers.tick(1_000);
+  h.subscribed();
+  h.sockets.at(-1).onclose();
+  t.mock.timers.tick(999);
   await tick(); await tick();
-  assert.equal(h.sockets.length, 2);
+  assert.equal(h.requests.length, delays.length + 1);
+  assert.equal(h.sockets.length, delays.length + 1);
+  t.mock.timers.tick(1);
+  await tick(); await tick();
+  assert.equal(h.requests.length, delays.length + 2);
+  assert.equal(h.sockets.length, delays.length + 2);
 });
 
 test('polls seen by one chat view remain for the next, including a retired one', async t => {
