@@ -47,7 +47,7 @@ export function resolveVod(id: string, signal?: AbortSignal): Promise<VodPlaybac
       channelDisplayName: channel?.displayName, channelProfileImageURL: channel?.profileImageURL,
       channelIsPartner: channel?.roles?.isPartner === true, channelProfile: channel ?? undefined,
       title: metadata.title, previewThumbnailURL: metadata.previewThumbnailURL,
-      seekPreviewsURL: metadata.seekPreviewsURL, language: metadata.language,
+      seekPreviewsURL: metadata.seekPreviewsURL, language: metadata.language, createdAt: metadata.createdAt,
       duration: Math.max(metadata.lengthSeconds ?? 0, manifest?.duration ?? 0),
       broadcastType: metadata.broadcastType.toLowerCase(), lifecycle, isLiveArchive: lifecycle === "growing",
       qualities: variants, segments: getVodPlaybackSegments(metadata), chapters: [], diagnostics,

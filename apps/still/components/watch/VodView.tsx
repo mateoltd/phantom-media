@@ -82,7 +82,8 @@ export function VodView({ vodData, masterUrl, startTime, playerTime, onTimeUpdat
               <DownloadButton key="download" iconOnly qualities={labeledQualities} channel={vodData.channel} vodId={vodData.vodId} />,
               <ShareButton key="share" iconOnly vodId={vodData.vodId} currentTime={playerTime} />,
             ]} />}
-          chat={<ChatPanel idle={!watchChat.started} onSeek={seek} channel={vodData.channel} vodId={vodData.vodId} time={playerTime} playbackSeekVersion={playbackSeekVersion} onClose={closeChat} />}
+          chat={<ChatPanel idle={!watchChat.started} onSeek={seek} channel={vodData.channel} vodId={vodData.vodId} time={playerTime} playbackSeekVersion={playbackSeekVersion}
+            recordingStartedAt={vodData.isLiveArchive ? vodData.createdAt : undefined} onClose={closeChat} />}
         >
         <div className="still-watch-information">
           <div className="still-watch-details"><VodInfo channel={vodData.channel} channelDisplayName={vodData.channelDisplayName} channelProfileImageURL={vodData.channelProfileImageURL}

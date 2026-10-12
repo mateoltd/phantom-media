@@ -2,7 +2,7 @@ import { UpstreamError } from "../errors.ts";
 
 export const QUERY_FAMILIES: Record<string, string> = {
   ChannelBasics: "channel", SearchChannels: "channel-search", SearchCandidates: "search-candidates", VideoMetadata: "video",
-  PlaybackAccessToken: "playback", VideoComments: "comments", ChatBadges: "chat-badges", RecentChannels: "channel",
+  PlaybackAccessToken: "playback", VideoComments: "comments", ChatBadges: "chat-badges", ChatPoll: "chat-poll", RecentChannels: "channel",
   WatchedCategories: "video", DiscoveryDirectory: "directory", DiscoveryCategory: "game-discovery",
   RelatedChannels: "recommendations", DiscoveryExpansionCategory: "game-discovery",
   ChannelVideos: "channel-videos", CategoryVideos: "game-videos", ChannelClips: "channel-clips", CategoryClips: "game-clips",

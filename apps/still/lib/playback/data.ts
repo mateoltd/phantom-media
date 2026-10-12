@@ -15,6 +15,8 @@ export interface VodPlaybackData {
   previewThumbnailURL?: string;
   seekPreviewsURL?: string;
   language?: string;
+  /** When recording began: offset zero of the timeline. */
+  createdAt?: string;
   duration: number;
   lifecycle: Lifecycle;
   isLiveArchive: boolean;
