@@ -16,20 +16,30 @@ import { ChannelHeader } from "./watch/ChannelHeader";
 import { VodInfo } from "./watch/VodInfo";
 import { useWatchChat, WatchLayout } from "./watch/WatchLayout";
 import { WatchRail } from "./watch/WatchRail";
+import { STREAM, type Reel } from "./welcome-stream-motion";
+import { STREAM_AVATAR, STREAM_BANNER, STREAM_FOG, WelcomeStream } from "./WelcomeStream";
 
-/** The pitch: each feeling Twitch leaves you with, then what happens here instead. */
+/**
+ * The pitch, in the mascot's own voice: it talks the way a friend showing you around would, and says what the two of
+ * you are about to do, never asks. Each stop is something Twitch does to you, then what happens here instead, and
+ * no stop begins cold: a line or a quiet moment of watching leads from one into the next.
+ */
 const LINES = [
-  "Pick someone to watch. A name is all I need.",
-  "We all know this feeling. It is just getting good, and then...",
-  "...ads. Right at the best part.",
-  "Not here. The stream never leaves the screen.",
-  "Looked away and missed it? On Twitch it is gone.",
-  "Here you drag back, even while it is live.",
-  "One tap and you are live again.",
-  "Got sent a video? Paste the link.",
-  "Subscribers only. On Twitch, that is the end of it.",
-  "I open those too, as long as Twitch still has the video.",
-  "No account, and what you watch stays in this browser. Your turn.",
+  "I play Twitch, minus the annoying bits. Let’s watch something.",
+  "Here we go. It’s just getting good, and...",
+  "...ads. Every single time.",
+  "Not on my watch. The ads go, the stream stays.",
+  "There. Now we can just watch.",
+  "Looked away and missed it? On Twitch, that’s gone.",
+  "Here, we just drag back. Even while it’s live.",
+  "And one tap takes us back to live.",
+  "So that’s live streams.",
+  "Now say a friend sends you a link.",
+  "Let’s drop it in.",
+  "Subscribers only. Twitch would stop us right here.",
+  "I’ll open it anyway, as long as Twitch still has the video.",
+  "No ads, live rewind, locked videos. And no account.",
+  "What you watch stays in your browser. Your turn.",
 ];
 /** How long a line stays up before anything else may happen: time to find the bubble, then to read it. */
 const read = (line: number) => 1100 + 60 * LINES[line].length;
@@ -57,10 +67,26 @@ interface Scene {
   /** Between two pages: the one on screen fades out before the next fades in. */
   fading: boolean;
   leaving: boolean;
+  /** How the mascot takes what is on screen: unimpressed by what Twitch does, pleased with what it did about it. */
+  mood: "calm" | "flat" | "glad" | "shut";
+  /** The lids are in the wings: drawn ahead of the blink, so that closing them is only moving them. */
+  lidded: boolean;
+  /** The whole view blinks, the way the visitor's own eyes would on looking away. */
+  shut: boolean;
+  /** Something happened while they were not looking, and the chat is full of it. */
+  missed: boolean;
 }
 
-const OPENING: Scene = { line: 0, speaking: false, view: "search", query: "", suggesting: false, slate: "none", mode: "rewind", playing: false, blocked: false, fading: false, leaving: false };
-const STAND_IN: Channel = { login: "nightowl", name: "nightowl", game: "Just Chatting", title: "nightowl", art: null };
+const OPENING: Scene = { line: 0, speaking: false, view: "search", query: "", suggesting: false, slate: "none", mode: "rewind", playing: false, blocked: false, fading: false, leaving: false, mood: "calm", lidded: false, shut: false, missed: false };
+/**
+ * Who the tour watches. The channel is made up and its stream is drawn here (see WelcomeStream), so no real channel
+ * is ever shown under an ad break or a lock that it does not have.
+ */
+/** About how long the tour takes from throwing the break out to the blink, less a moment to spare. */
+const SETTLING = 9000;
+/** What Twitch keeps for subscribers, which is the joke: see the kitchen in WelcomeStream. */
+const LOCKED = "3 hours of staring at my toaster";
+const STAR: Channel = { login: "nightowl", name: "nightowl", game: "Basketball", title: "one more shot before bed", art: STREAM_AVATAR };
 const QUALITY = [{ id: "quality", title: "Quality", options: [{ value: "auto", label: "Automatic" }], value: "auto", summary: "Automatic", onChange: () => {} }];
 const SLEEP = { minutes: null, minutesLeft: 0, setMinutes: () => {} };
 const CHATTERS = ["mossy_", "quietkay", "bitrate_bob", "lumen", "tako", "frame_drop", "sleepyjo", "nine_lives", "pixelpip", "owlbear"];
@@ -70,35 +96,16 @@ const CHAT_COLORS = ["#FF7F50", "#1E90FF", "#00FF7F", "#DAA520", "#FF69B4", "#9A
 const UNANSWERED = new Promise<SliceReceipt | null>(() => {});
 const idle = () => {};
 const finish = () => setWelcomePhase("done");
-const sharp = (art: string) => art.replace("-640x360.", "-1280x720.");
 
-/** The tour's cast is whoever leads the home feed right now, which is already on the page: no request is made for it. */
-function feedChannels(): Channel[] | null {
-  const cast = Array.from(document.querySelectorAll<HTMLAnchorElement>('[aria-labelledby="home-feed-heading"] a.still-home-tile')).slice(0, 2).flatMap((tile) => {
-    const name = tile.querySelector(".still-home-tile-channel")?.textContent?.trim();
-    if (!name) return [];
-    return [{
-      name,
-      login: tile.getAttribute("href")?.replace(/^\//, "") || name.toLowerCase(),
-      game: tile.querySelector(".still-home-tile-detail")?.textContent?.trim() ?? "",
-      title: tile.title.split("\n")[0].trim() || name,
-      art: tile.querySelector("img")?.getAttribute("src") ?? null,
-    }];
-  });
-  return cast.length ? cast : null;
-}
-
-/** The picture, sharp enough for the frame, over the tile's copy that the browser already has. */
-function picture(art: string | null) {
-  return art ? { backgroundImage: `url(${JSON.stringify(sharp(art))}), url(${JSON.stringify(art)})` } : undefined;
-}
-
-/** What the channel's own header needs, from what the feed tile says. The tile's picture stands in for the portrait. */
+/** What the channel's own header needs. */
 function profile(channel: Channel): ChannelData | null {
   if (!channel.art) return null;
-  return { id: channel.login, login: channel.login, displayName: channel.name, description: "", profileImageURL: channel.art,
+  return { id: channel.login, login: channel.login, displayName: channel.name, description: "", profileImageURL: channel.art, bannerImageURL: STREAM_BANNER, followers: { totalCount: 1287 },
     stream: { id: channel.login, title: channel.title, type: "live", viewersCount: 0, createdAt: "", game: channel.game ? { name: channel.game } : null } };
 }
+
+/** What the chat says about the moment the visitor looked away from. */
+const MISSED = ["NO WAY", "what just happened", "CLIP IT", "did you see that??", "rewind rewind rewind"];
 
 function line(index: number, offset?: number): ChatMessage {
   return { id: String(index), user: CHATTERS[(index * 7) % CHATTERS.length], color: CHAT_COLORS[(index * 3) % CHAT_COLORS.length], text: CHATTER[(index * 5) % CHATTER.length], offset };
@@ -156,8 +163,13 @@ function TourControls({ clock, live, title, playing, chatOpen }: { clock: Clock;
 }
 
 /** The real chat panel on scripted messages. It is already mid-conversation, and talks slowly: the mascot has the floor. */
-function TourChat({ clock, live, playing, channel }: { clock: Clock; live: boolean; playing: boolean; channel: string }) {
+function TourChat({ clock, live, playing, missed, channel }: { clock: Clock; live: boolean; playing: boolean; missed: boolean; channel: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>(() => live ? Array.from({ length: 9 }, (_, index) => line(index)) : []);
+  const [reacted, setReacted] = useState(missed);
+  if (missed !== reacted) {
+    setReacted(missed);
+    if (missed) setMessages((messages) => [...messages, ...MISSED.map((text, index) => ({ ...line(index + 2), id: `missed-${index}`, text }))]);
+  }
   const sent = useRef(9);
   useEffect(() => {
     if (!playing) return;
@@ -222,15 +234,14 @@ function arrange(frame: Frame, guide: HTMLElement, bubble: HTMLElement, spot: Sp
  * A line is given the time it takes to read before anything else moves, and the bubble travels with the mascot, so
  * what is happening always has its words beside it. The search is typed where the home page's own field stands,
  * and the player is the real watch page (layout, rail, chat, toolbar, the channel under it), so every viewport
- * gets the page it would really get. Nothing here plays or asks Twitch for anything: the picture is a feed
- * thumbnail, and the clock and the chat are scripted. It ends by handing the home page back.
+ * gets the page it would really get. Nothing here asks Twitch for anything: the stream is drawn (see
+ * WelcomeStream), and the clock and the chat are scripted. It ends by handing the home page back.
  *
  * It has to run well on a slow phone: everything that moves is a transform or an opacity, the clock and the chat
  * redraw only themselves, and a drag writes two styles a frame and reads none.
  */
 export function WelcomeTour() {
   const [scene, setScene] = useState(OPENING);
-  const [members, setMembers] = useState(feedChannels);
   const [clock] = useState(createClock);
   const watchChat = useWatchChat();
   const stage = useRef<HTMLDivElement>(null);
@@ -240,7 +251,7 @@ export function WelcomeTour() {
   const skip = useRef<HTMLButtonElement>(null);
   const spot = useRef<Spot | null>(null);
   const frame = useRef<Frame>({ width: 0, height: 0, face: 0 });
-  const star = members?.[0] ?? STAND_IN, locked = members?.[1] ?? star;
+  const reel = useRef<Reel>(null);
   const live = scene.mode !== "vod";
 
   // The scripted field stands exactly where the home page keeps its own, which steps aside (see still.css).
@@ -274,16 +285,6 @@ export function WelcomeTour() {
       covered.forEach((child) => { child.inert = false; });
     };
   }, []);
-
-  // A feed that is still loading is waited for, briefly: the tour's picture comes from it.
-  useEffect(() => {
-    if (members) return;
-    const settle = () => setMembers(feedChannels() ?? [STAND_IN]);
-    const feed = new MutationObserver(() => { if (feedChannels()) settle(); });
-    feed.observe(document.querySelector(".still-home") ?? document.body, { childList: true, subtree: true });
-    const late = setTimeout(settle, 3000);
-    return () => { feed.disconnect(); clearTimeout(late); };
-  }, [members]);
 
   // The page's own rules follow the tour by this (see still.css), which costs nothing to match.
   useLayoutEffect(() => {
@@ -444,10 +445,6 @@ export function WelcomeTour() {
     put(home() ?? { x: frame.current.width / 2, y: frame.current.height / 2, scale: 1 });
     void mascot.offsetWidth;
     mascot.style.transition = "";
-    if (!members) return;
-    // The frame's pictures are fetched while the search is on screen, so the page that follows opens complete.
-    for (const member of members) if (member.art) new Image().src = sharp(member.art);
-
     (async () => {
       setScene(OPENING);
       clock.set(ARCHIVE, ARCHIVE);
@@ -456,43 +453,78 @@ export function WelcomeTour() {
       // Search: it takes the prompt's place over the field and, while it is still talking, a name is typed and
       // the channel found live is picked.
       await go(greet());
-      await say(0, 1300);
+      await say(0, 2600);
       await press();
-      for (let typed = 1; typed <= star.login.length; typed++) {
-        patch({ query: star.login.slice(0, typed), suggesting: typed >= 2 });
-        await wait(Math.min(90, 1000 / star.login.length));
+      for (let typed = 1; typed <= STAR.login.length; typed++) {
+        patch({ query: STAR.login.slice(0, typed), suggesting: typed >= 2 });
+        await wait(Math.min(90, 1000 / STAR.login.length));
       }
       await wait(600);
       await visit(beside(find('.still-tour [role="option"]', 0.8)));
       await press();
       await swap({ view: "player", suggesting: false, playing: true });
       await go(seat());
-      await wait(700);
+      /** Waits for the stream to reach a moment of its own, so that a line lands on what is happening in it. */
+      const until = (moment: number) => wait(reduced ? 0 : Math.max(0, Math.min(3000, moment - (reel.current?.now() ?? moment))));
+      // The break cuts in on a shot in the air, which is where the line about it has to end.
+      await until(STREAM.airborne - read(1));
 
       // Ads: Twitch's break takes the picture mid-sentence. The mascot goes and throws it out, and the picture says so.
       await say(1);
-      patch({ slate: "ad" });
+      patch({ slate: "ad", mood: "flat" });
       await wait(350);
       await say(2);
       await visit(aim(".still-tour-picture", 0.5, 0.5, 0));
       if (!reduced) mascot.dataset.pressed = "";
-      patch({ slate: "none", blocked: true });
+      // A live stream does not wait for a break to end. Under the break it is moved on to where the shot that goes
+      // in will be leaving the shooter's hands as the two of them finish settling in.
+      reel.current?.seek(STREAM.released - SETTLING);
+      patch({ slate: "none", blocked: true, mood: "calm" });
       await wait(260);
       delete mascot.dataset.pressed;
-      await wait(500);
+      await wait(300);
       await go(seat());
+      patch({ mood: "glad" });
       await say(3);
-      patch({ blocked: false });
+      patch({ blocked: false, mood: "calm" });
 
-      // Rewind: the mascot drags the live edge back, and Live returns to it.
+      // With the break gone the two of them settle in and simply watch for a moment, which is what the next thing
+      // interrupts.
+      patch({ lidded: !reduced });
       await say(4);
-      await say(5, 1400);
+      await speak(false);
+      await wait(350);
+      // The eyes shut on a ball in the air, and open on what became of it.
+      await until(STREAM.released);
+
+      // Looking away: the whole view blinks shut with the mascot's own eyes. The stream went on meanwhile and the
+      // one shot that goes in went in, so it opens on a changed score, a player cheering and a chat that saw it.
+      if (!reduced) {
+        patch({ shut: true, mood: "shut" });
+        await wait(420);
+      }
+      reel.current?.seek(STREAM.after);
+      patch({ missed: true });
+      if (!reduced) {
+        patch({ shut: false, mood: "calm" });
+        await wait(380);
+        patch({ lidded: false });
+      }
+
+      // Rewind: the mascot drags the live edge back and the stream runs backwards under its hand, to just before the
+      // shot. It lets go, the shot is seen going in, and Live returns to where the stream has got to since.
+      await say(5);
+      await say(6, 1400);
       await visit(perch(".still-tour .scrub-hit", 1), true);
       const origin = cast.getBoundingClientRect();
       const rail = root.querySelector(".scrub-hit")?.getBoundingClientRect();
       const scrub = root.querySelector(".scrub");
       const from = spot.current;
-      if (reduced) clock.set(ARCHIVE * 0.68, ARCHIVE);
+      const edge = reel.current?.now() ?? 0, left = performance.now();
+      if (reduced) {
+        clock.set(ARCHIVE * 0.68, ARCHIVE);
+        reel.current?.seek(STREAM.before);
+      }
       else if (rail && scrub && from) {
         const lead = { x: held.x - from.x, y: held.y - from.y };
         mascot.dataset.pressed = mascot.dataset.dragging = speech.dataset.dragging = "";
@@ -502,6 +534,7 @@ export function WelcomeTour() {
           const time = ARCHIVE * (1 - 0.32 * eased);
           const x = rail.left - origin.left + rail.width * (time / ARCHIVE);
           clock.set(time, ARCHIVE);
+          reel.current?.seek(edge + (STREAM.before - edge) * eased);
           mascot.style.translate = `${x}px ${from.y}px`;
           speech.style.translate = `${x + lead.x}px ${from.y + lead.y}px`;
           spot.current = { ...from, x };
@@ -511,20 +544,26 @@ export function WelcomeTour() {
         delete mascot.dataset.dragging;
         delete speech.dataset.dragging;
       }
-      await wait(1300);
-      await say(6, 900);
+      await wait(900);
+      await say(7, 900);
+      await until(STREAM.cheered);
       // Room is left under the button for the bubble, which would otherwise cover the timeline as it snaps back.
       const button = aim(".still-tour .stage-live-trigger", 0.5, 0.5, 136);
       if (await visit(button && { ...button, sides: ["below", "above"] }, true)) await press();
       clock.set(ARCHIVE, ARCHIVE);
-      await wait(1400);
+      reel.current?.seek(reduced ? edge : edge + performance.now() - left);
+      await wait(900);
+      // It steps back from the controls to close the subject. The next one opens on the home page, in a bubble of its own.
+      await go(seat());
+      await say(8);
 
       // Subscriber-only: the other way in, a pasted link, lands on a video Twitch keeps locked. The lock gives
       // way, and the video underneath plays.
       await speak(false);
       await swap({ view: "search", query: "", playing: false });
       await go(greet());
-      await say(7, 1300);
+      await say(9);
+      await say(10, 1100);
       await press();
       patch({ query: LINK });
       await wait(700);
@@ -534,35 +573,44 @@ export function WelcomeTour() {
       await swap({ view: "player", mode: "vod", slate: "locked" });
       await go(seat());
       await wait(400);
-      await say(8);
-      await say(9, 1300);
+      patch({ mood: "flat" });
+      await say(11);
+      patch({ mood: "calm" });
+      await say(12, 1300);
       const lock = aim(".still-tour-lock", 1.9, 0.3, 96);
       // Under the lock is what it says, which a bubble must not cover.
       await visit(lock && { ...lock, sides: ["right", "left", "above", "below"] }, true);
       await press();
-      patch({ slate: "opening" });
+      patch({ slate: "opening", mood: "glad" });
       await wait(800);
       patch({ slate: "none", playing: true });
       const began = performance.now();
       const ticking = setInterval(() => clock.set((performance.now() - began) / 1000, VOD), 250);
-      try { await wait(2800); } finally { clearInterval(ticking); }
+      // While the video plays it sits back and counts off what was shown, which is the way out of the demo.
+      try {
+        await wait(900);
+        await go(seat());
+        patch({ mood: "calm" });
+        await say(13);
+      } finally { clearInterval(ticking); }
 
       // The home page comes back, the last words are said where the first were, and it goes home to the header.
       await speak(false);
       patch({ leaving: true, playing: false });
       await go(greet());
-      await say(10);
+      patch({ mood: "glad" });
+      await say(14);
       await go(home());
       finish();
     })().catch(() => {});
 
     return () => control.abort();
-  }, [clock, members, star.login]);
+  }, [clock]);
 
-  const shown = live ? star : locked;
+  const shown = STAR;
   const channel = live ? profile(shown) : null;
-  // A real channel is named only for what is true of it: that it is live. The locked video is nobody's.
-  const title = live ? shown.title : "Subscriber-only VOD";
+  // The locked video is nobody's: it is whatever link a friend might send.
+  const title = live ? shown.title : LOCKED;
 
   return <>
     <div ref={stage} className="still-tour" data-view={scene.view} data-fading={scene.fading || undefined} data-leaving={scene.leaving || undefined}>
@@ -572,16 +620,17 @@ export function WelcomeTour() {
           onValueChange={idle}
           onSubmit={idle}
           labels={SEARCH_LABELS}
-          suggestions={[{ id: star.login, title: star.name, subtitle: star.game, imageUrl: star.art, thumbnail: "video", status: "live" }]}
+          suggestions={[{ id: STAR.login, title: STAR.name, subtitle: STAR.game, imageUrl: STAR.art, thumbnail: "avatar", status: "live" }]}
           suggestionsOpen={scene.suggesting}
         />
       </div> : <div key={scene.mode} className="workspace-canvas still-main still-tour-page" inert>
         <div className={`media-content still-watch relative pb-8 ${live ? "still-channel-page" : ""}`}>
           <WatchLayout chatOpen={watchChat.open} chatState={watchChat.state}
             video={<PlayerStage title={title} subtitle={live ? shown.name : undefined} picture={
-              <div className="still-tour-picture" style={picture(shown.art)}>
-                {/* The locked video's blur is a small copy of the picture, blurred once and scaled up, that only fades. */}
-                {!live && <span className="still-tour-veil" style={shown.art ? { backgroundImage: `url(${JSON.stringify(shown.art)})` } : undefined} data-shown={scene.slate === "locked" || undefined} />}
+              <div className="still-tour-picture">
+                {/* The friend's video opens on the same shot, a moment before it is taken. */}
+                <WelcomeStream ref={reel} show={live ? "court" : "kitchen"} start={0} rolling={scene.playing && scene.slate === "none"} />
+                {!live && <span className="still-tour-veil" style={{ backgroundImage: STREAM_FOG }} data-shown={scene.slate === "locked" || undefined} />}
               </div>
             }>
               <div className="still-tour-slate" data-slate="ad" data-shown={scene.slate === "ad" || undefined}>
@@ -596,14 +645,14 @@ export function WelcomeTour() {
               <span className="still-tour-seat" />
               <TourControls clock={clock} live={live} title={title} playing={scene.playing} chatOpen={watchChat.open} />
             </PlayerStage>}
-            rail={<WatchRail channel={live ? shown.login : "still"} displayName={live ? shown.name : "Subscriber-only VOD"} image={live ? shown.art ?? undefined : undefined} broadcastType={live ? "Live" : "Past broadcast"} actions={[
+            rail={<WatchRail channel={live ? shown.login : "still"} displayName={live ? shown.name : "Still"} image={live ? shown.art ?? undefined : undefined} broadcastType={live ? "Live" : "Past broadcast"} actions={[
               <button key="chat" type="button" className="still-rail-action" aria-label={watchChat.open ? "Hide chat" : "Show chat"} aria-expanded={watchChat.open}><ChatCircle size={21} /></button>,
               ...(live ? [<button key="archive" type="button" className="still-rail-action" aria-label="Back to live"><Broadcast size={21} /></button>] : [
                 <button key="download" type="button" className="still-rail-action" aria-label="Download"><DownloadSimple size={21} /></button>,
                 <button key="share" type="button" className="still-rail-action" aria-label="Share"><ShareNetwork size={21} /></button>,
               ]),
             ]} />}
-            chat={<TourChat clock={clock} live={live} playing={scene.playing} channel={shown.login} />}
+            chat={<TourChat clock={clock} live={live} playing={scene.playing} missed={scene.missed} channel={shown.login} />}
           >
             <div className="still-watch-details">
               <VodInfo channel={live ? shown.login : "still"} channelDisplayName={title} broadcastType={live ? "live" : "archive"} title={title} isLive={live} titleOnly titleAs="h2" category={live ? shown.game || undefined : undefined} />
@@ -619,7 +668,8 @@ export function WelcomeTour() {
     </div>
     <div ref={layer} className="still-tour-cast" role="dialog" aria-label="Welcome to Still">
       <p className="sr-only" aria-live="polite">{LINES[scene.line]}</p>
-      <span ref={guide} className="still-tour-guide" data-speaking={scene.speaking || undefined} aria-hidden="true">
+      {scene.lidded && <span className="still-tour-lids" data-shut={scene.shut || undefined} aria-hidden="true" />}
+      <span ref={guide} className="still-tour-guide" data-mood={scene.mood} data-speaking={scene.speaking || undefined} aria-hidden="true">
         <svg viewBox="0 0 64 64" focusable="false">
           <path fill="#f4f2eb" d="M26 10h12a22 22 0 0 1 0 44H26a22 22 0 0 1 0-44Z" />
           <path className="still-tour-eyes" fill="#101113" d="M18 28h8a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2Zm20 0h8a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2Z" />

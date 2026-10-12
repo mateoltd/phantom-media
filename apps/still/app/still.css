@@ -1058,7 +1058,18 @@ html[data-welcome="talk"] { overflow: hidden; }
 .still-tour-guide > svg { display: block; width: 100%; height: 100%; transition: translate 0.14s cubic-bezier(0.3, 0, 0.1, 1), scale 0.14s cubic-bezier(0.3, 0, 0.1, 1); }
 /* A press is a dip onto whatever is under it. */
 .still-tour-guide[data-pressed] > svg { translate: 0 5px; scale: 1.06 0.86; }
-.still-tour-eyes { transform-origin: 32px 32px; }
+/* Its eyes say what it thinks of Twitch's doing: they drop to slits at an ad break or a lock. */
+.still-tour-eyes { transform-origin: 32px 32px; transition: scale 0.18s cubic-bezier(0.3, 0, 0.1, 1); }
+.still-tour-guide[data-mood="flat"] .still-tour-eyes { scale: 1 0.4; }
+.still-tour-guide[data-mood="shut"] .still-tour-eyes { scale: 1 0.12; }
+/* The visitor's own blink. An eye is an almond, so each lid's edge is an arch: the corners close first and the middle
+   last, and the two lids pass each other until what is left between the arches is nothing. Only they move; each is
+   painted once, in the page's own colour, so the scrollbar gutter beside them closes too. They fall fast and lift slowly. */
+.still-tour-lids { --lid: var(--color-bg); position: absolute; inset: 0; }
+.still-tour-lids::before, .still-tour-lids::after { content: ""; position: absolute; left: 0; width: 100%; height: 84%; background-repeat: no-repeat; will-change: translate; transition: translate 0.36s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.still-tour-lids::before { top: 0; background-image: linear-gradient(var(--lid), var(--lid)), radial-gradient(ellipse 50% 100% at 50% 100%, transparent 99.4%, var(--lid) 100%); background-position: top, bottom; background-size: 100% 59.7%, 100% 40.5%; translate: 0 -100%; }
+.still-tour-lids::after { bottom: 0; background-image: linear-gradient(var(--lid), var(--lid)), radial-gradient(ellipse 50% 100% at 50% 0, transparent 99.4%, var(--lid) 100%); background-position: bottom, top; background-size: 100% 59.7%, 100% 40.5%; translate: 0 100%; }
+.still-tour-lids[data-shut]::before, .still-tour-lids[data-shut]::after { translate: none; transition: translate 0.22s cubic-bezier(0.5, 0, 0.9, 0.5); }
 .still-welcome-bubble { position: absolute; top: 0; left: 0; width: max-content; max-width: var(--room, 22rem); margin: 0; padding: var(--space-3) var(--space-4); border-radius: 14px; background: var(--color-surface-light); color: var(--color-text); font-size: 16px; line-height: 1.45; font-weight: 500; opacity: 0; scale: 0.96; will-change: translate, opacity; transition: opacity 0.1s ease, scale 0.1s ease; }
 .still-welcome-bubble[data-speaking] { opacity: 1; scale: 1; transition: opacity 0.18s ease, scale 0.22s cubic-bezier(0.2, 0.9, 0.3, 1); }
 .still-welcome-bubble[data-gliding] { transition: translate var(--travel) cubic-bezier(0.4, 0, 0.1, 1); }
@@ -1102,8 +1113,44 @@ html[data-tour="player"] .still-home { opacity: 0; visibility: hidden; transitio
   /* The band the mascot waits in on smaller pages, in place of its seat on the picture. */
   .still-tour-page { top: calc(var(--media-header-height) + 7rem); }
 }
-.still-tour-picture { position: absolute; inset: 0; overflow: hidden; background: #050607 center / cover no-repeat; }
-.still-tour-veil { position: absolute; top: 37.5%; left: 37.5%; width: 25%; height: 25%; background: #050607 center / cover no-repeat; filter: blur(6px) brightness(0.5); scale: 4.8; opacity: 0; will-change: opacity; transition: opacity 0.5s ease; }
+.still-tour-picture { position: absolute; inset: 0; overflow: hidden; background: #050607; }
+/* The stream the tour watches (see WelcomeStream): a court drawn on a sheet 320 units wide, each unit a share of the
+   picture's width, so it is sharp at any size. It is kept in the page's own dark and low in contrast: it has to
+   look alive without ever being brighter than the mascot or what the mascot is pointing at. */
+.still-tour-film { position: absolute; inset: 0; overflow: hidden; container-type: inline-size; background: #222e30; }
+/* Six court colours; the guide stays brighter than the sage player. Both videos are framed close on the action, from
+   the lower right, which lifts their floor line clear of where the guide and its bubble sit. */
+.still-tour-court, .still-tour-kitchen { --u: 0.3125cqw; --ink: #171f20; --wall: #222e30; --floor: #2e3f40; --line: #49605f; --sage: #81938b; --warm: #b78159; position: absolute; top: 50%; left: 0; width: 100%; aspect-ratio: 16 / 9; translate: 0 -50%; scale: 1.3; transform-origin: 100% 94.4%; }
+.still-tour-court > span, .still-tour-kitchen > span { position: absolute; }
+.still-tour-setting { display: block; width: 100%; height: 100%; }
+.still-tour-board { top: calc(44 * var(--u)); left: calc(285 * var(--u)); display: grid; place-items: center; width: calc(26 * var(--u)); height: calc(24 * var(--u)); overflow: hidden; border-radius: calc(4 * var(--u)); background: var(--ink); color: var(--sage); font-family: Arial, Helvetica, sans-serif; font-size: calc(16 * var(--u)); font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
+.still-tour-board > b { grid-area: 1 / 1; font-weight: inherit; }
+.still-tour-board > b + b { opacity: 0; }
+.still-tour-hoop { top: calc(80 * var(--u)); left: calc(242 * var(--u)); width: calc(26 * var(--u)); height: calc(2.4 * var(--u)); border-radius: calc(1.2 * var(--u)); background: var(--warm); transform-origin: 100% 50%; }
+.still-tour-net { top: calc(82.4 * var(--u)); left: calc(244 * var(--u)); width: calc(22 * var(--u)); height: calc(16 * var(--u)); transform-origin: 50% 0; }
+.still-tour-net > svg, .still-tour-ball > svg, .still-tour-figure { display: block; width: 100%; height: 100%; }
+/* Contact ellipses share the floor line. Motion owns every moving transform. */
+.still-tour-shadow, .still-tour-ground { top: calc(130.5 * var(--u)); height: calc(3 * var(--u)); border-radius: 50%; background: var(--ink); transform-origin: center; }
+.still-tour-shadow { left: 0; width: calc(14 * var(--u)); margin-left: calc(-7 * var(--u)); }
+.still-tour-ground { left: calc(160 * var(--u)); width: calc(36 * var(--u)); margin-left: calc(-18 * var(--u)); }
+.still-tour-player { top: calc(101 * var(--u)); left: calc(140 * var(--u)); width: calc(40 * var(--u)); height: calc(31 * var(--u)); transform-origin: 50% 100%; }
+.still-tour-gaze { position: absolute; top: calc(13.5 * var(--u)); left: calc(9 * var(--u)); width: calc(22 * var(--u)); height: calc(6 * var(--u)); transform-origin: 50% 50%; }
+.still-tour-gaze > i { position: absolute; top: 0; left: 0; width: calc(8 * var(--u)); height: 100%; border-radius: calc(1.5 * var(--u)); background: var(--ink); }
+.still-tour-gaze > i + i { left: calc(14 * var(--u)); }
+.still-tour-ball { top: 0; left: 0; width: calc(12 * var(--u)); height: calc(12 * var(--u)); margin: calc(-6 * var(--u)) 0 0 calc(-6 * var(--u)); border-radius: 50%; }
+/* A long wait for toast, at night. Only the slice carries the warm accent. */
+.still-tour-kitchen { --cream: #aaa99d; --toast: #b49b74; }
+.still-tour-kitchen .still-tour-ground { left: calc(176 * var(--u)); }
+.still-tour-sitter { top: calc(101 * var(--u)); left: calc(156 * var(--u)); width: calc(40 * var(--u)); height: calc(31 * var(--u)); transform-origin: 50% 100%; }
+.still-tour-sitter .still-tour-gaze { top: calc(18 / 44 * 31 * var(--u)); left: calc(12 / 56 * 40 * var(--u)); width: calc(32 / 56 * 40 * var(--u)); height: calc(8 / 44 * 31 * var(--u)); }
+.still-tour-sitter .still-tour-gaze > i { width: calc(12 / 56 * 40 * var(--u)); border-radius: calc(2 / 56 * 40 * var(--u)) / calc(2 / 44 * 31 * var(--u)); }
+.still-tour-sitter .still-tour-gaze > i + i { left: calc(20 / 56 * 40 * var(--u)); }
+.still-tour-toast { top: 0; left: 0; width: calc(18 * var(--u)); height: calc(18 * var(--u)); margin: calc(-9 * var(--u)) 0 0 calc(-9 * var(--u)); }
+.still-tour-toast > svg, .still-tour-toaster > svg { display: block; width: 100%; height: 100%; }
+.still-tour-toaster { top: calc(91 * var(--u)); left: calc(208 * var(--u)); width: calc(52 * var(--u)); height: calc(41 * var(--u)); transform-origin: 50% 100%; }
+.still-tour-lever { position: absolute; top: calc(10.8 * var(--u)); left: calc(44 * var(--u)); width: calc(8 * var(--u)); height: calc(3.6 * var(--u)); border-radius: calc(1.8 * var(--u)); background: var(--sage); }
+/* A locked video is seen out of focus and in shade. That is a picture laid over it, so only an opacity ever moves. */
+.still-tour-veil { position: absolute; inset: 0; background: #0f1516 center / 100% auto no-repeat; opacity: 0; will-change: opacity; transition: opacity 0.5s ease; }
 .still-tour-veil[data-shown] { opacity: 1; transition: none; }
 /* What Twitch puts over the picture. The ad break is pushed off the top; the lock dissolves with the blur under it. */
 .still-tour-slate { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); color: var(--color-stage-text); font-size: clamp(14px, 2.2cqw, 20px); font-weight: 500; text-align: center; visibility: hidden; }
@@ -1125,13 +1172,20 @@ html[data-tour="player"] .still-home { opacity: 0; visibility: hidden; transitio
 @media (prefers-reduced-motion: no-preference) {
   .still-welcome-bubble > span { animation: still-tour-line 0.2s ease both; }
   .still-tour-eyes { animation: still-tour-blink 4.2s infinite; }
+  /* Pleased with itself, it hops once. */
+  .still-tour-guide[data-mood="glad"] > svg { animation: still-tour-hop 0.5s cubic-bezier(0.3, 0, 0.1, 1); }
   .still-tour-slate[data-opening] .still-tour-lock { animation: still-tour-unlock 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .still-tour, .still-tour-page > .media-content, .still-tour-veil, .still-tour-slate, .still-tour-blocked, .still-tour-guide, .still-welcome-bubble { transition: none; }
+  .still-tour, .still-tour-page > .media-content, .still-tour-film, .still-tour-veil, .still-tour-slate, .still-tour-blocked, .still-tour-guide, .still-tour-eyes, .still-welcome-bubble { transition: none; }
 }
 @keyframes still-tour-line { from { opacity: 0; } }
 @keyframes still-tour-blink { 0%, 93%, 100% { transform: none; } 96% { transform: scaleY(0.15); } }
+@keyframes still-tour-hop {
+  35% { transform: translateY(-7px) scale(0.96, 1.05); }
+  65% { transform: scale(1.05, 0.95); }
+  100% { transform: none; }
+}
 @keyframes still-tour-unlock {
   0% { rotate: 0deg; }
   20% { rotate: -14deg; }
