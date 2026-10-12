@@ -1088,6 +1088,8 @@ html[data-welcome="talk"] { overflow: hidden; }
 /* Skip waits in the middle of the header, which every page keeps clear, so it never lies over the demo. */
 .still-tour-cast > .still-welcome-skip { top: calc(var(--media-header-height) / 2); bottom: auto; translate: -50% -50%; padding: 0 var(--space-3); pointer-events: auto; background: var(--color-surface-light); }
 .still-tour-cast > .still-welcome-skip:hover { background: var(--color-surface-hover); }
+/* Skipped: the button goes with what it dismissed, and the home page's own words come back as the tour fades off them. */
+.still-tour-cast[data-skipped] > .still-welcome-skip { opacity: 0; pointer-events: none; transition: opacity 0.16s ease; }
 /* Where the mascot waits on the picture, on pages wide enough to have no band for it (see still-tour-page). */
 .still-tour-seat { position: absolute; left: clamp(4rem, 7%, 6rem); bottom: 9.5rem; }
 @media (max-width: 640px) {
@@ -1097,7 +1099,7 @@ html[data-welcome="talk"] { overflow: hidden; }
 /* The tour lies over the home page and under the header. While it searches it is clear: the scripted field stands
    where the home page's own field is (--search-* are measured from it), which steps aside. Then it is the watch
    page itself, laid out by the same rules as the real one, so each viewport sees its own. */
-html[data-welcome="talk"] .still-home-prompt, html[data-welcome="talk"]:not([data-tour="leaving"]) .still-home-search { visibility: hidden; }
+html[data-welcome="talk"]:not([data-tour="skipped"]) .still-home-prompt, html[data-welcome="talk"]:not([data-tour="leaving"], [data-tour="skipped"]) .still-home-search { visibility: hidden; }
 /* Under the watch page the home page is not drawn at all. It fades away and back as the pages change over it. */
 html[data-welcome="talk"] .still-home { transition: opacity 0.24s ease; }
 html[data-tour="player"] .still-home { opacity: 0; visibility: hidden; transition: opacity 0.2s ease, visibility 0s 0.2s; }
@@ -1171,6 +1173,7 @@ html[data-tour="player"] .still-home { opacity: 0; visibility: hidden; transitio
 .still-tour .react-loading-skeleton::after { animation: none; }
 @media (prefers-reduced-motion: no-preference) {
   .still-welcome-bubble > span { animation: still-tour-line 0.2s ease both; }
+  html[data-tour="skipped"] .still-home-prompt, html[data-tour="skipped"] .still-home-search { animation: still-tour-line 0.26s ease-out both; }
   .still-tour-eyes { animation: still-tour-blink 4.2s infinite; }
   /* Pleased with itself, it hops once. */
   .still-tour-guide[data-mood="glad"] > svg { animation: still-tour-hop 0.5s cubic-bezier(0.3, 0, 0.1, 1); }

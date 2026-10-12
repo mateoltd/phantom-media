@@ -67,6 +67,8 @@ interface Scene {
   /** Between two pages: the one on screen fades out before the next fades in. */
   fading: boolean;
   leaving: boolean;
+  /** Skip was pressed: whatever is on screen goes at once, and the home page comes back whole. */
+  skipped: boolean;
   /** How the mascot takes what is on screen: unimpressed by what Twitch does, pleased with what it did about it. */
   mood: "calm" | "flat" | "glad" | "shut";
   /** The lids are in the wings: drawn ahead of the blink, so that closing them is only moving them. */
@@ -77,7 +79,7 @@ interface Scene {
   missed: boolean;
 }
 
-const OPENING: Scene = { line: 0, speaking: false, view: "search", query: "", suggesting: false, slate: "none", mode: "rewind", playing: false, blocked: false, fading: false, leaving: false, mood: "calm", lidded: false, shut: false, missed: false };
+const OPENING: Scene = { line: 0, speaking: false, view: "search", query: "", suggesting: false, slate: "none", mode: "rewind", playing: false, blocked: false, fading: false, leaving: false, skipped: false, mood: "calm", lidded: false, shut: false, missed: false };
 /**
  * Who the tour watches. The channel is made up and its stream is drawn here (see WelcomeStream), so no real channel
  * is ever shown under an ad break or a lock that it does not have.
@@ -252,6 +254,7 @@ export function WelcomeTour() {
   const spot = useRef<Spot | null>(null);
   const frame = useRef<Frame>({ width: 0, height: 0, face: 0 });
   const reel = useRef<Reel>(null);
+  const leave = useRef(finish);
   const live = scene.mode !== "vod";
 
   // The scripted field stands exactly where the home page keeps its own, which steps aside (see still.css).
@@ -289,9 +292,9 @@ export function WelcomeTour() {
   // The page's own rules follow the tour by this (see still.css), which costs nothing to match.
   useLayoutEffect(() => {
     const page = document.documentElement.dataset;
-    page.tour = scene.leaving ? "leaving" : scene.view;
+    page.tour = scene.skipped ? "skipped" : scene.leaving ? "leaving" : scene.view;
     return () => { delete page.tour; };
-  }, [scene.view, scene.leaving]);
+  }, [scene.view, scene.leaving, scene.skipped]);
 
   // The bubble is laid out again for every line, and whenever it opens somewhere new.
   useLayoutEffect(() => {
@@ -301,7 +304,7 @@ export function WelcomeTour() {
   useEffect(() => {
     // Skip is the one thing here to work, so Tab has nowhere else to take the keyboard.
     const keys = (event: KeyboardEvent) => {
-      if (event.key === "Escape") finish();
+      if (event.key === "Escape") leave.current();
       else if (event.key === "Tab") { event.preventDefault(); skip.current?.focus({ preventScroll: true }); }
     };
     window.addEventListener("keydown", keys);
@@ -312,7 +315,7 @@ export function WelcomeTour() {
   useEffect(() => {
     const root = stage.current, cast = layer.current, mascot = guide.current, speech = bubble.current;
     if (!root || !cast || !mascot || !speech) return;
-    const control = new AbortController();
+    let control = new AbortController();
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const patch = (next: Partial<Scene>) => setScene((scene) => ({ ...scene, ...next }));
     const stopped = (reject: (reason: unknown) => void, cancel: () => void) => control.signal.addEventListener("abort", () => { cancel(); reject(control.signal.reason); }, { once: true });
@@ -604,7 +607,26 @@ export function WelcomeTour() {
       finish();
     })().catch(() => {});
 
-    return () => control.abort();
+    // Skipped, from wherever it is: the script stops mid-line, what it had on screen fades off the home page, and
+    // the mascot goes back to the header before the page is handed over.
+    let left = false;
+    leave.current = () => {
+      if (left) return;
+      left = true;
+      control.abort();
+      control = new AbortController();
+      delete mascot.dataset.pressed;
+      delete mascot.dataset.dragging;
+      delete speech.dataset.dragging;
+      (async () => {
+        await speak(false);
+        patch({ leaving: true, skipped: true, shut: false, mood: "calm" });
+        await Promise.all([go(home()), wait(reduced ? 0 : 300)]);
+        finish();
+      })().catch(() => {});
+    };
+
+    return () => { leave.current = finish; control.abort(); };
   }, [clock]);
 
   const shown = STAR;
@@ -666,7 +688,7 @@ export function WelcomeTour() {
         </div>
       </div>}
     </div>
-    <div ref={layer} className="still-tour-cast" role="dialog" aria-label="Welcome to Still">
+    <div ref={layer} className="still-tour-cast" data-skipped={scene.skipped || undefined} role="dialog" aria-label="Welcome to Still">
       <p className="sr-only" aria-live="polite">{LINES[scene.line]}</p>
       {scene.lidded && <span className="still-tour-lids" data-shut={scene.shut || undefined} aria-hidden="true" />}
       <span ref={guide} className="still-tour-guide" data-mood={scene.mood} data-speaking={scene.speaking || undefined} aria-hidden="true">
@@ -676,7 +698,7 @@ export function WelcomeTour() {
         </svg>
       </span>
       <p ref={bubble} className="still-welcome-bubble" data-speaking={scene.speaking || undefined} aria-hidden="true"><span key={scene.line}>{LINES[scene.line]}</span></p>
-      <button ref={skip} type="button" className="still-welcome-skip" onClick={finish}>Skip</button>
+      <button ref={skip} type="button" className="still-welcome-skip" onClick={() => leave.current()}>Skip</button>
     </div>
   </>;
 }

@@ -7,10 +7,16 @@ import { WelcomeTour } from "./WelcomeTour";
 
 const finish = () => setWelcomePhase("done");
 
-/** Sends the mascot to the header logo's face while the page appears behind it. */
-function land(overlay: HTMLElement): Animation[] {
-  const timing = { duration: 760, easing: "cubic-bezier(0.65, 0, 0.35, 1)", fill: "forwards" } as const;
-  const flight = [".still-welcome-greeting", ".still-welcome-skip"].flatMap((part) => overlay.querySelector(part)?.animate({ opacity: [1, 0] }, { duration: 200, fill: "forwards" }) ?? []);
+/** How long the mascot takes to reach the header, and how long when it was told to skip the rest. */
+const LANDING = 760, SKIPPING = 440;
+
+/**
+ * Sends the mascot to the header logo's face while the page appears behind it. What fades does so from however
+ * it looks at that moment, since Skip can call this before the greeting has been said.
+ */
+function land(overlay: HTMLElement, duration: number): Animation[] {
+  const timing = { duration, easing: "cubic-bezier(0.65, 0, 0.35, 1)", fill: "forwards" } as const;
+  const flight = Array.from(overlay.querySelectorAll(".still-welcome-greeting, .still-welcome-skip, .still-welcome-dream"), (part) => part.animate({ opacity: 0 }, { duration: 200, fill: "forwards" }));
   const backdrop = overlay.querySelector(".still-welcome-backdrop");
   if (backdrop) flight.push(backdrop.animate({ opacity: [1, 0] }, timing));
   const mascot = overlay.querySelector(".still-welcome-mascot");
@@ -33,6 +39,7 @@ function land(overlay: HTMLElement): Animation[] {
 export function Welcome() {
   const phase = useSyncExternalStore(subscribeWelcome, welcomePhase, (): WelcomePhase => "pending");
   const overlay = useRef<HTMLDivElement>(null);
+  const leave = useRef(finish);
   const faceId = useId();
 
   // Keeps what lib/welcome.ts wrote on <html> true, and writes it when the page was reached without a reload.
@@ -54,7 +61,7 @@ export function Welcome() {
     const covered = Array.from(document.body.children).filter((child): child is HTMLElement => child instanceof HTMLElement && !child.contains(element) && !child.inert && /^(HEADER|MAIN|SECTION)$/.test(child.tagName));
     covered.forEach((child) => { child.inert = true; });
     const hold = (event: Event) => event.preventDefault();
-    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") finish(); };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") leave.current(); };
     element.addEventListener("wheel", hold, { passive: false });
     element.addEventListener("touchmove", hold, { passive: false });
     window.addEventListener("keydown", escape);
@@ -62,18 +69,26 @@ export function Welcome() {
 
     // The greeting is CSS, so it starts with the first paint, before this runs. This only waits for it to end.
     let live = true;
+    let skipped = false;
     let flight: Animation[] = [];
+    const depart = (duration: number) => {
+      if (!flight.length) flight = land(element, duration);
+      return Promise.all(flight.map((animation) => animation.finished));
+    };
     Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished))
-      .then(() => {
-        if (!live) return;
-        flight = land(element);
-        return Promise.all(flight.map((animation) => animation.finished));
-      })
-      .then(() => { if (live) setWelcomePhase("talk"); })
+      .then(() => { if (live && !skipped) return depart(LANDING); })
+      .then(() => { if (live && !skipped) setWelcomePhase("talk"); })
       .catch(() => {});
+    // Skipped: the mascot still lands in the header, sooner, and there is no tour after it.
+    leave.current = () => {
+      if (skipped) return;
+      skipped = true;
+      depart(SKIPPING).then(() => { if (live) finish(); }).catch(() => {});
+    };
 
     return () => {
       live = false;
+      leave.current = finish;
       flight.forEach((animation) => animation.cancel());
       covered.forEach((child) => { child.inert = false; });
       element.removeEventListener("wheel", hold);
@@ -109,6 +124,6 @@ export function Welcome() {
       </div>
       <p className="still-welcome-greeting">Hi, I&rsquo;m Still.</p>
     </div>
-    <button type="button" className="still-welcome-skip" onClick={finish}>Skip</button>
+    <button type="button" className="still-welcome-skip" onClick={() => leave.current()}>Skip</button>
   </div>;
 }
