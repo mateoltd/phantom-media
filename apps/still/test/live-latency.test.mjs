@@ -454,3 +454,19 @@ test("prefetch cannot bypass ads, end-of-stream, discontinuities, or missing tim
   const output = rewriteLiveMediaPlaylist(duplicate, playlistBase, true);
   assert.equal((output.match(/#EXTINF/g) || []).length, 2, "an ambiguous tail cannot change segment sequence identity");
 });
+
+test("fMP4 playlists retain predictive playback and their initialization map", () => {
+  const initial = prefetchPlaylist
+    .replace("#EXT-X-TARGETDURATION:6", '#EXT-X-TARGETDURATION:6\n#EXT-X-MAP:URI="init.mp4"')
+    .replaceAll(".ts", ".mp4")
+    .replace("12.mp4", "future-12.mp4").replace("13.mp4", "future-13.mp4");
+  const segments = text => rewriteLiveMediaPlaylist(text, playlistBase, true)
+    .split("\n").filter(line => line.startsWith("https:"));
+  assert.deepEqual(segments(initial), [
+    "https://video-edge.ttvnw.net/live/10.mp4", "https://video-edge.ttvnw.net/live/11.mp4",
+    "https://video-edge.ttvnw.net/live/future-12.mp4", "https://video-edge.ttvnw.net/live/future-13.mp4",
+  ]);
+  const output = rewriteLiveMediaPlaylist(initial, playlistBase, true);
+  assert.ok(output.includes('#EXT-X-MAP:URI="https://video-edge.ttvnw.net/live/init.mp4"'));
+  assert.equal((output.match(/#EXT-X-STILL-PREFETCH/g) || []).length, 2);
+});

@@ -47,6 +47,15 @@ consume up to two `EXT-X-TWITCH-PREFETCH` segments directly from Twitch as their
 bytes arrive, without waiting for completion or routing video through the app.
 The adapter retains sequence identity and timestamps, excludes ads and unsafe
 tails, and falls back to completed segments if predictive delivery fails.
+Twitch's fMP4 prefetch URLs change at completion while their media bytes remain
+identical. The live level controller reconciles only that dated sequence's
+transition within the same rendition, initialization map and discontinuity.
+Other sequence mismatches trigger one retreat to completed media before the
+player exhausts its quality renditions, retaining the selected manual quality.
+Progressive live transfers flush 32 KiB batches. fMP4 chunks keep the first
+chunk's timestamp origin throughout each segment, and future segments retain
+their dated encoder interval while the current segment is only partly appended.
+This prevents overlapping frames and a compressed playback timeline.
 Native HLS keeps the completed-segment path. Encoder-paced prefetch is excluded
 from throughput estimates and emergency ABR aborts within its encoding
 allowance. Genuinely slow predictive transfers restore bandwidth sampling and
@@ -64,7 +73,7 @@ the playlist, so playlist reload cadence does not add avoidable delay.
 
 Ordinary live playback starts in Automatic quality so ABR can react to measured
 delivery speed. A single latency controller shares the connection monitor's
-one-second sample; it adds no polling loop. A stale paused playlist refreshes
+250 ms live sample; it adds no polling loop. A stale paused playlist refreshes
 once on resume. Regular HLS
 targets one and a half recently observed segments behind the estimated live edge
 (at least two seconds), retaining one complete segment in the available window.
@@ -92,6 +101,17 @@ Local 720p testing on `ow_esports` (2026-10-11):
 - **Still:** 1.85–1.94 seconds of measured delay, with no rebuffering after startup.
 - **Twitch:** 2.69–2.95 seconds reported earlier in the same session.
 - **Validation:** 232 tests, typecheck, lint, and webpack production build passed.
+
+`elxokas` fMP4 verification (2026-10-13): fixed the rotating prefetch URI and
+progressive timestamp resets while retaining low-latency delivery. Automatic
+completed 5.9 minutes with no playback errors or stalls after startup; manual
+1080p60 playback and recovery retained the selected rendition. A direct comparison
+of 80 displayed-frame samples at 100 ms intervals found Still approximately
+300–400 ms ahead of Twitch at the same 1080p60 rendition, with the original buffer
+reserve. The players' displayed latency figures use different clock mappings and
+are not directly comparable. All 265 tests, typecheck, lint and the webpack
+production build passed. These are local observations, not a production rollout
+or a guarantee for every network condition.
 
 From the workspace root:
 

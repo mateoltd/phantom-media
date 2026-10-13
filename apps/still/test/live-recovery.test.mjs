@@ -17,9 +17,14 @@ function fixture() {
   const hls = {
     on: (event, callback) => callbacks.set(event, callback),
     loadSource: mock.fn(), startLoad: mock.fn(), recoverMediaError: mock.fn(), destroy: mock.fn(),
+    autoLevelEnabled: true, loadLevel: 0, levels: [{ name: "1080p60" }],
+    preferredQualityRef: { current: null },
   };
   const create = new Function("Hls", "hls", `
     let prefetchEnabled = true, prefetchFailures = 0, levelsSynced = true, recoveries = 0;
+    let predictiveTimeline = true, prefetchDuration = 4;
+    let fallbackQuality = null;
+    const preferredQualityRef = hls.preferredQualityRef;
     const src = '/api/live/master.m3u8?channel=example';
     const capturePlayback = () => {};
     const liveController = { reset() {}, stall() {} };
@@ -29,7 +34,7 @@ function fixture() {
     const setError = () => {}, setLoading = () => {}, reportError = () => {};
     const hlsRef = { current: hls };
     ${registrations}
-    return () => ({ prefetchEnabled, prefetchFailures, recoveries });
+    return () => ({ prefetchEnabled, prefetchFailures, recoveries, predictiveTimeline, prefetchDuration, fallbackQuality });
   `);
   const state = create(Hls, hls);
   const frag = {
@@ -96,4 +101,50 @@ test("a fatal predictive error falls back immediately while ordinary parsing err
   f.failed(f.frag, true);
   assert.equal(f.hls.loadSource.mock.callCount(), 1);
   assert.equal(f.hls.recoverMediaError.mock.callCount(), 0, "fallback precedes generic fatal recovery");
+});
+
+test("playlist sequence mismatches without a fragment retreat before exhausting renditions", () => {
+  for (const fatal of [false, true]) {
+    const f = fixture();
+    const error = {
+      type: Hls.ErrorTypes.NETWORK_ERROR, details: Hls.ErrorDetails.LEVEL_PARSING_ERROR,
+      fatal, reason: "media sequence mismatch 12: https://video-edge.ttvnw.net/completed.mp4",
+    };
+    f.emit(Hls.Events.ERROR, error);
+    assert.equal(f.hls.loadSource.mock.callCount(), 1);
+    assert.equal(f.state().predictiveTimeline, false);
+    assert.equal(f.state().prefetchDuration, 0);
+    assert.equal(f.state().recoveries, 0);
+    assert.equal(f.hls.startLoad.mock.callCount(), 0);
+    f.emit(Hls.Events.ERROR, { ...error, fatal: false });
+    assert.equal(f.hls.loadSource.mock.callCount(), 1, "retreat happens only once");
+  }
+});
+
+test("unrelated playlist parsing errors do not disable predictive playback", () => {
+  const f = fixture();
+  f.emit(Hls.Events.ERROR, {
+    type: Hls.ErrorTypes.NETWORK_ERROR, details: Hls.ErrorDetails.LEVEL_PARSING_ERROR,
+    fatal: false, reason: "invalid playlist header",
+  });
+  assert.equal(f.state().prefetchEnabled, true);
+  assert.equal(f.hls.loadSource.mock.callCount(), 0);
+});
+
+test("predictive fallback retains a manual quality choice and leaves Automatic adaptive", () => {
+  for (const auto of [true, false]) {
+    const f = fixture();
+    f.hls.autoLevelEnabled = auto;
+    f.hls.preferredQualityRef.current = auto ? null : "1080p60";
+    f.failed(f.frag, true);
+    assert.equal(f.state().fallbackQuality, auto ? null : "1080p60");
+  }
+});
+
+test("manual quality survives even if hls.js has already reset its transient level mode", () => {
+  const f = fixture();
+  f.hls.preferredQualityRef.current = "1080p60";
+  f.hls.autoLevelEnabled = true;
+  f.failed(f.frag, true);
+  assert.equal(f.state().fallbackQuality, "1080p60");
 });

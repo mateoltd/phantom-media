@@ -7,6 +7,7 @@ import type { MediaState } from "./use-media";
 import { CONNECTION_ERROR_DETAILS, createConnectionHealth } from "@/lib/media/connection-health";
 import { createLiveLatencyController } from "@/lib/media/live-latency";
 import { LiveAbrController } from "@/lib/media/live-abr";
+import { createLiveFragmentLoader } from "@/lib/media/live-loader";
 
 interface HlsOptions {
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -60,6 +61,7 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
   const resumePlaying = useRef(false);
   const resumeTime = useRef<number | undefined>(undefined);
   const resumeSpeed = useRef(1);
+  const preferredQualityRef = useRef<string | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const resetConnectionPlaybackRef = useRef<(() => void) | null>(null);
   const liveControllerRef = useRef<ReturnType<typeof createLiveLatencyController> | null>(null);
@@ -81,6 +83,7 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
     };
 
     let recoveries = 0;
+    preferredQualityRef.current = null;
     let metadataLoaded = false;
     const connection = createConnectionHealth();
     setConnectionUnstable(false);
@@ -131,7 +134,7 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
       playbackGraceUntil = performance.now() + 3_000;
     };
     resetConnectionPlaybackRef.current = resetConnectionPlayback;
-    const connectionTimer = window.setInterval(sampleConnection, 1_000);
+    const connectionTimer = window.setInterval(sampleConnection, plainLive ? 250 : 1_000);
     window.addEventListener("offline", sampleConnection);
     window.addEventListener("online", sampleConnection);
     video.addEventListener("seeking", resetConnectionPlayback);
@@ -226,10 +229,12 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
     });
     attachedHls = hls;
     hlsRef.current = hls;
+    if (progressive) hls.config.fLoader = createLiveFragmentLoader(hls);
     let levelsSynced = false;
     const sourceUrl = new URL(src, window.location.href);
     let prefetchEnabled = progressive && sourceUrl.origin === window.location.origin && sourceUrl.pathname === "/api/live/master.m3u8";
     let prefetchFailures = 0;
+    let fallbackQuality: string | null = null;
 
     const syncLevels = (sourceLevels = hls.levels) => {
       const hevcSupported =
@@ -248,18 +253,21 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
 
       setLevels(filteredLevels);
       levelsSynced = filteredLevels.length > 0;
-      if (dvrMode && filteredLevels.length > 0) {
+      const restoredLevel = fallbackQuality === null ? -1 :
+        filteredLevels.find(level => level.name === fallbackQuality)?.index ?? -1;
+      if ((dvrMode || restoredLevel >= 0) && filteredLevels.length > 0) {
         const actualLevels = hls.levels.length > 0 ? hls.levels : sourceLevels;
-        const firstLevel = pickInitialLevel(filteredLevels, actualLevels);
+        const firstLevel = restoredLevel >= 0 ? restoredLevel : pickInitialLevel(filteredLevels, actualLevels);
         hls.currentLevel = firstLevel;
         hls.nextLevel = firstLevel;
         hls.loadLevel = firstLevel;
         hls.autoLevelCapping = -1;
         setCurrentLevel(firstLevel);
-
+        preferredQualityRef.current = labelHlsLevel(actualLevels[firstLevel]);
       } else {
         setCurrentLevel(-1);
       }
+      fallbackQuality = null;
     };
 
     hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
@@ -296,12 +304,22 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
     });
 
     hls.on(Hls.Events.ERROR, (_, data) => {
-      if (prefetchEnabled && data.frag?.tagList.some(tag => tag[0] === "EXT-X-STILL-PREFETCH") &&
-          (data.type === Hls.ErrorTypes.NETWORK_ERROR || data.type === Hls.ErrorTypes.MEDIA_ERROR)) {
-        if (++prefetchFailures >= 2 || data.fatal) {
+      // Playlist merge failures have no frag. Retreat before hls.js exhausts
+      // all renditions when a promoted URL changes at segment completion.
+      const sequenceMismatch = predictiveTimeline && data.details === Hls.ErrorDetails.LEVEL_PARSING_ERROR &&
+        /(?:media|discontinuity) sequence mismatch/.test(data.reason ?? data.error?.message ?? "");
+      const predictiveFragmentError = data.frag?.tagList.some(tag => tag[0] === "EXT-X-STILL-PREFETCH") &&
+        (data.type === Hls.ErrorTypes.NETWORK_ERROR || data.type === Hls.ErrorTypes.MEDIA_ERROR);
+      if (prefetchEnabled && (sequenceMismatch || predictiveFragmentError)) {
+        if (++prefetchFailures >= 2 || data.fatal || sequenceMismatch) {
           // Unsupported/failed predictive delivery gets one automatic retreat
           // to completed segments, rather than exhausting fatal recovery.
           prefetchEnabled = false;
+          predictiveTimeline = false;
+          prefetchDuration = 0;
+          // hls.js may already have reset manual mode while routing the error.
+          // Preserve the viewer's choice rather than that transient state.
+          fallbackQuality = preferredQualityRef.current;
           levelsSynced = false;
           capturePlayback();
           liveController?.reset();
@@ -399,6 +417,7 @@ export function useHls({ videoRef, src, delivery, audioOnly, isLive, dvrMode, st
       hls.currentLevel = level;
       hls.nextLevel = level;
       hls.loadLevel = level;
+      preferredQualityRef.current = level >= 0 && hls.levels[level] ? labelHlsLevel(hls.levels[level]) : null;
       setCurrentLevel(level);
 
       if (dvrMode && video && level >= 0) {

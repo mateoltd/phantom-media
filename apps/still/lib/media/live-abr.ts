@@ -1,10 +1,33 @@
 import Hls from "hls.js";
-import type { FragBufferedData, FragLoadingData } from "hls.js";
+import type { BufferAppendingData, FragBufferedData, FragLoadingData, LevelLoadedData } from "hls.js";
+import { reconcilePrefetchCompletion, stabilizePrefetchTiming } from "./live-level.ts";
 
 /** Encoder-paced prefetch is not a bandwidth test. Keep hls.js ABR for real delivery. */
 export class LiveAbrController extends Hls.DefaultConfig.abrController {
   private predictiveTimer?: ReturnType<typeof setInterval>;
   private firstProgress = new WeakMap<object, number | null>();
+
+  constructor(hls: Hls) {
+    super(hls);
+    // ABR is constructed before hls.js's playlist controllers. Register here
+    // so the known Twitch completion transition is reconciled before merging.
+    hls.on(Hls.Events.LEVEL_LOADED, this.onLiveLevelLoaded, this);
+    hls.on(Hls.Events.BUFFER_APPENDING, this.onLiveBufferAppending, this);
+  }
+
+  private onLiveLevelLoaded(_: typeof Hls.Events.LEVEL_LOADED, data: LevelLoadedData) {
+    reconcilePrefetchCompletion(data);
+  }
+
+  private onLiveBufferAppending(_: typeof Hls.Events.BUFFER_APPENDING, data: BufferAppendingData) {
+    stabilizePrefetchTiming(this.hls, data);
+  }
+
+  public destroy() {
+    this.hls?.off(Hls.Events.LEVEL_LOADED, this.onLiveLevelLoaded, this);
+    this.hls?.off(Hls.Events.BUFFER_APPENDING, this.onLiveBufferAppending, this);
+    super.destroy();
+  }
 
   public clearTimer() {
     clearInterval(this.predictiveTimer);
